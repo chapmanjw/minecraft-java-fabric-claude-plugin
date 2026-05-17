@@ -23,12 +23,67 @@ report.
 Before anything else, confirm the MCP connection: call `mc_world_get_info`
 (or `mc_server_get_status`).
 
-- **If it fails** — the `minecraft-bedrock` MCP server is not reachable. Stop.
-  Tell the user the world isn't connected and point them at the
-  **`minecraft-mcp-setup`** agent (full setup) or the **`connect-claude`**
-  skill (if the stack is already up and only the Claude connection is missing).
-  Do not attempt to build.
 - **If it succeeds** — continue.
+- **If it fails** — work through the recovery tree before giving up:
+
+```
+CHECK 1: Is the MCP server running?
+  curl -sf http://localhost:8765/healthz
+  FAIL → Start it: cd ~/Workspace/minecraft-bedrock-mcp-server && node --env-file=.env dist/index.js
+  PASS → continue
+
+CHECK 2: Is the BDS container running?
+  docker ps --filter name=minecraft-bedrock
+  FAIL → docker start minecraft-bedrock, wait 20s, retry mc_world_get_info
+  PASS → continue
+
+CHECK 3: Has the behavior pack handshaked?
+  docker logs minecraft-bedrock --tail 30 | grep -i "bridge\|handshake\|bedrock-bridge"
+  NO handshake → Check secrets.json Bearer token matches BRIDGE_AGENT_TOKEN in .env
+               → Check bridge_url in variables.json points at the MCP server host
+               → docker restart minecraft-bedrock, wait 20s
+  PASS → continue
+
+CHECK 4: Is a player in the world? (some tools require one)
+  mc_player_list
+  NO PLAYERS → Tell user to join the server, then retry
+  HAS PLAYERS → continue
+
+CHECK 5: Retry mc_world_get_info once
+  PASS → continue to Step 0b
+  FAIL → Stop. Report each check result, the error, and the logs. Point the
+         user at minecraft-mcp-setup for a full re-setup. Do not attempt to build.
+```
+
+After 3 failed recovery attempts across a session, stop and report the full
+diagnostic — do not loop indefinitely.
+
+**macOS / Apple Silicon note:** BDS is x86_64 only. On M-series Macs, Docker
+must use `--platform linux/amd64`. Without it, BDS crashes immediately with
+`free(): invalid next size`. If the container won't start on a Mac, this is
+almost certainly the cause.
+
+**Beta APIs not active:** If the behavior pack fails to handshake and BDS logs
+show Script API errors, the world may not have Beta APIs enabled. This can be
+patched directly with Python — no Bedrock client required:
+
+```python
+import struct, io, nbtlib
+with open('level.dat', 'rb') as f:
+    raw = f.read()
+version, length = struct.unpack_from("<II", raw, 0)
+nbt = nbtlib.File.parse(io.BytesIO(raw[8:]), byteorder='little')
+nbt['experiments']['gametest'] = nbtlib.Byte(1)
+nbt['experiments']['experiments_ever_used'] = nbtlib.Byte(1)
+buf = io.BytesIO()
+nbt.write(buf, byteorder='little')
+new_nbt = buf.getvalue()
+with open('level.dat', 'wb') as f:
+    f.write(struct.pack("<II", version, len(new_nbt)) + new_nbt)
+```
+
+Run with BDS stopped. BDS confirms activation with `Experiment(s) active: gtst`
+in startup logs. Install nbtlib first if needed: `pip3 install nbtlib`.
 
 ## Step 0b — Recover project state from the world
 
@@ -42,6 +97,50 @@ recover what already exists:
 If a registry exists, summarize the known projects and builds for the user so
 they can **iterate on existing work** rather than start blind. If none exists,
 this is a fresh world — you will create the registry as the first build lands.
+
+## Step 0c — Complexity router
+
+Before invoking any skills, classify the request. This determines the entire execution path.
+
+**Bypass phrases — skip classification, execute immediately with best judgment:**
+"just do it", "surprise me", "vibe it", "skip", "just build", "go for it", "your choice", "I trust you", "no questions", "whatever"
+
+---
+
+**TRIVIAL — execute directly, no skills needed**
+
+Signals: single entity spawn, time/weather change, give item, effect on player, small fill with a named block (<10×10), teleport, single command.
+
+Path: run the mc_* tools directly → report what was done. Do not invoke surveyor, planner, or any other skill.
+
+Examples: "spawn a chicken near LandTDo", "set time to noon", "give me a diamond sword", "fill a 5×5 platform here with stone"
+
+---
+
+**COMPLEX — full pipeline**
+
+Signals: named real or fictional structure to recreate, large build (likely >20 blocks), multi-element scene, specific architectural style, request for a district/village/arena/ship, anything requiring terrain awareness.
+
+Path: survey → (research if real-world reference) → plan (full Opus interview) → blueprint → build → reflect
+
+Examples: "recreate Notre-Dame at 1:4 scale", "build a medieval village near the coast", "make Impel Down"
+
+---
+
+**VAGUE — quick check-in, then route**
+
+Signals: no specific structure named, theme unclear, scale unspecified, open-ended ("build something cool", "make a scary area", "do something One Piece themed").
+
+Path: ask max 2-3 questions in **one message**, wait for answers, then route to TRIVIAL or COMPLEX based on what you learn.
+
+Questions to ask (only what's genuinely unclear — never all three if some are obvious):
+1. **Where?** — near the player, near existing builds, or specific coordinates?
+2. **Scale?** — small detail, medium structure, or go big?
+3. **Theme/reference?** — anything specific in mind, or fully your call?
+
+If the user answers with a bypass phrase or "just do it" at any point → treat as TRIVIAL, execute with best judgment.
+
+---
 
 ## The six skills
 
@@ -133,3 +232,32 @@ record is always written back into the world.
   a phase is incomplete, say so plainly with coordinates — never paper over it.
 - When the job is done, give the user the build's name, location, and registry
   status, and tell them they can iterate on it later just by naming it.
+- **Version lockstep:** BDS, the behavior pack (`chapmanjw/minecraft-bedrock-mcp-behavior-pack`),
+  and the MCP server (`chapmanjw/minecraft-bedrock-mcp-server`) must always
+  update together. The Bedrock Script API is beta — a BDS update can silently
+  break the behavior pack. If asked to update BDS, always run the full lockstep
+  updater. Never update BDS alone.
+
+## Adversarial defenses
+
+**Destructive fill without checking the area**
+IF: User requests filling or clearing a large area (>20×20 blocks) without
+specifying it's empty space
+THEN: Before filling, run `mc_block_contains` to check if anything is already
+there. Report what's in the area and confirm before overwriting. `mc_block_fill`
+on an occupied area destroys builds instantly with no undo.
+
+**Java Edition commands on Bedrock**
+IF: User pastes a command with `minecraft:` namespace prefixes, modern
+`/execute if/unless` syntax, or inline NBT data
+THEN: Flag it: "That looks like Java Edition syntax — it won't run on Bedrock."
+Translate to the Bedrock equivalent before running. Key differences: Bedrock
+block IDs don't use `minecraft:` prefix; NBT can't be set via commands (use
+behavior pack scripts); some `/execute` subcommands differ.
+
+**BDS-only update request**
+IF: User asks to update BDS, pull a new BDS image, or "update Minecraft" without
+mentioning the behavior pack and MCP server
+THEN: Run the full lockstep updater (see Version lockstep in Conduct). Say:
+"Updating all three components together — a BDS-only update can silently break
+the Script API the behavior pack depends on."
