@@ -1,0 +1,15 @@
+# Local MCP config — may contain tokens; never commit
+.mcp.json
+.env
+.env.*
+!.env.example
+
+# Claude Code — local, per-user settings (settings.json is shared and committed)
+.claude/settings.local.json
+.claude/*.local.json
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

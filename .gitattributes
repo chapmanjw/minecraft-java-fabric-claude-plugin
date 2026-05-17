@@ -1,0 +1,4 @@
+# Normalize line endings: text files are stored as LF in the repo and
+# checked out as LF on every platform, so tooling behaves identically
+# locally and in CI regardless of core.autocrlf.
+* text=auto eol=lf

@@ -1,0 +1,19 @@
+{
+  "name": "minecraft-bedrock",
+  "version": "0.1.0",
+  "description": "Agent skills and agents for driving a live Minecraft Bedrock world through the minecraft-bedrock MCP server. Includes a guided, step-by-step setup of the whole stack and an in-world builder agent.",
+  "author": {
+    "name": "chapmanjw"
+  },
+  "homepage": "https://github.com/chapmanjw/minecraft-bedrock-claude-plugin",
+  "repository": "https://github.com/chapmanjw/minecraft-bedrock-claude-plugin",
+  "license": "MIT",
+  "keywords": [
+    "minecraft",
+    "minecraft-bedrock",
+    "bedrock-dedicated-server",
+    "mcp",
+    "game-server",
+    "agent-skills"
+  ]
+}

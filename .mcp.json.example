@@ -1,0 +1,16 @@
+{
+  "//": "Reference MCP server config for the minecraft-bedrock MCP server.",
+  "//1": "The connect-claude skill walks you through registering this. This",
+  "//2": "file is a template only — it is NOT auto-loaded by the plugin.",
+  "//3": "Copy it to .mcp.json in a project (or use `claude mcp add`), set the",
+  "//4": "two env vars, and keep the token out of version control.",
+  "mcpServers": {
+    "minecraft-bedrock": {
+      "type": "http",
+      "url": "${MINECRAFT_MCP_URL:-http://localhost:8765/mcp}",
+      "headers": {
+        "Authorization": "Bearer ${MINECRAFT_MCP_TOKEN}"
+      }
+    }
+  }
+}

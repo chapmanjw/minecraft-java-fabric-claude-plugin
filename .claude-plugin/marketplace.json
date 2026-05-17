@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "minecraft-bedrock-claude",
+  "description": "Claude plugins for Minecraft Bedrock — guided setup and AI control of a live Bedrock world over MCP.",
+  "owner": {
+    "name": "chapmanjw"
+  },
+  "plugins": [
+    {
+      "name": "minecraft-bedrock",
+      "source": "./",
+      "description": "Guided, step-by-step setup of the Minecraft Bedrock MCP stack (dedicated server, world, behavior pack, MCP server, Claude connection) plus an in-world builder agent.",
+      "category": "games",
+      "keywords": [
+        "minecraft",
+        "minecraft-bedrock",
+        "mcp",
+        "game-server"
+      ]
+    }
+  ]
+}
