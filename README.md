@@ -6,11 +6,12 @@ the [`minecraft-bedrock-mcp-server`](https://github.com/chapmanjw/minecraft-bedr
 
 It does two things:
 
-1. **Guided setup** — four skills that walk you, step by step, through standing
-   up the whole stack: a Bedrock Dedicated Server, a compatible world, the
-   bridge behavior pack, the MCP server, and the connection to Claude.
-2. **End-to-end orchestration** — a `minecraft-mcp-setup` agent that runs all
-   four setup phases from start to finish in one continuous session.
+1. **Guided setup** — skills and an agent that walk you, step by step, through
+   standing up the whole stack: a Bedrock Dedicated Server, a compatible world,
+   the bridge behavior pack, the MCP server, and the connection to Claude.
+2. **Building in the world** — a `minecraft-builder` agent that surveys,
+   researches, plans, blueprints, builds, and reflects, coordinating a set of
+   model-tuned skills to design and construct elements in a live world.
 
 ## The stack
 
@@ -50,9 +51,10 @@ Add this repo as a plugin marketplace and install the plugin:
 ```
 
 Then restart Claude Code. The skills appear under `/minecraft-bedrock:*` and
-the `minecraft-mcp-setup` agent becomes available for delegation.
+the `minecraft-mcp-setup` and `minecraft-builder` agents become available for
+delegation.
 
-## Skills
+## Setup skills
 
 The four setup skills are meant to be run **in order**. Each one ends by
 handing off to the next.
@@ -71,18 +73,56 @@ for MCP — the first skill triggers automatically — or invoke it explicitly:
 /minecraft-bedrock:setup-bedrock-server
 ```
 
-## Agent
+## Builder skills
+
+Six skills make up the build pipeline. Each runs on the model best suited to
+its work — heavy reasoning where it pays off, a small model for mechanical
+execution. The `minecraft-builder` agent invokes them in order; you can also
+invoke any one directly.
+
+| Skill | Role | Model |
+| ----- | ---- | ----- |
+| `surveyor` | Investigates the world — terrain, biomes, existing builds, surroundings. | Sonnet |
+| `researcher` | Researches real-world references for faithful recreation. | Sonnet |
+| `planner` | Captures requirements, interviews the user, produces a fully-resolved plan. | Opus |
+| `blueprinter` | Turns the plan into named, reusable structure files in the world. | Sonnet |
+| `worker` | Executes the plan step by step — mechanical, no redesign. | Haiku |
+| `philosopher` | Reviews the finished job and records process lessons in project memory. | Sonnet |
+
+## Agents
 
 **`minecraft-mcp-setup`** — orchestrates the complete setup end to end. It runs
 all four phases in one continuous session: checks prerequisites up front, works
 each phase interactively, verifies every phase's checklist before advancing,
 and carries forward the values later phases depend on (paths, tokens, host).
-The four setup skills are preloaded into the agent as its per-phase procedures.
 
-Delegate to it when you want the whole stack stood up without driving the
-phases yourself — e.g. *"Set up the Minecraft Bedrock MCP stack for me."* Use
-the individual `/minecraft-bedrock:*` skills instead if you'd rather do (or
-re-do) a single phase on its own.
+**`minecraft-builder`** — designs and constructs elements in a live world. It
+health-checks the MCP connection (and points you at `minecraft-mcp-setup` if
+the world isn't reachable), recovers existing project state from the world,
+then coordinates the six builder skills: survey → research → plan → blueprint →
+build → reflect. Delegate to it for anything beyond a trivial block change —
+e.g. *"Build a lakeside village near the nearest player."*
+
+Use the individual `/minecraft-bedrock:*` skills directly if you'd rather drive
+one step yourself.
+
+## State model
+
+The builder keeps **persistent state in the Minecraft world**, not in your
+workspace — a project folder is useful only while you're working in it, but the
+world travels everywhere:
+
+- **Blueprints** are saved as named structure files (`mcb_<project>_<element>`),
+  so build elements can be placed, copied, and iterated later.
+- A **registry** — a world dynamic property `mcbuilder:registry` holding a
+  [TOON](https://toonformat.dev/) document — records every project and build
+  (element, structure, coordinates, status, revision). Any future session reads
+  it back and can pick up where the last left off.
+
+Local files under `.minecraft-builder/<project>/` (requirements, survey, plan)
+are treated as throwaway scratch — Markdown for prose, TOON for structured
+data. The `philosopher` records only *process lessons* in project memory, never
+build data.
 
 ## MCP connection
 

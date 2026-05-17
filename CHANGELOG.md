@@ -6,6 +6,20 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- `minecraft-builder` agent — coordinates a build pipeline in a live world:
+  health-checks the MCP connection, recovers project state from the world, and
+  runs survey → research → plan → blueprint → build → reflect.
+- Six builder skills, each tuned to a model suited to its job: `surveyor` and
+  `researcher` (Sonnet, forked), `planner` (Opus), `blueprinter` (Sonnet),
+  `worker` (Haiku, forked), and `philosopher` (Sonnet).
+- World-anchored state model: blueprints saved as named structure files and a
+  `mcbuilder:registry` world dynamic property (TOON) recording every build, so
+  projects can be iterated later with no external state. Local
+  `.minecraft-builder/` files are treated as ephemeral scratch (Markdown +
+  TOON).
+
 ## [0.1.0] - 2026-05-16
 
 Initial release. Pairs with
