@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-16
+
 ### Added
 
 - `minecraft-builder` agent — coordinates a build pipeline in a live world:
