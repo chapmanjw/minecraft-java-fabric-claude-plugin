@@ -6,6 +6,24 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- `terraforming` skill — designs natural terrain and environments (mountains,
+  valleys, rivers, lakes, coastlines, caves, biomes, weathering) using vetted
+  landscaping technique, and writes the terrain phases into the build plan.
+- A `reference/` library inside the terraforming skill — command-budget,
+  landforms, water, biome palettes, and weathering — loaded on demand so
+  technique detail does not bloat context until needed.
+
+### Changed
+
+- The `minecraft-builder` agent gained a `shape` step and now coordinates
+  seven skills (survey → research → plan → shape → blueprint → build →
+  reflect).
+- The `planner` defers terrain phases to `terraforming` and keeps `fill` steps
+  within the ~32,768-block volume limit; the `worker` executes pre-tiled fills
+  without merging or splitting them.
+
 ## [0.2.0] - 2026-05-16
 
 ### Added

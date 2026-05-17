@@ -75,7 +75,7 @@ for MCP — the first skill triggers automatically — or invoke it explicitly:
 
 ## Builder skills
 
-Six skills make up the build pipeline. Each runs on the model best suited to
+Seven skills make up the build pipeline. Each runs on the model best suited to
 its work — heavy reasoning where it pays off, a small model for mechanical
 execution. The `minecraft-builder` agent invokes them in order; you can also
 invoke any one directly.
@@ -85,9 +85,14 @@ invoke any one directly.
 | `surveyor` | Investigates the world — terrain, biomes, existing builds, surroundings. | Sonnet |
 | `researcher` | Researches real-world references for faithful recreation. | Sonnet |
 | `planner` | Captures requirements, interviews the user, produces a fully-resolved plan. | Opus |
+| `terraforming` | Designs natural terrain and environments — mountains, water, biomes — using vetted landscaping technique. | Inherit |
 | `blueprinter` | Turns the plan into named, reusable structure files in the world. | Sonnet |
 | `worker` | Executes the plan step by step — mechanical, no redesign. | Haiku |
 | `philosopher` | Reviews the finished job and records process lessons in project memory. | Sonnet |
+
+The `terraforming` skill carries a `reference/` library — command-budget,
+landforms, water, biome palettes, and weathering — loaded on demand so the
+technique detail never bloats context until it is needed.
 
 ## Agents
 
@@ -99,8 +104,8 @@ and carries forward the values later phases depend on (paths, tokens, host).
 **`minecraft-builder`** — designs and constructs elements in a live world. It
 health-checks the MCP connection (and points you at `minecraft-mcp-setup` if
 the world isn't reachable), recovers existing project state from the world,
-then coordinates the six builder skills: survey → research → plan → blueprint →
-build → reflect. Delegate to it for anything beyond a trivial block change —
+then coordinates the seven builder skills: survey → research → plan → shape →
+blueprint → build → reflect. Delegate to it for anything beyond a trivial block change —
 e.g. *"Build a lakeside village near the nearest player."*
 
 Use the individual `/minecraft-bedrock:*` skills directly if you'd rather drive

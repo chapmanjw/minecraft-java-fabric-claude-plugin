@@ -46,8 +46,12 @@ Coordinates are absolute `x y z` strings — use them literally. Do no arithmeti
 - If a step **fails or is ambiguous** — a bad block ID, a malformed
   coordinate, a missing structure, a tool error — **stop immediately**. Do not
   guess a fix, do not skip ahead. Report which step failed and the error.
-- Respect the command throttle: large `fill` operations are one call each;
-  do not break them into many small calls or fire calls in a tight burst.
+- Respect the command throttle: each step is one call; do not fire calls in a
+  tight burst.
+- Execute each `fill` step exactly as sized in the plan. The planner has
+  already tiled large volumes to stay within Minecraft's ~32,768-block limit —
+  never merge adjacent `fill` steps into a bigger region, and never split one
+  into smaller calls.
 
 ## Verify
 

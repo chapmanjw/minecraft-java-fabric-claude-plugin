@@ -94,6 +94,19 @@ Write `.minecraft-builder/<project>/plan.toon` in **TOON**
   create as a structure file, so furniture, modules, and repeated parts are
   defined once and stamped many times.
 
+## Terrain and environment
+
+If the build involves terrain, water, or natural scenery — a mountain, a
+river, a biome, a landscaped setting around a structure — **do not plan it
+freehand.** The `terraforming` skill owns that: it applies vetted landscaping
+technique and writes the terrain phases into `plan.toon` for you. Plan the
+structures and capture the requirements; leave the terrain phases to it, and
+note in `requirements.md` that terraforming is needed.
+
+Also keep `fill` steps within Minecraft's volume limit: any single `fill` must
+cover at most ~32,768 blocks (a ~30×30×30 tile is a safe size). Split larger
+volumes into multiple pre-tiled `fill` steps — the worker does no arithmetic.
+
 ## Hand off
 
 State the plan back to the user in plain language and confirm it before
