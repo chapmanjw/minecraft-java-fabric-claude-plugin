@@ -27,8 +27,9 @@ fiction, an "in the style of" request) → the `building-architect` skill; a
 **contraption or working machine** (redstone, an automatic farm, a sorter, a
 door, a minecart system) → the `engineer` skill; a **monument or build-art** (a
 statue, sculpture, giant creature, pixel art, mural, logo) → the
-`monument-builder` skill. Each runs an adaptive interview and iterates with the
-user.
+`monument-builder` skill; a **designed outdoor space** (a formal garden, park,
+plaza, courtyard, hedge maze) → the `landscape-architect` skill. Each runs an
+adaptive interview and iterates with the user.
 
 ## Inputs
 

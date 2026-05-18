@@ -21,7 +21,10 @@ and expert terrain is discipline about the rules below, not effort.
 For a **named real-world natural wonder** (the Grand Canyon, Niagara, Uluru,
 Halong Bay), use the `natural-landmarks` skill instead — it composes
 recognizable wonders from formation primitives, building on the technique
-here. This skill handles generic terrain and scenery.
+here. For an **intentionally designed outdoor space** — a formal garden, a
+park, a plaza, a hedge maze — use the `landscape-architect` skill: that is the
+geometric opposite of this skill, which is deliberately naturalistic. This
+skill handles generic, natural-looking terrain and scenery.
 
 ## Connection
 

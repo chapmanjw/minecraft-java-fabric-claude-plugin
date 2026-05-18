@@ -24,11 +24,15 @@ fabric reads as oppressive.
 
 ## Parks and green space
 
-- **Formal** — geometric parterres, axial paths, clipped hedges, ornamental
-  ponds (a `terraforming`-adjacent task, but laid out by you).
-- **Landscape** — naturalistic parks (Central Park, Hyde Park) — hand the
-  shaping to `terraforming`, keep the paths and edges.
-- Reserve 15–30% of a district as open space across the city.
+Reserve 15–30% of a district as open space across the city, and hand the
+design of each significant green space to a specialist:
+
+- **Formal gardens, plazas, and designed parks** — geometric parterres,
+  squares, civic plazas → the `landscape-architect` skill; give it the
+  envelope, datum, and axis.
+- **Naturalistic parks** — hand the shaping to `terraforming`.
+
+Lay out where the green space goes and how big; let the specialist design it.
 
 ## Fountains and water features
 

@@ -56,6 +56,14 @@ All notable changes to this project are documented in this file. The format is b
   voxelization, palette-gradient mapping (including the copper-oxidation
   chain), and armor-stand detailing. Coordinates with `natural-landmarks`
   (cliffs), `building-architect` (pedestals), and `terraforming` (plinths).
+- `landscape-architect` skill — designs intentionally designed outdoor space:
+  formal gardens, parks, plazas, courtyards, hedge mazes, fountains, parterres,
+  topiary. Covers French formal, Italian, English landscape, Mughal, Japanese,
+  Chinese, modernist, and other traditions. It is the geometric, intentional
+  counterpart to the naturalistic `terraforming`, and coordinates heavily with
+  `terraforming` (grading), `building-architect` (roofed structures),
+  `monument-builder` (statuary), `engineer` (animated water), and
+  `city-planner` (delegated plaza and park envelopes).
 - A `spawn` plan operation (`mc_entity_spawn`) so plans can place villagers,
   animals, and other entities; the `worker` executes it.
 - `inspector` skill — verifies a build in-world after each phase: checks the
@@ -71,15 +79,16 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Changed
 
-- The `minecraft-builder` agent now coordinates fifteen skills: it gained a
+- The `minecraft-builder` agent now coordinates sixteen skills: it gained a
   `shape` step routing terrain work to `terraforming` (generic) or
   `natural-landmarks` (named wonders), routes the `plan` step to
   `player-house` for player bases, `village-planner` for settlements,
   `city-planner` for cities and districts, `building-architect` for specific
   named buildings and replicas, `engineer` for redstone and mechanical
-  contraptions, or `monument-builder` for statues and build-art, and runs the
-  `build` step as a phase-by-phase build-and-inspect loop with the `inspector`
-  for self-correction.
+  contraptions, `monument-builder` for statues and build-art, or
+  `landscape-architect` for designed outdoor space, and runs the `build` step
+  as a phase-by-phase build-and-inspect loop with the `inspector` for
+  self-correction.
 - The `planner` defers terrain phases to the terrain specialists and keeps
   `fill` steps within the ~32,768-block volume limit; the `worker` executes
   pre-tiled fills without merging or splitting them.
