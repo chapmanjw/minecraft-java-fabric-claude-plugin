@@ -41,7 +41,7 @@ that the world is not connected.
 - The world itself, read with `mc_block_get`, `mc_block_get_top`,
   `mc_block_get_volume`, `mc_structure_list`, `mc_entity_get`.
 
-## The three checks
+## The checks
 
 ### 1. Plan fidelity — was the phase carried out?
 
@@ -72,7 +72,16 @@ This is the check a literal step-by-step verifier misses. Look for:
 - **Scale and proportion drift** — the phase visibly diverging from the plan's
   intent.
 
-### 3. Adjustments — what needs to change
+### 3. Functional behaviour — does it actually work?
+
+If the build has an `inspection-recipe.toon` (written by the `engineer` for a
+redstone or mechanical contraption), run its functional tests: apply each
+**trigger** with `mc_run_command`, **wait** the budgeted ticks, **sample** the
+result, and compare to the **expected** value. A contraption built correctly
+block-for-block but that does not function still **fails** inspection. Route a
+functional failure back to the `engineer` to diagnose, not to the worker.
+
+### 4. Adjustments — what needs to change
 
 For every issue, produce a **concrete correction**: the coordinates, what is
 wrong, and the fix as standard plan steps (`fill` / `set` / `replace` /

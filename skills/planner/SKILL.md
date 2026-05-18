@@ -23,8 +23,10 @@ treehouse) → the `player-house` skill; a **settlement up to ~15 buildings** (a
 hamlet, village, trading hub) → the `village-planner` skill; a **city or
 district** (~16+ buildings, a metropolis) → the `city-planner` skill; a
 **specific named building or replica** (a real-world landmark, a building from
-fiction, an "in the style of" request) → the `building-architect` skill. Each
-runs an adaptive interview and iterates blueprints with the user.
+fiction, an "in the style of" request) → the `building-architect` skill; a
+**contraption or working machine** (redstone, an automatic farm, a sorter, a
+door, a minecart system) → the `engineer` skill. Each runs an adaptive
+interview and iterates with the user.
 
 ## Inputs
 

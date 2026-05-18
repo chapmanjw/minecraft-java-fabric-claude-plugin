@@ -75,7 +75,7 @@ for MCP — the first skill triggers automatically — or invoke it explicitly:
 
 ## Builder skills
 
-Thirteen skills make up the build pipeline. Each runs on the model best suited
+Fourteen skills make up the build pipeline. Each runs on the model best suited
 to its work — heavy reasoning where it pays off, a small model for mechanical
 execution. The `minecraft-builder` agent invokes them in order; you can also
 invoke any one directly.
@@ -89,6 +89,7 @@ invoke any one directly.
 | `village-planner` | Designs functional villages and settlements, reusing standard building types. | Opus |
 | `city-planner` | Designs whole cities and districts — urban fabric, zoning, streets, transit, vernacular reuse. | Opus |
 | `building-architect` | Designs specific named buildings — real-world and fictional replicas, originals. | Opus |
+| `engineer` | Designs and verifies complex redstone and mechanical contraptions — Bedrock-correct, with functional tests. | Opus |
 | `terraforming` | Designs natural terrain and environments — mountains, water, biomes — using vetted landscaping technique. | Inherit |
 | `natural-landmarks` | Composes recognizable real-world natural wonders from a library of formation primitives. | Sonnet |
 | `blueprinter` | Turns the plan into named, reusable structure files in the world. | Sonnet |
@@ -97,11 +98,12 @@ invoke any one directly.
 | `philosopher` | Reviews the finished job and records process lessons in project memory. | Sonnet |
 
 The `terraforming`, `natural-landmarks`, `player-house`, `village-planner`,
-`city-planner`, and `building-architect` skills each carry a `reference/`
-library — landforms, water, palettes, weathering, formation primitives, wonder
-recipes, rooms, styles, layouts, village mechanics, urban zoning, vernacular
-modules, architectural techniques, interview scripts, blueprint rendering —
-loaded on demand so the detail never bloats context until it is needed.
+`city-planner`, `building-architect`, and `engineer` skills each carry a
+`reference/` library — landforms, water, palettes, weathering, formation
+primitives, wonder recipes, rooms, styles, layouts, village mechanics, urban
+zoning, vernacular modules, architectural techniques, redstone contraptions,
+interview scripts, blueprint rendering — loaded on demand so the detail never
+bloats context until it is needed.
 
 ## Agents
 
@@ -113,7 +115,7 @@ and carries forward the values later phases depend on (paths, tokens, host).
 **`minecraft-builder`** — designs and constructs elements in a live world. It
 health-checks the MCP connection (and points you at `minecraft-mcp-setup` if
 the world isn't reachable), recovers existing project state from the world,
-then coordinates the thirteen builder skills: survey → research → plan → shape →
+then coordinates the fourteen builder skills: survey → research → plan → shape →
 blueprint → build → inspect → reflect. Delegate to it for anything beyond a trivial block change —
 e.g. *"Build a lakeside village near the nearest player."*
 

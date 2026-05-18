@@ -39,6 +39,16 @@ All notable changes to this project are documented in this file. The format is b
   `building-architect` via a handoff contract, can delegate functional
   quarters to `village-planner`, and works at district / whole-city /
   silhouette scales within Bedrock's limits.
+- `engineer` skill — designs and verifies complex redstone and mechanical
+  contraptions: item sorters, piston and hidden doors, automatic farms,
+  mob-spawner collectors, minecart networks and roller coasters, elevators,
+  note-block music, traps. Bedrock-correct — it refuses Java-only mechanics
+  (quasi-connectivity, 0-tick pulses, BUD switches, TNT duping) — and ships
+  every design with a functional in-world test recipe and a symptom →
+  diagnosis → fix correction catalog.
+- The `inspector` now runs the `engineer`'s functional test recipes
+  (`inspection-recipe.toon`) in addition to its plan-fidelity and world-fit
+  checks — a contraption that does not work fails inspection.
 - A `spawn` plan operation (`mc_entity_spawn`) so plans can place villagers,
   animals, and other entities; the `worker` executes it.
 - `inspector` skill — verifies a build in-world after each phase: checks the
@@ -54,14 +64,14 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Changed
 
-- The `minecraft-builder` agent now coordinates thirteen skills: it gained a
+- The `minecraft-builder` agent now coordinates fourteen skills: it gained a
   `shape` step routing terrain work to `terraforming` (generic) or
   `natural-landmarks` (named wonders), routes the `plan` step to
   `player-house` for player bases, `village-planner` for settlements,
-  `city-planner` for cities and districts, or `building-architect` for
-  specific named buildings and replicas, and runs the `build` step as a
-  phase-by-phase build-and-inspect loop with the `inspector` for
-  self-correction.
+  `city-planner` for cities and districts, `building-architect` for specific
+  named buildings and replicas, or `engineer` for redstone and mechanical
+  contraptions, and runs the `build` step as a phase-by-phase
+  build-and-inspect loop with the `inspector` for self-correction.
 - The `planner` defers terrain phases to the terrain specialists and keeps
   `fill` steps within the ~32,768-block volume limit; the `worker` executes
   pre-tiled fills without merging or splitting them.
