@@ -6,6 +6,13 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-18
+
+The build pipeline. Adds the `minecraft-builder` agent and a suite of
+model-tuned builder skills that survey, research, plan, shape, blueprint,
+build, inspect, and reflect — turning a request into a verified build in a
+live world.
+
 ### Added
 
 - `terraforming` skill — designs natural terrain and environments (mountains,
