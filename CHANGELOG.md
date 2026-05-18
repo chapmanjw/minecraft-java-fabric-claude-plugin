@@ -32,6 +32,13 @@ All notable changes to this project are documented in this file. The format is b
   citations for real-world targets, resolves the book/film/game adaptation
   conflict for fictional ones, applies advanced building technique, and leans
   on a reusable structure-module library so detailed builds stay tractable.
+- `city-planner` skill — designs whole cities and city districts: real-world
+  replicas (modern and historical), pop-culture replicas, and originals. Plans
+  the urban fabric — district zoning, street hierarchy, transit, walls,
+  reused vernacular building modules — defers every named landmark to
+  `building-architect` via a handoff contract, can delegate functional
+  quarters to `village-planner`, and works at district / whole-city /
+  silhouette scales within Bedrock's limits.
 - A `spawn` plan operation (`mc_entity_spawn`) so plans can place villagers,
   animals, and other entities; the `worker` executes it.
 - `inspector` skill — verifies a build in-world after each phase: checks the
@@ -47,13 +54,14 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Changed
 
-- The `minecraft-builder` agent now coordinates twelve skills: it gained a
+- The `minecraft-builder` agent now coordinates thirteen skills: it gained a
   `shape` step routing terrain work to `terraforming` (generic) or
   `natural-landmarks` (named wonders), routes the `plan` step to
-  `player-house` for player bases, `village-planner` for settlements, or
-  `building-architect` for specific named buildings and replicas, and runs the
-  `build` step as a phase-by-phase build-and-inspect loop with the `inspector`
-  for self-correction.
+  `player-house` for player bases, `village-planner` for settlements,
+  `city-planner` for cities and districts, or `building-architect` for
+  specific named buildings and replicas, and runs the `build` step as a
+  phase-by-phase build-and-inspect loop with the `inspector` for
+  self-correction.
 - The `planner` defers terrain phases to the terrain specialists and keeps
   `fill` steps within the ~32,768-block volume limit; the `worker` executes
   pre-tiled fills without merging or splitting them.

@@ -51,9 +51,10 @@ What is the user asking for?
    ratio.
 2. **Interior depth** — aesthetic-only, hybrid (name the hero rooms), or fully
    furnished. Explain the cost difference and give a fill-volume estimate.
-3. **Composition** — standalone, anchoring a village (the `village-planner`
-   coordinates), or doubling as the player's base (the `player-house` skill
-   coordinates).
+3. **Composition** — standalone, a landmark within a city (the `city-planner`
+   coordinates, and may hand you a footprint envelope and anchor), anchoring a
+   village (the `village-planner` coordinates), or doubling as the player's
+   base (the `player-house` skill coordinates).
 
 Then: **project name** (the registry slug).
 

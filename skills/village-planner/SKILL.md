@@ -31,8 +31,11 @@ Two principles run through everything:
 
 ## When to use — and not
 
-Use for a multi-building **settlement**. Do not use for:
+Use for a multi-building **settlement** of up to ~15 buildings. Do not use for:
 
+- A **city or district** (~16+ buildings, a metropolis) → `city-planner`. A
+  city-planner may delegate one functional residential quarter back to this
+  skill.
 - A single player base of operations → `player-house`.
 - A single standalone building → `planner`.
 - A named natural wonder → `natural-landmarks`; pure terrain → `terraforming`.

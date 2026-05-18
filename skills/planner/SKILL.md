@@ -19,11 +19,12 @@ decision**. Every choice is yours; the worker only places what you specify.
 
 Some build types have their own planning specialists — hand off rather than
 planning them here: a player's **base of operations** (a house, survival base,
-treehouse) → the `player-house` skill; a **village or settlement** (a hamlet,
-town, trading hub) → the `village-planner` skill; a **specific named building
-or replica** (a real-world landmark, a building from fiction, an "in the style
-of" request) → the `building-architect` skill. Each runs an adaptive interview
-and iterates blueprints with the user.
+treehouse) → the `player-house` skill; a **settlement up to ~15 buildings** (a
+hamlet, village, trading hub) → the `village-planner` skill; a **city or
+district** (~16+ buildings, a metropolis) → the `city-planner` skill; a
+**specific named building or replica** (a real-world landmark, a building from
+fiction, an "in the style of" request) → the `building-architect` skill. Each
+runs an adaptive interview and iterates blueprints with the user.
 
 ## Inputs
 
