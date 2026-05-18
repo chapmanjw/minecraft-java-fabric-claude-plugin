@@ -11,18 +11,26 @@ All notable changes to this project are documented in this file. The format is b
 - `terraforming` skill — designs natural terrain and environments (mountains,
   valleys, rivers, lakes, coastlines, caves, biomes, weathering) using vetted
   landscaping technique, and writes the terrain phases into the build plan.
-- A `reference/` library inside the terraforming skill — command-budget,
-  landforms, water, biome palettes, and weathering — loaded on demand so
-  technique detail does not bloat context until needed.
+- `natural-landmarks` skill — composes recognizable real-world natural wonders
+  (Grand Canyon, Niagara, Uluru, Halong Bay, Giant's Causeway, …) from a
+  library of reusable formation primitives, enforcing signature features and
+  minimum recognition scale.
+- A `reference/` library inside each of the `terraforming` and
+  `natural-landmarks` skills — command-budget, landforms, water, palettes,
+  weathering, formation primitives, named-wonder recipes, sequencing, and
+  anti-patterns — loaded on demand so technique detail does not bloat context
+  until needed.
 
 ### Changed
 
 - The `minecraft-builder` agent gained a `shape` step and now coordinates
-  seven skills (survey → research → plan → shape → blueprint → build →
-  reflect).
-- The `planner` defers terrain phases to `terraforming` and keeps `fill` steps
-  within the ~32,768-block volume limit; the `worker` executes pre-tiled fills
-  without merging or splitting them.
+  eight skills, routing terrain work to `terraforming` (generic) or
+  `natural-landmarks` (named wonders).
+- The `planner` defers terrain phases to the terrain specialists and keeps
+  `fill` steps within the ~32,768-block volume limit; the `worker` executes
+  pre-tiled fills without merging or splitting them.
+- The `philosopher` checks natural-wonder builds against the
+  `natural-landmarks` signature-feature anti-pattern checklist.
 
 ## [0.2.0] - 2026-05-16
 

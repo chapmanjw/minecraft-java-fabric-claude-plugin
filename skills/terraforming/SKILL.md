@@ -18,6 +18,11 @@ Minecraft Bedrock world. Natural-looking terrain is not "random"; it follows
 rules. Apply them deliberately. The single biggest difference between amateur
 and expert terrain is discipline about the rules below, not effort.
 
+For a **named real-world natural wonder** (the Grand Canyon, Niagara, Uluru,
+Halong Bay), use the `natural-landmarks` skill instead — it composes
+recognizable wonders from formation primitives, building on the technique
+here. This skill handles generic terrain and scenery.
+
 ## Connection
 
 If an `mc_*` call fails because the MCP server is unreachable, stop and tell

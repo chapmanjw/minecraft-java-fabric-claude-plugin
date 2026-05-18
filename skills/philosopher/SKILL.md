@@ -35,6 +35,10 @@ Ask, honestly:
 - Did the survey or research miss something that mattered?
 - What estimates (size, materials, phase count) were off, and by how much?
 - What went *right* and is worth doing again deliberately?
+- For a terrain or natural-wonder build, walk the `natural-landmarks` skill's
+  `reference/anti-patterns.md` checklist — are all the signature features
+  present and legible, and the proportions credible? A failed signature gate
+  is a correction to make, not a cosmetic note.
 
 ## Record lessons — in the right place
 
