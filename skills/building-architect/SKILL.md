@@ -33,6 +33,7 @@ Use for a **specific building or building complex**. Do not use for:
 - A village or settlement → `village-planner`.
 - A player's own base of operations → `player-house`.
 - Terrain or a natural wonder → `terraforming` / `natural-landmarks`.
+- A statue, sculpture, or other figurative art → `monument-builder`.
 
 ## Connection
 

@@ -49,6 +49,13 @@ All notable changes to this project are documented in this file. The format is b
 - The `inspector` now runs the `engineer`'s functional test recipes
   (`inspection-recipe.toon`) in addition to its plan-fidelity and world-fit
   checks — a contraption that does not work fails inspection.
+- `monument-builder` skill — designs monuments and build-art: giant statues,
+  organic creatures, abstract sculpture, pixel art and murals, large 3D text
+  and logos. Produces solid or shell-only figurative forms (no habitable
+  interiors) using pixel-grid image mapping, organic-curve construction,
+  voxelization, palette-gradient mapping (including the copper-oxidation
+  chain), and armor-stand detailing. Coordinates with `natural-landmarks`
+  (cliffs), `building-architect` (pedestals), and `terraforming` (plinths).
 - A `spawn` plan operation (`mc_entity_spawn`) so plans can place villagers,
   animals, and other entities; the `worker` executes it.
 - `inspector` skill — verifies a build in-world after each phase: checks the
@@ -64,14 +71,15 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Changed
 
-- The `minecraft-builder` agent now coordinates fourteen skills: it gained a
+- The `minecraft-builder` agent now coordinates fifteen skills: it gained a
   `shape` step routing terrain work to `terraforming` (generic) or
   `natural-landmarks` (named wonders), routes the `plan` step to
   `player-house` for player bases, `village-planner` for settlements,
   `city-planner` for cities and districts, `building-architect` for specific
-  named buildings and replicas, or `engineer` for redstone and mechanical
-  contraptions, and runs the `build` step as a phase-by-phase
-  build-and-inspect loop with the `inspector` for self-correction.
+  named buildings and replicas, `engineer` for redstone and mechanical
+  contraptions, or `monument-builder` for statues and build-art, and runs the
+  `build` step as a phase-by-phase build-and-inspect loop with the `inspector`
+  for self-correction.
 - The `planner` defers terrain phases to the terrain specialists and keeps
   `fill` steps within the ~32,768-block volume limit; the `worker` executes
   pre-tiled fills without merging or splitting them.

@@ -25,8 +25,10 @@ district** (~16+ buildings, a metropolis) → the `city-planner` skill; a
 **specific named building or replica** (a real-world landmark, a building from
 fiction, an "in the style of" request) → the `building-architect` skill; a
 **contraption or working machine** (redstone, an automatic farm, a sorter, a
-door, a minecart system) → the `engineer` skill. Each runs an adaptive
-interview and iterates with the user.
+door, a minecart system) → the `engineer` skill; a **monument or build-art** (a
+statue, sculpture, giant creature, pixel art, mural, logo) → the
+`monument-builder` skill. Each runs an adaptive interview and iterates with the
+user.
 
 ## Inputs
 
