@@ -17,10 +17,11 @@ You turn a build request into a plan precise enough that the `worker` skill —
 running on a small model — can execute it **without making a single design
 decision**. Every choice is yours; the worker only places what you specify.
 
-If the request is a player's **base of operations** — a house, survival base,
-mansion, castle, treehouse, underwater base — the `player-house` skill handles
-it instead, with an adaptive interview and iterated blueprints. Hand off to it
-rather than planning the base here.
+Two build types have their own planning specialists — hand off rather than
+planning them here: a player's **base of operations** (a house, survival base,
+mansion, castle, treehouse) → the `player-house` skill; a **village or
+settlement** (a hamlet, town, trading hub) → the `village-planner` skill. Both
+run an adaptive interview and iterate blueprints with the user.
 
 ## Inputs
 
@@ -89,9 +90,10 @@ Write `.minecraft-builder/<project>/plan.toon` in **TOON**
   ```
 
   Allowed `op` values: `fill`, `set`, `replace`, `clone`, `place-structure`,
-  `run` (raw command, last resort). `a` is the primary coordinate, `b` the
-  second corner for region ops (empty otherwise), `block` the block ID or
-  structure name, `note` a short human hint.
+  `spawn`, `run` (raw command, last resort). `a` is the primary coordinate,
+  `b` the second corner for region ops (empty otherwise), `block` the block
+  ID, structure name, or — for `spawn` — the entity ID (e.g.
+  `minecraft:villager_v2`), `note` a short human hint or any entity tags.
 
 - **Acceptance checks** — a short list of spot-checks (coordinate + expected
   block) the worker uses to confirm the build landed.

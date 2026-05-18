@@ -35,6 +35,7 @@ table, and `acceptance` checks. Each step row is one operation:
 | `replace` | `mc_block_replace` | In region `a`–`b`, replace one block type with `block`. |
 | `clone` | `mc_block_clone` | Clone region `a`–`b` to the destination in `note`. |
 | `place-structure` | `mc_structure_place` | Stamp structure `block` at `a`. |
+| `spawn` | `mc_entity_spawn` | Spawn entity `block` at `a` (`note` carries any tags). |
 | `run` | `mc_run_command` | Run the raw command in `note`. Last resort. |
 
 Coordinates are absolute `x y z` strings — use them literally. Do no arithmetic.
