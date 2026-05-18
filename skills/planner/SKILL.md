@@ -28,8 +28,10 @@ fiction, an "in the style of" request) → the `building-architect` skill; a
 door, a minecart system) → the `engineer` skill; a **monument or build-art** (a
 statue, sculpture, giant creature, pixel art, mural, logo) → the
 `monument-builder` skill; a **designed outdoor space** (a formal garden, park,
-plaza, courtyard, hedge maze) → the `landscape-architect` skill. Each runs an
-adaptive interview and iterates with the user.
+plaza, courtyard, hedge maze) → the `landscape-architect` skill; a **transit
+network linking two or more sites** (rail, roads, a nether hub, a bridge or
+tunnel between places) → the `transit-architect` skill. Each runs an adaptive
+interview and iterates with the user.
 
 ## Inputs
 

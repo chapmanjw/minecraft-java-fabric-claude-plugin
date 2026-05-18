@@ -68,3 +68,8 @@ Route the transit the city is known for:
 Make transit actually **connect** — a canal that dead-ends, a rail line to
 nowhere, or a bridge that misses the far bank all break the illusion. Verify
 connectivity in the plan.
+
+This covers transit *within* the city. A network *between* the city and other
+settlements — long-distance rail, highways, a nether hub — is the
+`transit-architect` skill's job; hand it the city's transit terminal as the
+connection point.

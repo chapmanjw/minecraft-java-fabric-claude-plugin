@@ -64,6 +64,15 @@ All notable changes to this project are documented in this file. The format is b
   `terraforming` (grading), `building-architect` (roofed structures),
   `monument-builder` (statuary), `engineer` (animated water), and
   `city-planner` (delegated plaza and park envelopes).
+- `transit-architect` skill — designs the world-spanning connective network
+  between builds: rail lines, roads and highways, nether-hub transit, bridges,
+  tunnels, elevators, docks, and airports. Chooses the network topology
+  (hub-and-spoke, mesh, ring, trunk-and-branch, nether hub) and routes the
+  links, applying the nether 8:1 ratio and Bedrock rail and ice-boat
+  mechanics. Owns static infrastructure only — redstone goes to `engineer`,
+  station buildings to `building-architect`, grading to `terraforming`;
+  `city-planner` covers streets within a city, `transit-architect` connects
+  cities.
 - A `spawn` plan operation (`mc_entity_spawn`) so plans can place villagers,
   animals, and other entities; the `worker` executes it.
 - `inspector` skill — verifies a build in-world after each phase: checks the
@@ -79,16 +88,16 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Changed
 
-- The `minecraft-builder` agent now coordinates sixteen skills: it gained a
+- The `minecraft-builder` agent now coordinates seventeen skills: it gained a
   `shape` step routing terrain work to `terraforming` (generic) or
   `natural-landmarks` (named wonders), routes the `plan` step to
   `player-house` for player bases, `village-planner` for settlements,
   `city-planner` for cities and districts, `building-architect` for specific
   named buildings and replicas, `engineer` for redstone and mechanical
-  contraptions, `monument-builder` for statues and build-art, or
-  `landscape-architect` for designed outdoor space, and runs the `build` step
-  as a phase-by-phase build-and-inspect loop with the `inspector` for
-  self-correction.
+  contraptions, `monument-builder` for statues and build-art,
+  `landscape-architect` for designed outdoor space, or `transit-architect` for
+  networks connecting sites, and runs the `build` step as a phase-by-phase
+  build-and-inspect loop with the `inspector` for self-correction.
 - The `planner` defers terrain phases to the terrain specialists and keeps
   `fill` steps within the ~32,768-block volume limit; the `worker` executes
   pre-tiled fills without merging or splitting them.
