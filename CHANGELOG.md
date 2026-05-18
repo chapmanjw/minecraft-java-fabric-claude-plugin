@@ -26,6 +26,12 @@ All notable changes to this project are documented in this file. The format is b
   adapted to the biome and the request. Proposes layout options, iterates with
   the user, and respects Bedrock village mechanics (iron golems, beds,
   workstations, bells, raids, breeding, cats).
+- `building-architect` skill — designs specific named buildings: real-world
+  replicas (historical and modern), pop-culture replicas, user-described
+  originals, and generative-style fictional buildings. Uses deep research with
+  citations for real-world targets, resolves the book/film/game adaptation
+  conflict for fictional ones, applies advanced building technique, and leans
+  on a reusable structure-module library so detailed builds stay tractable.
 - A `spawn` plan operation (`mc_entity_spawn`) so plans can place villagers,
   animals, and other entities; the `worker` executes it.
 - A `reference/` library inside the `terraforming`, `natural-landmarks`, and
@@ -36,10 +42,11 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Changed
 
-- The `minecraft-builder` agent now coordinates ten skills: it gained a
+- The `minecraft-builder` agent now coordinates eleven skills: it gained a
   `shape` step routing terrain work to `terraforming` (generic) or
   `natural-landmarks` (named wonders), and routes the `plan` step to
-  `player-house` for player bases or `village-planner` for settlements.
+  `player-house` for player bases, `village-planner` for settlements, or
+  `building-architect` for specific named buildings and replicas.
 - The `planner` defers terrain phases to the terrain specialists and keeps
   `fill` steps within the ~32,768-block volume limit; the `worker` executes
   pre-tiled fills without merging or splitting them.
