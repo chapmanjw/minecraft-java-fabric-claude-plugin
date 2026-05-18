@@ -23,6 +23,8 @@ Review, for the just-finished job:
 - `.minecraft-builder/<project>/plan.toon` — what was planned.
 - `.minecraft-builder/<project>/survey.toon` and `research.*` — what was known.
 - The `worker`'s execution report — what actually happened.
+- `.minecraft-builder/<project>/inspections.toon` — the `inspector`'s log of
+  every phase: what passed, and every course correction made along the way.
 - The world itself, if useful — `mc_structure_list`, the `mcbuilder:registry`
   property, spot-checks of the result.
 
@@ -31,6 +33,9 @@ Review, for the just-finished job:
 Ask, honestly:
 
 - Where did plan and reality diverge — failed steps, rework, deviations?
+- What did the `inspector` have to course-correct, and why? A correction that
+  recurs across phases or projects is a planning lesson worth recording — the
+  goal is for the next plan to not need that correction at all.
 - Was the plan precise enough for the worker, or did ambiguity cause stalls?
 - Did the survey or research miss something that mattered?
 - What estimates (size, materials, phase count) were off, and by how much?

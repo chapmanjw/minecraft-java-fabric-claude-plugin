@@ -34,6 +34,11 @@ All notable changes to this project are documented in this file. The format is b
   on a reusable structure-module library so detailed builds stay tractable.
 - A `spawn` plan operation (`mc_entity_spawn`) so plans can place villagers,
   animals, and other entities; the `worker` executes it.
+- `inspector` skill — verifies a build in-world after each phase: checks the
+  plan was carried out, that the result fits the world cleanly (no dangling
+  edges, blocked paths, or unintended overrides), and proposes course
+  corrections. Runs after every major phase as the build's self-correction
+  checkpoint; its corrections are logged for the `philosopher`.
 - A `reference/` library inside the `terraforming`, `natural-landmarks`, and
   `player-house` skills — command-budget, landforms, water, palettes,
   weathering, formation primitives, wonder recipes, rooms, styles, layouts,
@@ -42,11 +47,13 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Changed
 
-- The `minecraft-builder` agent now coordinates eleven skills: it gained a
+- The `minecraft-builder` agent now coordinates twelve skills: it gained a
   `shape` step routing terrain work to `terraforming` (generic) or
-  `natural-landmarks` (named wonders), and routes the `plan` step to
+  `natural-landmarks` (named wonders), routes the `plan` step to
   `player-house` for player bases, `village-planner` for settlements, or
-  `building-architect` for specific named buildings and replicas.
+  `building-architect` for specific named buildings and replicas, and runs the
+  `build` step as a phase-by-phase build-and-inspect loop with the `inspector`
+  for self-correction.
 - The `planner` defers terrain phases to the terrain specialists and keeps
   `fill` steps within the ~32,768-block volume limit; the `worker` executes
   pre-tiled fills without merging or splitting them.

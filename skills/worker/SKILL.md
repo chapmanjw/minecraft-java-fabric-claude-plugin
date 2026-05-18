@@ -40,6 +40,10 @@ table, and `acceptance` checks. Each step row is one operation:
 
 Coordinates are absolute `x y z` strings — use them literally. Do no arithmetic.
 
+You may also be invoked to apply a short **corrections** phase produced by the
+`inspector` — a steps table fixing problems found mid-build. Execute it exactly
+like any other steps, in order.
+
 ## Execute
 
 - Work **phase by phase, step by step, in `seq` order**. Never reorder steps.
