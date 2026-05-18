@@ -141,8 +141,11 @@ Brief — same parameter discipline applies.
   cylinders) on banded terracotta ground.
 - **speleothem-column / cave-drapery** — pointed dripstone stalactites and
   stalagmites.
-- **sequoia-tree / baobab-tree / cypress-knee-patch / mangrove-root-cluster** —
-  oversized and specialty vegetation primitives.
+- **sequoia-tree / baobab-tree** — oversized *hero* tree primitives, built as
+  deliberate one-offs and **never duplicated**. **cypress-knee-patch /
+  mangrove-root-cluster** — specialty ground vegetation. For ordinary trees and
+  any grove, **grow saplings — never place or repeat a tree** — see the
+  `terraforming` skill's `reference/weathering.md`.
 
 ## Common mistakes
 

@@ -45,13 +45,42 @@ Scatter these in **clusters**, not evenly:
   or exposed stone — pristine uniform grass reads as paint.
 - **Double-layer.** Always ≥2 substrate blocks under the surface.
 
-## Trees
+## Trees — grow them, never place them
 
-- Never a solid cube canopy. Build 3–5 leaf **lobes** of varying size around
-  the trunk.
-- Vary trunk height and a slight lean within a stand.
-- Keep trees **short and away from mountain feet** — oversized trees dwarf the
-  topography and kill the sense of scale.
+**Never build a tree block by block, and never stamp the same tree structure
+twice.** A hand-placed canopy and duplicated trees are the loudest tell in any
+landscape — real groves are all different. Every tree is **grown from a
+sapling** so vanilla generation makes each one unique.
+
+To plant trees:
+
+1. **Pick the species** for the biome and the look — `oak_sapling`,
+   `spruce_sapling`, `birch_sapling`, `jungle_sapling`, `acacia_sapling`,
+   `dark_oak_sapling`, `cherry_sapling`, `mangrove_propagule`, or `azalea` /
+   `flowering_azalea` (which grow into azalea trees).
+2. **Place the sapling** with `mc_block_set` on valid soil (dirt, grass,
+   podzol, mud for mangrove), with the light and headroom the species needs.
+   For 2×2 species — jungle, dark oak, large spruce — place the full
+   four-sapling square.
+3. **Space them naturally** — clusters of 3–7 with irregular gaps, never a
+   grid. The 7-block rule applies to tree lines too.
+4. **Grow them.** Two methods:
+   - **Tick speed (scriptable).** Temporarily raise `randomTickSpeed` with
+     `mc_run_command` (`/gamerule randomTickSpeed <high, e.g. 300>`), let the
+     saplings grow, then **restore it to the previous value** (Bedrock default
+     is `1`). Raised tick speed also speeds crops, fire spread, and leaf decay
+     in loaded chunks — raise it briefly and restore it promptly.
+   - **Bone meal.** Apply bone meal to each sapling (via a player or a
+     dispenser). Use when the build has something able to do so.
+5. **Vary** species, age, and spacing across a stand so no two trees match —
+   that variation is the whole point of growing rather than placing.
+
+A single oversized **hero tree** — a giant landmark baobab or sequoia beyond
+vanilla sapling scale — may be custom-built as a deliberate one-off, but it is
+never duplicated. Ordinary trees and every grove are grown.
+
+Keep trees short and away from mountain feet — oversized trees dwarf the
+topography and kill the sense of scale.
 
 ## Composition principles
 

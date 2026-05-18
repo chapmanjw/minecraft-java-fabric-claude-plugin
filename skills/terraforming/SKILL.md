@@ -50,6 +50,11 @@ read as "kindergarten":
 6. **Exaggerate scale.** A 1-block player needs 30–50-block hills to feel
    "tall", 80–150 for mountainous. Vertical exaggeration and keeping trees
    short and away from mountain feet sells the illusion.
+7. **Grow trees, never place them.** Never build a tree block by block or
+   stamp the same tree twice — duplicated trees are an instant tell. Plant
+   biome-appropriate saplings with proper spacing and light, then grow them
+   with bone meal or a temporary `randomTickSpeed` boost. See
+   `reference/weathering.md`.
 
 ## The five-pass workflow
 
