@@ -15,17 +15,24 @@ All notable changes to this project are documented in this file. The format is b
   (Grand Canyon, Niagara, Uluru, Halong Bay, Giant's Causeway, …) from a
   library of reusable formation primitives, enforcing signature features and
   minimum recognition scale.
-- A `reference/` library inside each of the `terraforming` and
-  `natural-landmarks` skills — command-budget, landforms, water, palettes,
-  weathering, formation primitives, named-wonder recipes, sequencing, and
-  anti-patterns — loaded on demand so technique detail does not bloat context
-  until needed.
+- `player-house` skill — designs a player's base of operations through an
+  adaptive interview, proposes ASCII / Markdown-table / Mermaid blueprints,
+  iterates with the user until approved, then writes the build plan. Covers
+  rooms, architectural styles, layouts, special-site environments (underwater,
+  mountainside, cave, sky, nether, end), functional systems, storage, and
+  interiors.
+- A `reference/` library inside the `terraforming`, `natural-landmarks`, and
+  `player-house` skills — command-budget, landforms, water, palettes,
+  weathering, formation primitives, wonder recipes, rooms, styles, layouts,
+  environments, utilities, interiors, interview scripts, and blueprint
+  rendering — loaded on demand so detail does not bloat context until needed.
 
 ### Changed
 
-- The `minecraft-builder` agent gained a `shape` step and now coordinates
-  eight skills, routing terrain work to `terraforming` (generic) or
-  `natural-landmarks` (named wonders).
+- The `minecraft-builder` agent now coordinates nine skills: it gained a
+  `shape` step routing terrain work to `terraforming` (generic) or
+  `natural-landmarks` (named wonders), and routes the `plan` step to
+  `player-house` for player bases of operations.
 - The `planner` defers terrain phases to the terrain specialists and keeps
   `fill` steps within the ~32,768-block volume limit; the `worker` executes
   pre-tiled fills without merging or splitting them.

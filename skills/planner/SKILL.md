@@ -17,6 +17,11 @@ You turn a build request into a plan precise enough that the `worker` skill —
 running on a small model — can execute it **without making a single design
 decision**. Every choice is yours; the worker only places what you specify.
 
+If the request is a player's **base of operations** — a house, survival base,
+mansion, castle, treehouse, underwater base — the `player-house` skill handles
+it instead, with an adaptive interview and iterated blueprints. Hand off to it
+rather than planning the base here.
+
 ## Inputs
 
 Before planning, gather what exists:
