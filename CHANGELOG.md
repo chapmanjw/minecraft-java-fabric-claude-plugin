@@ -6,6 +6,31 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-18
+
+Structure uploads. Build elements that are easier to compute than to lay by
+hand — pixel-art murals, voxelized forms — can now be generated and uploaded
+as `.mcstructure` files instead of placed block by block. Needs
+[`minecraft-bedrock-mcp-server`](https://github.com/chapmanjw/minecraft-bedrock-mcp-server)
+and
+[`minecraft-bedrock-mcp-behavior-pack`](https://github.com/chapmanjw/minecraft-bedrock-mcp-behavior-pack)
+v0.2.0 for the `mc_structure_upload` and `mc_server_reload_world` tools.
+
+### Added
+
+- `blueprinter` gains a third blueprint method — generating a block-grid
+  structure definition and uploading it with `mc_structure_upload`, alongside
+  capture-from-world and the block-by-block loop. A new
+  `reference/structure-upload.md` covers the definition format, ZYX index
+  ordering, generating the grid with a script, and the world-reload
+  requirement (`/reload all` needs an online player).
+
+### Changed
+
+- `monument-builder` routes a quantized pixel-art grid or a voxelized form
+  through the `blueprinter`'s upload path rather than emitting it as thousands
+  of `fill` / `set` rows in the plan.
+
 ## [0.3.0] - 2026-05-18
 
 The build pipeline. Adds the `minecraft-builder` agent and a suite of

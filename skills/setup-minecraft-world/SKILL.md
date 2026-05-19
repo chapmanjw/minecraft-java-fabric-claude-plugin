@@ -126,7 +126,7 @@ Copy-Item -Recurse .\bedrock-bridge $bp
 Create (or edit) `<world>/world_behavior_packs.json` so BDS loads the pack:
 
 ```json
-[{ "pack_id": "fa013817-66f2-4a5f-a724-1347f912bd40", "version": [0, 1, 0] }]
+[{ "pack_id": "fa013817-66f2-4a5f-a724-1347f912bd40", "version": [0, 2, 0] }]
 ```
 
 `pack_id` is the pack's header UUID — use exactly the value above. If the pack
