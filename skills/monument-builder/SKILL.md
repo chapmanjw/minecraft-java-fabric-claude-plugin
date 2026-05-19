@@ -113,9 +113,9 @@ Pass siblings a shared anchor coordinate through the `mcbuilder:registry`.
 7. **Design into the plan** — write pre-tiled phases and steps into
    `plan.toon`; save reusable tiles as `mcb_<project>_<element>` structures via
    the `blueprinter`. A pixel-art grid or a voxelized form is a **generated
-   grid** — have the `blueprinter` build it with the `mc_structure_upload`
-   path rather than as thousands of `fill`/`set` rows. Queue armor-stand
-   decoration as a late phase.
+   grid** — have the `blueprinter` build it with
+   `mc_structure_create_from_blocks` rather than as thousands of `fill`/`set`
+   rows. Queue armor-stand decoration as a late phase.
 8. **Render and iterate** — produce blueprints (`reference/blueprints.md`),
    show the user, revise, and **loop until they approve**.
 9. **Hand off** — write the plan and register the monument.

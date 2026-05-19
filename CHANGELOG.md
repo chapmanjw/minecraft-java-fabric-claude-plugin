@@ -6,6 +6,28 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-18
+
+Replaces the 0.4.0 structure-upload path, which did not work on a dedicated
+server. Needs
+[`minecraft-bedrock-mcp-server`](https://github.com/chapmanjw/minecraft-bedrock-mcp-server)
+and
+[`minecraft-bedrock-mcp-behavior-pack`](https://github.com/chapmanjw/minecraft-bedrock-mcp-behavior-pack)
+v0.3.0.
+
+### Changed
+
+- The `blueprinter`'s third blueprint method now builds a structure with
+  `mc_structure_create_from_blocks` — it sends a run-length-encoded block grid
+  to the behavior pack, which builds a world-saved structure directly,
+  immediately placeable. This replaces the 0.4.0 `mc_structure_upload` path,
+  which wrote a `.mcstructure` file and relied on a world reload that does not
+  re-index structure files on a dedicated server, and on a host-side file path
+  unreachable from a remote client. The `reference/structure-upload.md` guide
+  is rewritten as `reference/generated-structures.md`.
+- `monument-builder` routes pixel-art grids and voxelized forms through
+  `mc_structure_create_from_blocks`.
+
 ## [0.4.0] - 2026-05-18
 
 Structure uploads. Build elements that are easier to compute than to lay by

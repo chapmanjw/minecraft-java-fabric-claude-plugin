@@ -46,17 +46,15 @@ For every element in the plan's `blueprints` list:
      capture it with `mc_structure_create_from_world` over its exact bounds.
    - **Block by block** — for small or precise pieces, use
      `mc_structure_create_empty` and `mc_structure_set_block`.
-   - **Upload a generated grid** — if the element is easier to describe with a
+   - **Generate a block grid** — if the element is easier to describe with a
      formula or script than to lay by hand (pixel-art murals, voxelized
-     models, anything image-mapped or parametric), generate a structure
-     definition and `mc_structure_upload` it. See
-     `reference/structure-upload.md`. The placed id is `mcp:<name>`.
+     models, anything image-mapped or parametric), generate a run-length-encoded
+     block grid and build it with `mc_structure_create_from_blocks`. See
+     `reference/generated-structures.md`.
 2. Build it from the plan's exact materials and dimensions.
-3. Save it under the `mcb_<project>_<element>` name — or, for an upload,
-   `mcp:<project>_<element>`.
-4. Verify the saved size: `mc_structure_get` / `mc_structure_list` for world
-   structures; for an upload, see the verification note in
-   `reference/structure-upload.md`.
+3. Save it under the `mcb_<project>_<element>` name.
+4. Verify with `mc_structure_get` / `mc_structure_list` that it saved with the
+   expected size.
 
 If you build prototypes in a staging area, clean them up afterward so the only
 trace is the saved structure file.
