@@ -3,6 +3,83 @@
 Shaping rock and land. Every technique here assumes the non-negotiable rules
 from `SKILL.md` (7-block rule, asymmetry, no 45°, double-layer).
 
+## The heightmap method — default for anything over ~30 blocks
+
+For any landform whose footprint is larger than ~30 blocks in either
+horizontal axis, **build it from a per-column heightmap**, not from stacked
+rectangular fills. This is the technique that took Cape Aurelia from a flat
+ziggurat to "1000× better" in one rebuild.
+
+The recipe:
+
+1. **Per-column heightmap.** For each `(x, z)` in the footprint compute a
+   target surface height `h(x, z)` as:
+
+   ```
+   h(x, z) = sea_level
+           + base_amplitude * radial_falloff(x, z, center, max_radius)
+           * sum_octaves(value_noise(x*f, z*f) * a for (f, a) in octaves)
+   ```
+
+   - **Multi-octave value noise.** 3–4 octaves at frequencies (0.06, 0.13,
+     0.27, 0.55) and amplitudes (1.0, 0.5, 0.25, 0.12), summed and normalised.
+     A coherent surface with detail at every scale.
+   - **Radial falloff.** Smoothstep that goes 1 at the centre and 0 at
+     `max_radius`. Multiplied with the noise so the landmass tapers naturally
+     into the surrounding sea or plain.
+   - **Organic blob lakes / coves / inlets.** A cove is a point where
+     `hypot(dx*sx, dz*sz) + valueNoise(x,z) < 1` — an irregular elliptical
+     blob, never a circle or rectangle. Carve from `h` so the column floods.
+   - **Blended build pads.** Where a flat pad is needed for a building, set
+     `h = pad_height` inside the pad and blend a 9-block shoulder where it
+     meets natural terrain. The pad is buildable; the shoulder hides the
+     transition.
+
+2. **Bake to RLE tiles.** Walk `(x, z)` in tile-sized chunks (≤30×30 with a
+   tile depth fitting under 64×384×64 and ~1500 RLE runs — see
+   `command-budget.md`). For each column write a vertical run: stone /
+   substrate / surface block / air (or water above sea level). Encode as
+   compact RLE for `mc_structure_create_from_blocks`.
+
+3. **Place tiles.** One `mc_structure_create_from_blocks` per tile, one
+   `mc_structure_place` per spot. Pace the placements (≤6–8 in a row, then a
+   light verify read) to avoid bridge drops.
+
+4. **Tiles reach the seabed.** For coastal tiles, extend the column down to
+   the seabed (or at least 10 blocks below the lowest expected water column)
+   so water sits on real ground, not in a void-over-rock shelf.
+
+This is fast, repeatable, and produces organic terrain by construction. Once
+the heightmap is right, re-placing it is one tool call per tile. Stacked
+rectangular fills produced the v1 ziggurat — do not return to that method.
+
+## Naturalising an existing rectangular mass — the talus-skirt rescue
+
+If you discover a rectangular foundation, base mass, or "corestone megablock"
+underwater or above ground that violates the foundations-are-terrain rule,
+**do not demolish it** — naturalise it. The pattern that worked at
+Cape Aurelia:
+
+1. **Banded talus skirt.** Place 4–6 concentric bands around the rectangle,
+   each ~2–4 blocks wider than the band above it (or narrower as height
+   rises). Mix the band's blocks with the surrounding terrain palette
+   (basalt + smooth_basalt + tuff for a basaltic headland; granite + gravel
+   + cobblestone for a generic mountain). Edge each band with the 7-block
+   rule — never a clean ring.
+2. **Corner knolls.** At each corner of the rectangle, place a small
+   asymmetric mound that extends the rock outward and breaks the corner
+   silhouette. Knolls should be different sizes; do not paste the same one
+   four times.
+3. **Side mounds.** Along the longer faces, drop 2–3 irregular mounds that
+   bulge the wall outward by 4–8 blocks. Heights and footprints vary.
+4. **Cap with naturalistic surface.** Top the skirt with the appropriate
+   biome surface (grass/dirt + scree, sand + gravel, etc.) blended into the
+   existing terrain above.
+
+The result reads as an organic massif with the original rectangle hidden
+inside it. Underwater, concentrate effort in the **lit band** (seabed → seabed
++ ~20); below that, fog black hides detail and the blocks are wasted.
+
 ## Mountains
 
 1. **Irregular base outline.** The footprint is never a circle or oval — it is

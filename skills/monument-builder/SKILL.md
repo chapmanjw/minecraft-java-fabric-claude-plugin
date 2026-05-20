@@ -81,7 +81,7 @@ Five techniques carry the work — pick the ones the piece needs:
   off to `terraforming` so the figure sits at 1:1 on a plinth.
 - A monument over ~64 blocks in any horizontal axis exceeds one structure
   file (64×384×64) — split it into tiles along natural anatomy seams (a
-  waist, a neck, a limb joint), each a `mcb_<project>_<element>` structure.
+  waist, a neck, a limb joint), each a `mcb:<project>_<element>` structure.
 - Keep `fill` steps in `plan.toon` pre-tiled to ≤32,768 blocks. For the full
   limit detail, follow the `terraforming` skill's `reference/command-budget.md`.
 
@@ -111,11 +111,22 @@ Pass siblings a shared anchor coordinate through the `mcbuilder:registry`.
    files).
 6. **Coordinate siblings** — emit handoffs for any cliff, pedestal, or plinth.
 7. **Design into the plan** — write pre-tiled phases and steps into
-   `plan.toon`; save reusable tiles as `mcb_<project>_<element>` structures via
-   the `blueprinter`. A pixel-art grid or a voxelized form is a **generated
-   grid** — have the `blueprinter` build it with
-   `mc_structure_create_from_blocks` rather than as thousands of `fill`/`set`
-   rows. Queue armor-stand decoration as a late phase.
+   `plan.toon`; save reusable tiles as `mcb:<project>_<element>` (colon
+   namespace) structures via the `blueprinter`. A pixel-art grid or a
+   voxelized form is a **generated grid** — have the `blueprinter` build it
+   with `mc_structure_create_from_blocks` rather than as thousands of
+   `fill`/`set` rows. Queue armor-stand decoration as a late phase.
+
+   **Emit a `quality_contract` block** per the schema in `planner/SKILL.md`.
+   For monuments and sculptures the contract should include:
+   - **silhouette** rows asserting the outline is legible from the
+     intended viewing distance (sample surface points; height variance
+     must match the design).
+   - **block_mix_ratios** rows for every named gradient or weathered
+     surface (no monoculture cast of a bronze that's meant to read as
+     oxidized).
+   - **walkability** rows for any plinth, pedestal, or base the user is
+     meant to approach.
 8. **Render and iterate** — produce blueprints (`reference/blueprints.md`),
    show the user, revise, and **loop until they approve**.
 9. **Hand off** — write the plan and register the monument.

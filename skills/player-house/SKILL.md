@@ -88,7 +88,25 @@ the user to run the `minecraft-mcp-setup` agent.
    build into `.minecraft-builder/<project>/plan.toon` (the standard schema —
    absolute coordinates, pre-tiled `fill` steps, phases) and record the base
    and its rooms in the `mcbuilder:registry` world property. Name each room as
-   a structure module the `blueprinter` will create: `mcb_<project>_<room>`.
+   a structure module the `blueprinter` will create:
+   `mcb:<project>_<room>` (colon namespace — required by the structure
+   create tools; underscore-only IDs are rejected).
+
+   **Emit a `quality_contract` block** per the schema in `planner/SKILL.md`.
+   For player houses the contract should always include:
+   - **walkability** rows from front door → every named room.
+   - **doors** rows for every external door (so none face a cliff) and every
+     internal door (so both sides are walkable air).
+   - **headroom** rows over every stair and corridor (min 2 blocks clear).
+   - **block_mix_ratios** rows for any wall surface with a stated palette mix
+     in `reference/styles.md` (no monoculture wall planes).
+   - **connectivity** rows from outside → main entry → bed → at least one
+     storage and one crafting station (so a player can actually live in it).
+
+   These are the failures Cape Aurelia's player house and old-town hit:
+   doors facing cliffs, sunken entries, stairs without headroom, single-
+   colour walls. The contract is the inspector's hook to catch them
+   automatically.
 
 ## Reference library
 

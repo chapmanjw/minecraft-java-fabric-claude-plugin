@@ -133,7 +133,7 @@ The builder keeps **persistent state in the Minecraft world**, not in your
 workspace — a project folder is useful only while you're working in it, but the
 world travels everywhere:
 
-- **Blueprints** are saved as named structure files (`mcb_<project>_<element>`),
+- **Blueprints** are saved as named structure files (`mcb:<project>_<element>`),
   so build elements can be placed, copied, and iterated later.
 - A **registry** — a world dynamic property `mcbuilder:registry` holding a
   [TOON](https://toonformat.dev/) document — records every project and build

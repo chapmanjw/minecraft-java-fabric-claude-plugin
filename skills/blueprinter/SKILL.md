@@ -31,10 +31,16 @@ the user to run the `minecraft-mcp-setup` agent.
 
 ## Naming
 
-Name every structure **`mcb_<project>_<element>`** — lowercase, consistent,
-project-scoped. This makes the whole library discoverable with
-`mc_structure_list` and unambiguous to the `worker` and future sessions. If a
-build tool requires a namespace, use `mcb:<project>_<element>`.
+Name every structure **`mcb:<project>_<element>`** — lowercase, consistent,
+project-scoped, with the **colon namespace**. This is the canonical form
+across the whole plugin: in `plan.toon`, in `mcbuilder:registry`, and in
+every `mc_structure_*` call.
+
+The colon is required, not optional. `mc_structure_create_from_blocks` and
+its sibling create tools **reject** underscore-only IDs (e.g.
+`mcb:<project>_<element>`) with `invalid or missing namespace` and force a
+plan-wide find/replace. Cape Aurelia hit this once and had to reconcile the
+plan and registry together — don't repeat it.
 
 ## Create each blueprint
 
@@ -52,7 +58,7 @@ For every element in the plan's `blueprints` list:
      block grid and build it with `mc_structure_create_from_blocks`. See
      `reference/generated-structures.md`.
 2. Build it from the plan's exact materials and dimensions.
-3. Save it under the `mcb_<project>_<element>` name.
+3. Save it under the `mcb:<project>_<element>` name.
 4. Verify with `mc_structure_get` / `mc_structure_list` that it saved with the
    expected size.
 
@@ -75,7 +81,7 @@ Record every blueprint in the **`mcbuilder:registry`** world dynamic property
 
 ```toon
 builds[1]{project,element,structure,x,y,z,status,revision}:
-  lakeside-village,table-set,mcb_lakeside-village_table-set,0,0,0,blueprint,1
+  lakeside-village,table-set,mcb:lakeside-village_table-set,0,0,0,blueprint,1
 ```
 
 Use `status: blueprint` for a defined-but-not-yet-placed structure; the

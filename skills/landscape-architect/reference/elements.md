@@ -1,7 +1,7 @@
 # Garden elements
 
 The constructed pieces of a designed garden. Each is a reusable unit — define
-it once as a `mcb_<project>_<element>` structure and stamp it.
+it once as a `mcb:<project>_<element>` structure and stamp it.
 
 ## The leaf-persistence rule
 

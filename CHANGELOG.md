@@ -6,6 +6,91 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-05-19
+
+Quality gates from the Cape Aurelia retrospective. The builder pipeline now
+catches the failure modes that turned a single-pass terrain build into three
+iterations: stacked-rectangle "ziggurat" terrain, rectangular underwater
+foundations, doors facing cliffs, sunken houses, single-colour walls, stale
+plans against rebuilt terrain, and self-cycling redstone that ships static.
+Skill-level changes only — no new MCP tools; still pairs with
+[`minecraft-bedrock-mcp-server`](https://github.com/chapmanjw/minecraft-bedrock-mcp-server)
+and
+[`minecraft-bedrock-mcp-behavior-pack`](https://github.com/chapmanjw/minecraft-bedrock-mcp-behavior-pack)
+v0.3.0.
+
+### Added
+
+- **`quality_contract` schema** in `plan.toon` — a machine-checkable list of
+  the properties the finished build must satisfy: walkability between named
+  rooms, door clearance and facing, headroom over stairs, block-mix ratios
+  for wall surfaces, silhouette variance for naturalistic terrain, edge
+  irregularity for coastlines and ridges, foundation naturalisation for
+  underwater masses, water-column continuity for coasts, and site
+  connectivity for transit networks. The `planner` owns the canonical
+  schema; every planner-class skill emits the rows relevant to its domain.
+- `inspector` parses the contract and runs the sampling algorithms — new
+  `reference/contract-checks.md` documents each row's algorithm, threshold,
+  and root-cause-routing behaviour on failure. Inspection now samples
+  **below sea level** too, so an underwater rectangular foundation cannot
+  pass.
+- `terraforming/reference/non-negotiable-enforcement.md` — the
+  non-negotiable rules (7-block, asymmetry, no monoculture, double-layer)
+  expressed as `quality_contract` rows the inspector checks automatically.
+- `engineer/reference/setblock-redstone-limits.md` — documents which
+  redstone patterns self-start when placed via `setblock` and which need a
+  one-time player right-click to kick. The `inspection-recipe.toon` schema
+  gains a `manual_kick` block; the `philosopher`'s report and the
+  `minecraft-builder` agent's final summary surface every outstanding kick
+  step prominently.
+- `minecraft-builder` agent gains an **honesty contract** (Step 0b.5) —
+  before classifying a request it must flag blind-build limits up-front:
+  no visual judgement from sampling, auto-cycling redstone needs a manual
+  kick, naturalistic terrain needs a prototype-first checkpoint, and never
+  silently downgrade scope.
+
+### Changed
+
+- `terraforming/SKILL.md` adds two **hard rules** above the non-negotiables:
+  heightmap-or-live-sculpt for any landform over ~30 blocks of extent
+  (stacked rectangular fills are refused — they produce the ziggurat
+  artifact), and foundations-are-terrain including underwater faces (no
+  rectangular corestone megablocks). Plus a mandatory **prototype-first
+  checkpoint** — build a ~20×20 patch and ask the user to glance before
+  scaling up.
+- `terraforming/reference/landforms.md` documents the **heightmap method**
+  (multi-octave value noise + radial falloff + organic-blob coves + blended
+  build pads, baked to RLE structure tiles) and the **talus-skirt rescue**
+  for naturalising an existing rectangular mass.
+- `terraforming/reference/command-budget.md` adds bridge-pacing rules
+  (≤6–8 heavy ops then a verify read; never chase a placement burst with a
+  read burst), the 1500-RLE-runs-per-tile cap, the chunk-loading-trap
+  guidance (ticking areas keep work-zone chunks loaded), and the
+  canonical colon-namespace `mcb:<project>_<element>` rule.
+- `worker/SKILL.md` adds **stale-plan detection** — sample the planned `b`
+  (before-state) of the first few steps and HALT if the world doesn't match,
+  rather than overwriting onto stale coordinates.
+- `blueprinter`, `planner`, `surveyor`, and all planner-class skills now
+  use **`mcb:<project>_<element>`** (colon namespace) as the canonical
+  structure name — the create tools reject underscore-only IDs.
+- `engineer/SKILL.md` puts the setblock-redstone limit at the top: prefer
+  lever/button/plate-triggered designs over self-starting clocks; declare a
+  `manual_kick` step for any clock that needs one; never silently ship a
+  static structure where a moving one was promised.
+- Every planner-class skill (`player-house`, `village-planner`,
+  `city-planner`, `building-architect`, `landscape-architect`,
+  `monument-builder`, `transit-architect`, `natural-landmarks`) now emits
+  a `quality_contract` block tailored to its domain (walkability and door
+  clearance for houses, connectivity for cities and transit, silhouette
+  and edge-irregularity for natural wonders, etc.).
+- `philosopher` aggregates every `manual_kick` from the project's
+  `inspection-recipe.toon` files and surfaces them as an **Outstanding
+  manual steps** section in the final retrospective.
+- `minecraft-builder` agent's build loop now routes corrections by failure
+  type (silhouette/edge to terraforming; walkability/doors/headroom to the
+  planner-class skill) rather than always to the worker, since
+  half-measures cost more iterations than fixing root causes.
+
 ## [0.5.0] - 2026-05-18
 
 Replaces the 0.4.0 structure-upload path, which did not work on a dedicated

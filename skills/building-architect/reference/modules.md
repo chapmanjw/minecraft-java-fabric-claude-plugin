@@ -23,7 +23,7 @@ That is a handful of designed pieces, then placement.
 1. **Identify the modules** — scan the building for what repeats: bays, tiers,
    towers, buttresses, window units, roof segments.
 2. The `blueprinter` builds each module **once** and saves it as a named
-   structure, `mcb_<project>_<element>` (e.g. `mcb_notredame_buttress`).
+   structure, `mcb:<project>_<element>` (e.g. `mcb:notredame_buttress`).
 3. The `worker` **stamps** each module wherever the manifest places it, using
    rotation and mirror for corners and opposite faces.
 4. **Vary** to avoid a copy-paste look — alternate two window variants, age

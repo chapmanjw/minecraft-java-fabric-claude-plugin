@@ -64,7 +64,7 @@ the user to run the `minecraft-mcp-setup` agent.
    persistent leaves, or built on a log core** within range — state this in
    the plan so the `worker` does not place decaying leaves.
 4. **Reuse the repeating unit.** A parterre quarter, a maze cell, an allée
-   tree — define it once as a `mcb_<project>_<element>` structure and stamp
+   tree — define it once as a `mcb:<project>_<element>` structure and stamp
    it, like the other design skills.
 
 ## Inputs
@@ -91,7 +91,21 @@ the user to run the `minecraft-mcp-setup` agent.
 7. **Render and iterate** — produce blueprints (`reference/blueprints.md`),
    show the user, revise, **loop until they approve**.
 8. **Write the plan and hand off** — `requirements.md`, `plan.toon`, and the
-   registry entry.
+   registry entry. Structure names follow the canonical colon form
+   `mcb:<project>_<element>`.
+
+   **Emit a `quality_contract` block** per the schema in `planner/SKILL.md`.
+   For designed outdoor spaces the contract should include:
+   - **walkability** rows for every named path (gate → fountain, parterre
+     → bench, axis A → axis B). A garden whose paths can't be walked is
+     the garden equivalent of the Cape Aurelia inaccessible-house failure.
+   - **headroom** rows under any arbour, pergola, archway, or topiary
+     tunnel.
+   - **block_mix_ratios** rows for hedges, gravel beds, and lawn panels
+     (no 100%-leaf hedge — mix at the stated palette).
+   - **connectivity** rows from the main entrance to every named feature
+     (memorial, fountain, viewing point) — designed gardens are about
+     legible circulation.
 
 ## Reference library
 

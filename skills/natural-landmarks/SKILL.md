@@ -112,14 +112,26 @@ primitives[4]{seq,primitive,x,y,z,method,params}:
 
 - **Plan** — expand each primitive into phases and pre-tiled steps in
   `plan.toon`, using the standard `steps` table. Resolve all coordinates to
-  absolutes; the Haiku `worker` does no arithmetic.
+  absolutes; the Haiku `worker` does no arithmetic. For any primitive
+  whose footprint exceeds ~30 blocks, follow terraforming's heightmap method
+  (`terraforming/reference/landforms.md § The heightmap method`) — stacked
+  rectangular fills produce the ziggurat artifact, every time.
 - **Modules** — save reusable primitive instances as named structures
-  `mcb_<project>_<primitive>_<index>` via `mc_structure_*`, like the
+  **`mcb:<project>_<primitive>_<index>`** (colon namespace — required by
+  `mc_structure_create_from_blocks`) via `mc_structure_*`, like the
   `blueprinter`. Reuse them with rotation, mirror, and `integrity` for
-  weathered variation. A landmark at minimum recognition size can span several
-  structure files (max 64×384×64 each) — tile them.
-- **Registry** — record the landmark and its modules in the `mcbuilder:registry`
-  world dynamic property.
+  weathered variation. A landmark at minimum recognition size can span
+  several structure files (max 64×384×64 each) — tile them.
+- **Quality contract** — emit a `quality_contract` block per
+  `planner/SKILL.md`, with terrain rows from
+  `terraforming/reference/non-negotiable-enforcement.md`:
+  - **silhouette** for the landmark's overall mass (no flat plateaus).
+  - **edge_irregularity** for every recognisable rim, ridge, or coastline.
+  - **block_mix_ratios** for every banded or weathered surface.
+  - **asymmetry** to confirm the build isn't a mirror-perfect cone.
+  - **foundation_naturalised** if the wonder rises from a sea or basin.
+- **Registry** — record the landmark and its modules in the
+  `mcbuilder:registry` world dynamic property.
 
 ## Quality gate
 
@@ -127,7 +139,8 @@ Before handing off, check the build against the **signature features** you
 identified in step 1 and against `reference/anti-patterns.md` — insufficient
 strata bands, wrong colour sequence, symmetric-where-asymmetric, missing
 signature, scale below the recognition floor. If a signature is weak or
-missing, fix it before reporting done.
+missing, fix it before reporting done. The `quality_contract` rows above are
+the inspector's automated form of this gate; both run.
 
 ## Hand off
 

@@ -66,9 +66,46 @@ floor before the walls so hollowing doesn't clip the slab" — not vague ("plan
 better"). Check for an existing memory on the same point and update it rather
 than duplicating.
 
+## Outstanding manual steps — surface them, every time
+
+Some builds leave **one-time manual actions** the user has to perform for the
+build to actually function. Most commonly:
+
+- A self-cycling redstone clock (rotating beam, windmill animation, observer
+  ring) built via `setblock` will not self-start in Bedrock — the user must
+  right-click one component once to kick the loop. See
+  `engineer/reference/setblock-redstone-limits.md`.
+- Pressure-plate triggers wired to a hidden mechanism may need the player to
+  walk over them once for the inspector's functional test to pass.
+- Boats, minecarts, and item frames placed via spawn or setblock sometimes
+  need a player-click to "register" properly.
+
+Aggregate every such item from the project's `inspection-recipe.toon` files
+(every recipe's `manual_kick` block) and the inspector's reports. Surface
+them as a clearly-titled section in the final retrospective — coordinates,
+the action, and what it activates:
+
+```
+Outstanding manual steps (do these to activate the build):
+
+1. Right-click any of the 4 lantern-room repeaters at (-39,143,-42),
+   (-34,143,-39), (-37,143,-34), or (-42,143,-37) to start the rotating
+   lighthouse beam.
+2. Right-click the observer at (5,125,-30) at the windmill cap to start the
+   blade animation.
+3. Pull the lever at (-44,128,-44) to sound the foghorn. (Lever-driven — no
+   kick needed; this is how to use it.)
+```
+
+This is non-optional. The Cape Aurelia retrospective established that the
+user shouldn't have to discover that the rotating beam needs a kick by
+noticing it isn't rotating — the orchestrator's final message must include
+the kick steps prominently, every time.
+
 ## Report
 
 Give the user a short retrospective: what worked, what didn't, the estimate
-gaps, and the lessons you recorded. Confirm the world registry is consistent.
-This closes the build; the world now holds everything needed to iterate on it
-later, and memory holds everything needed to build the next one better.
+gaps, the lessons you recorded, and the **outstanding manual steps**. Confirm
+the world registry is consistent. This closes the build; the world now holds
+everything needed to iterate on it later, and memory holds everything needed
+to build the next one better.

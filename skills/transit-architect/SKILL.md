@@ -94,6 +94,21 @@ bubble-elevator activator) is an `engineer` handoff.
 7. **Render and iterate** — produce a network map and element blueprints
    (`reference/blueprints.md`), show the user, revise, **loop until approved**.
 8. **Write the plan and hand off** — `requirements.md`, `plan.toon`, registry.
+   Structure names follow the canonical colon form `mcb:<project>_<element>`.
+
+   **Emit a `quality_contract` block** per the schema in `planner/SKILL.md`.
+   For transit networks the contract must include:
+   - **connectivity** rows for every site pair the network is supposed to
+     link. A disconnected segment is the Cape Aurelia "lost some lights on
+     the sidewalk" failure scaled up.
+   - **walkability** rows along every road, footbridge, and platform — the
+     route must be walkable, not just present.
+   - **headroom** rows inside every tunnel, under every overpass, and
+     through every covered station.
+   - **doors** rows for every station / dock / portal entrance.
+   - **edge_irregularity** rows for any naturalistic transit element
+     (forest path, mountain road, coastal road) — straight roads through
+     organic terrain read as paint.
 
 ## Reference library
 

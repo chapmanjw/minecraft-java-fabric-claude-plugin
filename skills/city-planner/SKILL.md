@@ -82,7 +82,7 @@ Bedrock limits force a districted design. Pick one of three scales:
 Then:
 
 - **Decompose the city into districts of ≤256×256 blocks** — each a unit the
-  `blueprinter` slices into structure files (`mcb_<project>_<district>_<element>`).
+  `blueprinter` slices into structure files (`mcb:<project>_<district>_<element>`).
 - **Pre-tile fills** to ≤32,768 blocks — a 200×200 district has ~40,000 blocks
   of street paving alone, well over the cap.
 - **Y-budget rule** — the world spans Y -64 to 320 (~384 blocks). A 1:1
@@ -114,7 +114,24 @@ For the full limit detail, follow the `terraforming` skill's
 9. **Render district layouts** — produce blueprints (`reference/blueprints.md`),
    show the user, iterate, and **loop until they approve**.
 10. **Write the plan and hand off** — write `requirements.md` and `plan.toon`,
-    record the city and its districts in `mcbuilder:registry`.
+    record the city and its districts in `mcbuilder:registry`. Structure
+    names follow the canonical colon form `mcb:<project>_<element>`.
+
+    **Emit a `quality_contract` block** per the schema in `planner/SKILL.md`.
+    Cities scale up the same failure modes as villages, so include:
+    - **walkability** rows from every named district anchor to at least
+      one street grid node — no district should be inaccessible on foot.
+    - **connectivity** rows between every district pair via the street /
+      rail / canal network you specified, so the inspector can detect a
+      broken edge.
+    - **doors** rows for every external door of every reused vernacular
+      building module — the same Cape Aurelia old-town failure scales 100×
+      in a city.
+    - **headroom** rows over every named stair, ramp, bridge, or tunnel.
+    - **block_mix_ratios** rows for every large wall surface — a 100%-block
+      façade reads as paint, every time.
+    - **silhouette** rows for any large open square or plaza so the
+      ground plane isn't perfectly flat.
 
 ## Reference library
 

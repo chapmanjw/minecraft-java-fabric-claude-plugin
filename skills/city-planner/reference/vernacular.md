@@ -11,7 +11,7 @@ city and its street blocks.
    Haussmann Paris: the apartment block, the corner block, the ground-floor
    shopfront). Most of the city is these.
 2. The `blueprinter` builds each type **once** and saves it as a named
-   structure, `mcb_<project>_vern_<type>` (with its variants).
+   structure, `mcb:<project>_vern_<type>` (with its variants).
 3. The `worker` **stamps** the type along every block edge the layout calls
    for, using rotation and mirror for corners and opposite sides.
 4. **Vary every copy** — see "Parametric variation" — so a row reads as

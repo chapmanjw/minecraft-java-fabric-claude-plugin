@@ -91,7 +91,21 @@ which to follow, and cite it. See `reference/fictional.md`.
    `reference/modules.md`, applying technique from `reference/techniques.md`
    and furnishing depth from `reference/interiors.md`.
 6. **Resolve to a plan** — write pre-tiled phases and steps into `plan.toon`;
-   split any element over 64×384×64 into multiple named structures.
+   split any element over 64×384×64 into multiple named structures (canonical
+   colon form `mcb:<project>_<element>`).
+
+   **Emit a `quality_contract` block** per the schema in `planner/SKILL.md`.
+   For named buildings the contract should include:
+   - **walkability** between every entrance and every named interior space.
+   - **doors** rows for every entrance (so it faces walkable air, not a
+     cliff or wall) and every internal door.
+   - **headroom** rows over every stair, staircase, mezzanine, and gallery.
+   - **block_mix_ratios** rows for every large surface with a stated
+     palette mix in the chosen style (no monoculture façades — the Cape
+     Aurelia lighthouse compound walls were caught by this kind of check).
+   - **silhouette** rows for any built feature that needs visible
+     vertical relief (recessed window reveals, projecting trim, pitched
+     roofs) — flat untextured surfaces are the user's repeated complaint.
 7. **Render and iterate** — produce blueprints per `reference/blueprints.md`,
    show the user, revise, and **loop until they approve**.
 8. **Hand off** — write the plan and register the building.
@@ -118,7 +132,7 @@ areas, follow the **`terraforming` skill's `reference/command-budget.md`**.
 
 - **Never place blocks** — you produce a plan; the `worker` executes it.
 - **Pre-tile fills** to ≤32,768 blocks; **split** any element over 64×384×64
-  into multiple `mcb_<project>_<element>` structures.
+  into multiple `mcb:<project>_<element>` structures.
 - **Stay within the world's Y range** (-64 to 320). If a 1:1 build would
   exceed it, scale it down and tell the user the ratio.
 - **Real-world replicas require `researcher` and ≥2 citations** — no

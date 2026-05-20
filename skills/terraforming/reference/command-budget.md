@@ -30,6 +30,37 @@ A 200 × 1 × 200 surface (40,000 blocks) already exceeds the cap — the planne
 must split it into multiple `fill` steps. Always emit **pre-tiled** fills in
 `plan.toon`; the Haiku `worker` does no arithmetic.
 
+## Structure tile sizing — plan it up front
+
+The `mc_structure_*` cap is **64 × 384 × 64**. State this cap *at the planning
+stage* and tile to it before generating any RLE arrays — discovering the cap
+mid-build wastes a generation cycle (Cape Aurelia terrain v2 generated tiles
+112 deep and had to re-tile 3×2).
+
+For hand-transcribed RLE arrays into `mc_structure_create_from_blocks`:
+
+- Cap each tile at **~1500 RLE runs** (≈ 28-deep × 30×30 footprint, depending
+  on entropy). Many small tiles beat few large ones — the
+  `create_from_blocks` cell-count validator catches transcription drift, but
+  a 3000-run array is near the limit where a 56-cell drop slips through.
+- If the generator emits tiles that exceed either cap, **regenerate at half
+  tile-depth** before retrying — don't try to "squeeze" a too-large tile.
+
+## Structure naming — colon, not underscore
+
+`mc_structure_create_from_blocks` (and the other create tools) **rejects**
+underscore-only structure IDs with `invalid or missing namespace`. The
+canonical form everywhere — `plan.toon`, `mcbuilder:registry`,
+`mc_structure_place` calls — is:
+
+```
+mcb:<project>_<element>
+```
+
+An underscore-only `mcb_<project>_<element>` form will fail at create time
+and force a plan-wide find/replace later. Treat this as the canonical name
+form; the colon is required, not optional.
+
 ## Fill modes
 
 `mc_block_fill` supports modes — choose deliberately:
@@ -56,10 +87,15 @@ must split it into multiple `fill` steps. Always emit **pre-tiled** fills in
 ## Structure modules — the force multiplier
 
 `mc_structure_*` is the unit of work for anything reusable or larger than a
-fill. Max structure size in Bedrock is **64 × 384 × 64**.
+fill. Max structure size in Bedrock is **64 × 384 × 64** — see the sizing
+rules above.
 
 - `mc_structure_create_from_world` — capture a built terrain piece to a named
-  structure. Name them `mcb_<project>_terrain_<element>`.
+  structure. Name them `mcb:<project>_terrain_<element>` (colon namespace).
+- `mc_structure_create_from_blocks` — synthesise a tile from an offline-baked
+  RLE array. **This is the default for heightmap-based terrain** — generate
+  the per-column heights offline, encode to RLE, and place directly without
+  ever building it block-by-block in-world.
 - `mc_structure_place` — stamp it. Vary **rotation** (0/90/180/270) and
   **mirror** to get up to 8 orientations from one module.
 - **`integrity`** (0–100) — places only that percentage of the module's
@@ -69,8 +105,17 @@ fill. Max structure size in Bedrock is **64 × 384 × 64**.
   seed for a different scatter.
 
 Build one detailed module (e.g. a 32×16×32 hill), then place it 6+ times with
-different rotation, mirror, integrity, and seed. This is the only practical way
-to fill Tier-3+ terrain.
+different rotation, mirror, integrity, and seed. This is the only practical
+way to fill Tier-3+ terrain.
+
+### Offline generation is legitimate
+
+For noise-driven terrain (mountains, headlands, coastlines), **offline
+generation in Python → RLE → `mc_structure_create_from_blocks`** is usually
+better than live block-by-block sculpting. It is fast, repeatable, lets you
+tune the noise and re-place without rebuilding in-world, and is the only
+practical way to get organic shapes at scale. Do not feel obliged to live-sculpt
+when a heightmap will do the job — see `landforms.md § The heightmap method`.
 
 ## Randomness without `/random`
 
@@ -95,11 +140,38 @@ ticking area via `mc_run_command`:
   (`/tickingarea remove tf_work`).
 - For Tier-4+ jobs, rotate ticking areas across cells as construction moves.
 
-## Pacing
+## Pacing — keep the bridge alive
 
-- Prefer **few large operations** over many tiny ones — every call pays
+The BDS script watchdog will silently drop the bridge
+(`BRIDGE_DISCONNECTED`) if a script callback runs too long or a burst of
+calls saturates it. The Cape Aurelia v2 terrain build hit this repeatedly
+until the rhythm below was adopted.
+
+- **Cap at ≤6–8 heavy ops in a row** — structure placements, large fills,
+  large clones. After the burst, drop in **one light verify read** (e.g. a
+  single `mc_block_get`) before the next burst.
+- **Never chase a placement burst with a read burst.** A burst of
+  `mc_structure_place` followed immediately by a burst of `mc_block_get_top`
+  is the most reliable way to crash the bridge. Alternate: place, place,
+  read, place, place, read.
+- **Prefer few large operations** over many tiny ones — every call pays
   throttle cost.
+- **Use ticking areas over the work zone away from the player.** `mc_block_*`
+  ops in unloaded chunks silently no-op (`blocks_changed: 0`); a ticking area
+  guarantees the chunks stay loaded. Add one for the work zone, remove it
+  when the phase ends.
 - For big jobs, let the orchestrator run the `worker` **once per phase** so
   each run stays bounded and within the watchdog's patience.
 - World vertical range is **Y=-64 to Y=320** (384 blocks) — plan heights
   inside it; do not modify the Y=-64 bedrock floor.
+
+## The chunk-loading trap
+
+`mc_block_*` ops in unloaded chunks return `blocks_changed: 0` with no error.
+If the player has wandered away from the work zone — or the zone is far from
+spawn — your fills and sets silently no-op.
+
+- Add a ticking area over the work zone before any large terrain phase.
+- Verify with a `mc_block_get` at a coord you just set; if it doesn't match,
+  the chunk wasn't loaded.
+- Remove the ticking area when the phase ends — the world has 10 slots total.

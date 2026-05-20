@@ -1,6 +1,6 @@
 {
   "name": "minecraft-bedrock",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Agent skills and agents for driving a live Minecraft Bedrock world through the minecraft-bedrock MCP server. Includes a guided, step-by-step setup of the whole stack and an in-world builder agent.",
   "author": {
     "name": "chapmanjw"

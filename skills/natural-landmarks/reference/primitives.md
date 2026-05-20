@@ -5,7 +5,7 @@ size range, a **build method** (`carve` = build solid then cut; `build-up` =
 additive — see `sequencing.md`), and an approach. Every primitive lives within
 the limits in `terraforming/reference/command-budget.md`.
 
-Naming: save primitive instances as structures `mcb_<project>_<primitive>_<index>`.
+Naming: save primitive instances as structures `mcb:<project>_<primitive>_<index>` (colon namespace — the underscore-only form is rejected by the create tools).
 
 ## V1 primitives — implement these first
 

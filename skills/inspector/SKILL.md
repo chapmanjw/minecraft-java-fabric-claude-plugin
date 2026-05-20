@@ -34,12 +34,18 @@ that the world is not connected.
 ## Inputs
 
 - `.minecraft-builder/<project>/plan.toon` — the phase that was just built,
-  its steps, and its acceptance checks.
+  its steps, its acceptance checks, and its **`quality_contract`** block.
 - `.minecraft-builder/<project>/survey.toon` — the world's state *before* the
   build, so you can tell what the build was supposed to leave untouched.
 - The `worker`'s execution report for the phase.
 - The world itself, read with `mc_block_get`, `mc_block_get_top`,
   `mc_block_get_volume`, `mc_structure_list`, `mc_entity_get`.
+
+## Reference library
+
+| File | Covers |
+| ---- | ------ |
+| `reference/contract-checks.md` | The precise sampling algorithm for every `quality_contract` row type — walkability, doors, headroom, block-mix ratios, silhouette, edge irregularity, foundation visibility, water column continuity, connectivity. |
 
 ## The checks
 
@@ -53,7 +59,24 @@ that the world is not connected.
 - Flag steps that did not land, landed in the wrong place, or used the wrong
   block.
 
-### 2. World fit — does it sit in the world correctly?
+### 2. Quality contract — does the build satisfy its properties?
+
+This is the new check. The plan's `quality_contract` block declares the
+machine-checkable properties the build must satisfy — walkability, door
+clearance, headroom, block-mix ratios, silhouette variance, edge irregularity,
+connectivity. **Parse the contract and run every row's sampling algorithm.**
+
+Acceptance checks confirm "block X is at coord Y." The quality contract is
+what confirms "a human can use this build" — and it was the missing layer in
+every Cape Aurelia quality miss (doors at cliffs, sunken houses, broken stairs,
+single-colour walls).
+
+See `reference/contract-checks.md` for the precise sampling algorithm for each
+row type. A failing row is a real failure, not advisory — emit the failing
+samples as corrections and route back to the planner-class skill that owns the
+build (`terraforming`, `player-house`, etc.), not to the worker.
+
+### 3. World fit — does it sit in the world correctly?
 
 This is the check a literal step-by-step verifier misses. Look for:
 
@@ -71,8 +94,15 @@ This is the check a literal step-by-step verifier misses. Look for:
   cells in a finished area.
 - **Scale and proportion drift** — the phase visibly diverging from the plan's
   intent.
+- **Underwater faces.** For any terrain phase, **sample below sea level too** —
+  pad walls, foundation faces, and the seabed profile, not just the
+  above-water silhouette. Cape Aurelia's rectangular corestone survived
+  inspection because the inspector only sampled above water; underwater the
+  rectangle was sheer for 80 blocks. Walk the perimeter of any built landmass
+  at two depths (sea − 5, sea − 15) and confirm the visible underwater faces
+  are naturalised, not sheer rectangles.
 
-### 3. Functional behaviour — does it actually work?
+### 4. Functional behaviour — does it actually work?
 
 If the build has an `inspection-recipe.toon` (written by the `engineer` for a
 redstone or mechanical contraption), run its functional tests: apply each
@@ -81,13 +111,27 @@ result, and compare to the **expected** value. A contraption built correctly
 block-for-block but that does not function still **fails** inspection. Route a
 functional failure back to the `engineer` to diagnose, not to the worker.
 
-### 4. Adjustments — what needs to change
+If the recipe declares a **manual kick step** (a player right-click required
+to start a self-cycling redstone clock — see the engineer's
+`reference/setblock-redstone-limits.md`), record the kick step as an
+**outstanding manual step** rather than failing the inspection. The mechanism
+itself is verified by the recipe; the kick is a known Bedrock limitation.
+
+### 5. Adjustments — what needs to change
 
 For every issue, produce a **concrete correction**: the coordinates, what is
 wrong, and the fix as standard plan steps (`fill` / `set` / `replace` /
 `clone` / `place-structure` / `spawn`). You do not place blocks yourself — the
 `worker` applies your corrections. If an issue is too large to correct with a
 few steps (a whole phase mis-built), say so and recommend re-planning.
+
+**Fix root causes, not symptoms.** On a failing `quality_contract` row, do
+not paint over the symptom — the Cape Aurelia retrospective showed that
+half-measures cost more iterations than they save. A `silhouette` failure
+means the heightmap is too flat; regenerate it. A `walkability` failure means
+the layout is wrong; route back to the planner. A `block_mix_ratios` failure
+means the palette weights are wrong; retune them. Then **re-sample** to
+confirm the fix landed and did not break a neighbouring row.
 
 ## Output
 

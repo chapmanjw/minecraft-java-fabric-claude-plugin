@@ -98,6 +98,58 @@ If a registry exists, summarize the known projects and builds for the user so
 they can **iterate on existing work** rather than start blind. If none exists,
 this is a fresh world — you will create the registry as the first build lands.
 
+## Step 0b.5 — The honesty contract
+
+Before any work classification, internalise the structural limits of the
+agent + Bedrock setblock interface. These came out of the Cape Aurelia
+retrospective; ignoring them costs the user trust and multiple demolition
+cycles.
+
+When brainstorming, suggesting features, or scoping a build, you MUST flag
+the following constraints **upfront**, before the user picks a feature — not
+at the end after a half-build was shipped:
+
+1. **You cannot see the world.** `mc_block_get` confirms blocks exist at
+   coordinates. It cannot confirm: walkability, aesthetic coherence,
+   silhouette quality, fit-with-terrain, or whether a build looks "right" to
+   a human. For naturalistic terrain and builds that require human visual
+   judgement, propose **user visual checkpoints** explicitly (prototype a
+   small patch → ask the user to glance → scale up only after approval).
+   Do this *before* committing to a large build, not after.
+2. **Auto-cycling redstone needs a manual kick.** Clocks, observer rings,
+   hopper clocks, and repeater loops built blind by the agent will not
+   self-start in Bedrock. The user must right-click one component once
+   after the build to start the cycle. **Flag this before the user picks
+   the feature, not after.** See
+   `engineer/reference/setblock-redstone-limits.md`. If the user prefers a
+   no-click solution, redesign as a lever-/button-triggered one-shot.
+3. **The plan→worker pipeline is for static work.** Anything needing a
+   feedback loop — naturalistic terrain, redstone timing tuning, walkability
+   validation, aesthetic iteration — should be **live-built by the
+   specialist**, not handed to the worker. See terraforming's hard-rule 1.
+4. **Refuse to silently downgrade scope.** If a feature can't be delivered
+   as suggested (a self-rotating beam that needs a kick, a self-running
+   animation that won't auto-start), say so **before** "completing" it. Do
+   not ship a static structure and let the user discover it isn't moving.
+
+Classify every request through this filter:
+
+- **Static, fully sample-verifiable** → full pipeline (plan → worker →
+  inspector contract). Walls, floors, façades, furniture, simple lighting.
+- **Visual coherence required** → prototype-first + user visual checkpoint
+  before scaling up. Organic terrain, big silhouettes, large coloured
+  surfaces, anything where "does it look right?" matters.
+- **Self-cycling redstone** → flag the manual kick before the user commits;
+  build the mechanism; surface the kick step in the final report.
+- **Things you cannot reliably do blind** — be explicit. Examples: pixel-
+  perfect aesthetic coherence over multi-block regions you can't see;
+  sequenced rotating optics built blind that need timing tuning; hidden
+  piston doors retrofitted into existing walls without redesign.
+
+The contract is non-negotiable. The Cape Aurelia user said the build
+"shouldn't have to call out missed deliverables" — flag the limits first,
+let the user choose, then build to the chosen scope.
+
 ## Step 0c — Complexity router
 
 Before invoking any skills, classify the request. This determines the entire execution path.
@@ -206,15 +258,26 @@ district uses all of it. The full sequence:
    Skip this step for purely architectural builds on already-suitable ground.
 5. **Blueprint** — invoke `blueprinter` to create/update named structure files
    for the reusable elements in the plan (including terrain modules).
-6. **Build and inspect** — execute `plan.toon` **phase by phase**, and inspect
+6. **Prototype-first checkpoint** — for any terrain area over ~100 blocks of
+   extent, or any visually-loaded build (large coloured surface, organic
+   landform, recognizable silhouette), build a representative small patch
+   first (~20×20 for terrain, one building for a village), then **ask the
+   user to glance** before scaling up. One quick "looks good" is worth
+   hours of demolition. This step is mandatory whenever the contract above
+   classifies the work as "visual coherence required."
+7. **Build and inspect** — execute `plan.toon` **phase by phase**, and inspect
    every phase. For each phase:
    1. invoke `worker` to build the phase;
-   2. invoke `inspector` to verify it — plan fidelity, world fit, and any
-      needed corrections;
-   3. on **CORRECTIONS NEEDED**, invoke `worker` to apply the inspector's
-      correction steps, then `inspector` again to confirm;
-   4. on **FAIL**, stop and return to `planner` (or the relevant specialist)
-      to re-plan;
+   2. invoke `inspector` to verify it — plan fidelity, **`quality_contract`
+      rows**, world fit, underwater faces for terrain, and any needed
+      corrections;
+   3. on **CORRECTIONS NEEDED**, route to the specialist that owns the
+      failure (terraforming for silhouette/edge/foundation failures,
+      planner-class for walkability/door/headroom failures), not the worker
+      — half-measures cost more than fixing root causes. Then invoke
+      `worker` to apply the corrected steps, then `inspector` again to
+      confirm;
+   4. on **FAIL**, stop and return to the planner-class skill to re-plan;
    5. only on **PASS** advance to the next phase.
    This inspect-after-every-phase loop is your **self-correction mechanism** —
    use it throughout. Never let an unverified phase be built over; problems
@@ -223,12 +286,18 @@ district uses all of it. The full sequence:
    test recipe the engineer wrote (`inspection-recipe.toon`) — a machine that
    is built correctly but does not *work* still fails. Route a functional
    failure back to the `engineer` to diagnose and correct, not to the worker.
-7. **Register** — after each build lands, update the `mcbuilder:registry` world
+   If the recipe declares a `manual_kick`, surface it as an outstanding
+   manual step — the mechanism passes inspection once the user confirms the
+   kick and the sample matches.
+8. **Register** — after each build lands, update the `mcbuilder:registry` world
    property with the new/changed builds (the blueprinter and worker do their
    parts; you make sure the registry is consistent at the end).
-8. **Reflect** — invoke `philosopher` to review the job — including the
+9. **Reflect** — invoke `philosopher` to review the job — including the
    `inspections.toon` log of every course correction — and update project
-   memory with reusable lessons.
+   memory with reusable lessons. Surface every **outstanding manual step**
+   (kicks, plate triggers, click-to-register) prominently in the final
+   report — the user shouldn't have to discover that the windmill needs a
+   click by noticing it isn't moving.
 
 Do not start a phase until the `inspector` has passed the previous one.
 
@@ -241,7 +310,7 @@ only while the user is in that workspace — the world travels everywhere.
 **Authoritative state — in the world:**
 
 - **Blueprints** — reusable elements are saved as named **structure files**
-  (`mc_structure_*`), named `mcb_<project>_<element>`. They are listable,
+  (`mc_structure_*`), named `mcb:<project>_<element>`. They are listable,
   re-placeable, and re-savable, so builds iterate without external memory.
 - **Registry** — a world **dynamic property** `mcbuilder:registry` holds a
   TOON document recording every project and build: element, structure name,
@@ -254,8 +323,8 @@ only while the user is in that workspace — the world travels everywhere.
   projects[1]{name,created,dimension}:
     lakeside-village,2026-05-16,overworld
   builds[2]{project,element,structure,x,y,z,status,revision}:
-    lakeside-village,town-hall,mcb_lakeside-village_town-hall,120,64,-340,built,2
-    lakeside-village,fountain,mcb_lakeside-village_fountain,130,64,-330,built,1
+    lakeside-village,town-hall,mcb:lakeside-village_town-hall,120,64,-340,built,2
+    lakeside-village,fountain,mcb:lakeside-village_fountain,130,64,-330,built,1
   ```
 
   If the registry grows past the dynamic-property size limit, split it across

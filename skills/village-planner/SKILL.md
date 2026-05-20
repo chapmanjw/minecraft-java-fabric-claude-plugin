@@ -82,7 +82,22 @@ the user to run the `minecraft-mcp-setup` agent.
    unapproved layout.
 9. **Write the plan and hand off.** Write `requirements.md` and `plan.toon`,
    record the village in `mcbuilder:registry`, and list the building templates
-   and population for the rest of the pipeline.
+   and population for the rest of the pipeline. Structure names follow the
+   canonical colon form `mcb:<project>_<element>`.
+
+   **Emit a `quality_contract` block** per the schema in `planner/SKILL.md`.
+   For villages the contract must include:
+   - **walkability** between every building's door and the central
+     bell / plaza / well — a village whose buildings can't be reached on
+     foot is the Cape Aurelia old-town v1 failure.
+   - **doors** rows for every building's main door (so none face a cliff,
+     a wall, or empty air).
+   - **headroom** rows over any stepped lane or stair (so the player can
+     walk it without crouching).
+   - **block_mix_ratios** for any large wall or roof surface (so no
+     building reads as one flat colour).
+   - **connectivity** between every building and at least one bell, well,
+     and workstation cluster (Bedrock mechanics need this).
 
 ## Reference library
 
@@ -109,8 +124,8 @@ village assets:
 1. Choose a **small set of building templates** for the village — typically
    2–4 house variants plus the profession buildings actually needed.
 2. The `blueprinter` builds each template **once** and saves it as a named
-   structure, `mcb_<project>_village_<piece>` (e.g.
-   `mcb_oakhollow_village_small_house_a`).
+   structure, `mcb:<project>_village_<piece>` (e.g.
+   `mcb:oakhollow_village_small_house_a`).
 3. The `worker` **stamps** each template wherever the layout places that
    building, varying rotation and mirror, and applying small palette tweaks,
    so instances read as a real village — same vocabulary, not identical clones.

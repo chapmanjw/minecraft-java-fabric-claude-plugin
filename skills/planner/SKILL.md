@@ -89,13 +89,13 @@ Write `.minecraft-builder/<project>/plan.toon` in **TOON**
     walls,stone_bricks
     floor,polished_andesite
   blueprints[1]{element,structure}:
-    table-set,mcb_lakeside-village_table-set
+    table-set,mcb:lakeside-village_table-set
   steps[6]{phase,seq,op,a,b,block,note}:
     1,1,fill,120 63 -340,132 63 -330,grass_block,level the pad
     2,1,fill,120 64 -340,132 72 -330,stone_bricks,outer shell
     2,2,fill,121 65 -339,131 71 -331,air,hollow the interior
     2,3,set,126 64 -340,,oak_door,front door
-    3,1,place-structure,123 65 -337,,mcb_lakeside-village_table-set,furniture
+    3,1,place-structure,123 65 -337,,mcb:lakeside-village_table-set,furniture
     3,2,set,122 71 -338,,lantern,ceiling light
   ```
 
@@ -108,8 +108,74 @@ Write `.minecraft-builder/<project>/plan.toon` in **TOON**
 - **Acceptance checks** — a short list of spot-checks (coordinate + expected
   block) the worker uses to confirm the build landed.
 - **Blueprint list** — name every reusable element the `blueprinter` must
-  create as a structure file, so furniture, modules, and repeated parts are
-  defined once and stamped many times.
+  create as a structure file (canonical name `mcb:<project>_<element>` — the
+  colon namespace; the underscore form fails at create time), so furniture,
+  modules, and repeated parts are defined once and stamped many times.
+
+## Quality contract — the part that catches a bad build
+
+The Cape Aurelia retrospective established that point-sample acceptance
+checks confirm blocks exist at coordinates but cannot confirm a human can
+**use** the build — doors facing cliffs, sunken houses, stairs without
+headroom, single-block walls of one colour. Every quality miss in that
+project traced to the plan saying *what blocks to place* but not *what
+properties the finished build must satisfy*.
+
+Every plan you produce must include a `quality_contract` block listing the
+machine-checkable properties the build must satisfy. The `inspector` parses
+this block and runs the checks automatically — a violation is a build
+failure, not a stylistic note.
+
+```toon
+quality_contract:
+  walkability[3]{from,to,note}:
+    122 65 -339,127 65 -334,front door to living room
+    127 65 -334,127 67 -333,living room to upstairs via stair
+    127 67 -333,130 67 -335,upstairs to bedroom
+  doors[2]{at,facing,clearance_blocks}:
+    122 65 -339,south,2
+    127 66 -333,east,2
+  headroom[2]{over_region_a,over_region_b,min_clear}:
+    126 65 -335,127 66 -334,2
+    127 66 -334,128 67 -333,2
+  block_mix_ratios[1]{region_a,region_b,palette,max_single_ratio}:
+    120 64 -340,132 72 -330,"stone_bricks,mossy_stone_bricks,cracked_stone_bricks",0.7
+  silhouette[1]{region_a,region_b,sample_count,min_y_variance}:
+    -55 105 -47,55 130 63,8,3
+```
+
+Row types — pick the ones that apply to your build:
+
+- **walkability[]{from,to,note}** — sample a straight line of `mc_block_get`
+  between `from` and `to` at floor and floor+1; fail if non-traversable
+  blocks block the route or there is no stand-on-able floor.
+- **doors[]{at,facing,clearance_blocks}** — sample the cells in front of
+  (and behind) the door for `clearance_blocks` blocks; fail if both sides
+  aren't air with a stand-on-able floor.
+- **headroom[]{over_region_a,over_region_b,min_clear}** — for every column
+  in the region, require at least `min_clear` air blocks above the highest
+  solid block (over stairs, corridors, doorways).
+- **block_mix_ratios[]{region_a,region_b,palette,max_single_ratio}** —
+  count blocks in the region; fail if any single block exceeds
+  `max_single_ratio` of the total, or if listed palette members are missing
+  entirely.
+- **silhouette[]{region_a,region_b,sample_count,min_y_variance}** — sample
+  N surface points; fail if Y variance < spec (for naturalistic terrain,
+  no flat plateaus).
+- **edge_irregularity[]{edge_name,from,to,max_collinear_run}** — sample
+  along an edge; fail if any run of identical X or Z exceeds the limit
+  (the 7-block rule for terrain).
+- **connectivity[]{site_a,site_b,via}** — two named sites must be reachable
+  along the named path (rail, road, footbridge).
+
+Terrain phases get a richer set of contract rows specific to the
+non-negotiables — see `terraforming/reference/non-negotiable-enforcement.md`.
+
+Every `walkability`, `doors`, and `headroom` row in the contract is one
+the inspector samples and one the worker is forbidden to silently work
+around. If you can't write a row because you don't know the answer (e.g.
+"is this door reachable?"), the plan is not detailed enough — interview the
+user further or check the survey.
 
 ## Terrain and environment
 

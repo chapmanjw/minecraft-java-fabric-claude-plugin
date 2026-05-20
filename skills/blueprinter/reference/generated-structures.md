@@ -21,8 +21,9 @@ persists across reloads. No files, no world reload.
 
 `mc_structure_create_from_blocks` takes:
 
-- **`id`** — the structure identifier, e.g. `mcb:lakeside-village_mural`. Use
-  the same `mcb_<project>_<element>` / `mcb:` naming as any other blueprint.
+- **`id`** — the structure identifier, e.g. `mcb:lakeside-village_mural`.
+  The colon namespace `mcb:<project>_<element>` is **required** — the
+  create tools reject underscore-only IDs.
 - **`size`** — `{ x, y, z }` extents in blocks.
 - **`palette`** — the distinct block states, indexed from 0. Each entry is a
   block `name` and optional `states` (e.g. `{ "pillar_axis": "y" }`).

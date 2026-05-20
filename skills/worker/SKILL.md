@@ -44,6 +44,32 @@ You may also be invoked to apply a short **corrections** phase produced by the
 `inspector` — a steps table fixing problems found mid-build. Execute it exactly
 like any other steps, in order.
 
+## Before you start: detect a stale plan
+
+Plans pin absolute coordinates. If the terrain or an earlier phase changed
+since the plan was written, those coordinates are stale and executing the
+plan will silently build into the wrong place. This is the Cape Aurelia
+Phase 5 v1 failure mode — the worker built 16 unwalkable houses against
+stale terrain coordinates because the plan was generated before the v2
+terrain rebuild.
+
+Before executing any phase, sample the first few `fill` and `set` steps:
+
+- For a `fill` step with a planned **`b` (before-state)** value, sample the
+  cell at `a` with `mc_block_get`. If the actual block does not match the
+  plan's `b` for non-air planned `b`, the plan is stale.
+- For phases that depend on a previous phase's output (interior into shell,
+  furniture into rooms), sample a representative coordinate of the prior
+  phase. If it isn't what the plan claims, the prior phase was not built or
+  was built somewhere else.
+
+**On detection: HALT.** Do not overwrite. Report which step's `b` mismatched
+and where; the orchestrator routes back to the planner-class skill that
+owns the build to re-resolve coordinates against current world state.
+
+This adds one extra `mc_block_get` per phase. It is cheap; the alternative
+(building 16 houses into nothing) is not.
+
 ## Execute
 
 - Work **phase by phase, step by step, in `seq` order**. Never reorder steps.
@@ -52,11 +78,17 @@ like any other steps, in order.
   coordinate, a missing structure, a tool error — **stop immediately**. Do not
   guess a fix, do not skip ahead. Report which step failed and the error.
 - Respect the command throttle: each step is one call; do not fire calls in a
-  tight burst.
+  tight burst. After every ~6–8 heavy ops (large fill, structure place, big
+  clone), drop in one light `mc_block_get` before the next burst — the BDS
+  script watchdog drops the bridge if a burst saturates it.
 - Execute each `fill` step exactly as sized in the plan. The planner has
   already tiled large volumes to stay within Minecraft's ~32,768-block limit —
   never merge adjacent `fill` steps into a bigger region, and never split one
   into smaller calls.
+- **Watch for `blocks_changed: 0`.** `mc_block_*` ops in unloaded chunks
+  return success with zero blocks changed. If a fill that should change
+  thousands reports zero, the chunk wasn't loaded — stop and tell the
+  orchestrator to add a ticking area over the work zone before retrying.
 
 ## Verify
 

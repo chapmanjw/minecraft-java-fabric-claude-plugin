@@ -34,6 +34,60 @@ ordinary `planner` build.
 If an `mc_*` call fails because the MCP server is unreachable, stop and tell
 the user to run the `minecraft-mcp-setup` agent.
 
+## Critical Bedrock limitation — agent-built redstone needs a manual kick
+
+This sits above every other rule. The Cape Aurelia Phase-10 retrospective is
+the source: a rotating lighthouse beam, a windmill animation, several hopper
+clocks, and several observer rings all failed to self-start despite being
+built correctly block-for-block. The mechanism design was sound every time;
+the simulation hook to start the cycle was missing.
+
+**`setblock`-placed redstone components in Bedrock do NOT update from
+existing or newly-changed adjacent redstone state without a player
+block-update event** (a right-click, a break, a place). This means:
+
+- A 2-observer clock placed via `mc_block_set` will not self-start.
+- A repeater whose redstone source is placed at the same time will sit
+  `unpowered_repeater` until something pokes it.
+- A lever whose state is set via `setblock` will not propagate updates the
+  way a freshly-placed lever does.
+- Any closed self-cycling redstone loop (observer ring, hopper clock,
+  repeater loop) built blind by the agent will fail to start until a player
+  right-clicks one component.
+
+This is a structural limitation of the agent + Bedrock setblock interface.
+You cannot work around it with cleverer wiring. The mechanism *is correct*;
+the cycle needs a one-time kick.
+
+**Design implications — these are hard rules:**
+
+1. **Prefer lever-, button-, and pressure-plate-triggered designs over
+   self-starting clocks.** A keeper-operated foghorn, a player-pulled crane,
+   a player-triggered foghorn, a manual hidden door — all reliable. A
+   self-cycling rotating lamp ring built blind is not.
+2. **When a clock IS required, the design MUST include a manual kick
+   step** in its output:
+   - Add a `kick_step` row to the `inspection-recipe.toon` (see Verification
+     below) naming the coord and the action ("right-click the observer at
+     (x,y,z) to start the clock").
+   - Surface that kick step in the orchestrator's final report as an
+     **outstanding manual step**.
+3. **Direct power works.** A lever attached to a block that is adjacent to
+   the receiver, a `redstone_block` placed adjacent to a piston — these
+   activate normally when placed via `mc_block_set`. Use these as your
+   primary power sources whenever you can.
+4. **Functional tests with a kick step must invoke the kick before
+   sampling.** The `inspector` runs the recipe top-to-bottom; the kick is
+   step 1, the trigger is step 2, the sample is step 3.
+
+See `reference/setblock-redstone-limits.md` for the documented list of
+patterns that self-start and patterns that don't.
+
+**Never quietly ship a self-cycling clock as "working" if it needs a kick.**
+That was the Cape Aurelia honesty failure — the mechanism shipped as static
+because the agent didn't flag the limit upfront. Flag the kick, every time,
+*before* the user picks the feature.
+
 ## Core principle — Bedrock is not Java
 
 **Most redstone tutorials, videos, and wiki content are written for Java
@@ -76,6 +130,7 @@ Read the file for the step you are on — do not load them all up front:
 
 | File | Covers |
 | ---- | ------ |
+| `reference/setblock-redstone-limits.md` | **Read first.** Which redstone patterns self-start when placed by the agent, which need a manual kick, and the kick-step idiom for the inspection recipe. |
 | `reference/bedrock-redstone.md` | Bedrock-vs-Java fundamentals, the timing table, and the Java-only ban list. |
 | `reference/contraptions-farms.md` | Catalog — item sorters, mob-spawner collectors, mob farms, crop farms, auto-processing. |
 | `reference/contraptions-mechanisms.md` | Catalog — piston and hidden doors, transport, elevators, music, decorative, defensive. |
@@ -105,6 +160,33 @@ steps[3]{action,target,detail}:
 A test is **trigger → wait → sample → expected**: apply an input (the
 `inspector` uses `mc_run_command` to place a redstone block or item), wait the
 budgeted ticks, then read the result with `mc_block_get` / `mc_entity_get`.
+
+### Recipes with a manual kick step
+
+For any contraption with a self-cycling clock (observer ring, hopper clock,
+repeater loop) — the kind that won't self-start because of the
+setblock-redstone limit above — the recipe **must declare a kick step** as
+the first action. The kick is a one-time, player-performed click:
+
+```toon
+test: rotating-light-beam
+manual_kick:
+  required: true
+  at: {x:-39,y:143,z:-42}
+  action: right-click any of the 4 lantern-room repeaters once to start the loop
+steps[3]{action,target,detail}:
+  trigger,,wait until kick has been performed
+  wait,,200 game ticks
+  sample,{x:-37,y:144,z:-38},expect at least one of the cardinal lamps to be powered
+```
+
+The `inspector` surfaces the `manual_kick` block as an **outstanding manual
+step** to the user; the orchestrator's final report repeats it. The
+mechanism passes inspection only after the user confirms the kick was done
+and the sample matches.
+
+Never ship a self-cycling clock without a `manual_kick` block. The contraption
+is not "done" if the user can't tell that they need to start it.
 
 The loop:
 

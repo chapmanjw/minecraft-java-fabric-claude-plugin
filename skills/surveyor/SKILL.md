@@ -72,7 +72,7 @@ obstructions[2]{type,x,y,z,note}:
   water,112,63,118,small pond
   trees,95,64,95,oak cluster over NW corner
 existing[1]{element,structure,x,y,z}:
-  fountain,mcb_lakeside-village_fountain,130,64,-330
+  fountain,mcb:lakeside-village_fountain,130,64,-330
 ```
 
 Then give the requester a short prose summary: where there is room to build,
