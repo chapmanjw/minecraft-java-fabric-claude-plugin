@@ -90,12 +90,13 @@ When stamping with `structure_load_to_world` (for iteration or for the worker's
 - **`integrity`** — float 0..1; `1.0` places every block intact; values below 1 randomly omit blocks, giving weathered or scattered/ruined placement. Useful for pre-aged ruins and naturalistic scattering.
 - **`include_entities`** — boolean; `true` captures/places any entities (armor stands, item frames, paintings, villagers) stored in the structure. Set `false` when stamping structural geometry only.
 
-## Register
+## Register — report it, do not write it
 
-Record every blueprint in the **`mcbuilder:registry`** command storage record
-(TOON — see <https://toonformat.dev/>). Read the current value with
-`data_storage_get` (namespace `mcbuilder`, path `registry`), add or update the
-structure's row, and write it back with `data_storage_set`:
+The **orchestrator owns the `mcbuilder:registry`** and is its sole writer. Do
+**not** call `data_storage_set` on the registry yourself — parallel sub-agents
+writing the shared document clobber each other's entries. Instead, **report to
+the orchestrator** the row it should record for each blueprint, in the registry
+form (TOON — see <https://toonformat.dev/>):
 
 ```toon
 builds[1]{project,element,structure,x,y,z,status,revision}:
@@ -103,7 +104,18 @@ builds[1]{project,element,structure,x,y,z,status,revision}:
 ```
 
 Use `status: blueprint` for a defined-but-not-yet-placed structure; the
-`worker` updates it to `built` with real coordinates when it stamps it.
+orchestrator updates it to `built` with real coordinates once the `worker`
+stamps it. Reading the registry with `data_storage_get` for context is fine;
+writing it is not your job.
+
+**Confirm persistence before handing off.** A blueprint phase that "ran" but
+left no `.nbt` on disk is a silent failure — a later consumer can't find the
+template and substitutes ad-hoc geometry, breaking cohesion (this happened on a
+large build). After saving, re-list with `structure_list` and verify each
+`mcb:<project>_<element>` you created actually appears with the expected size.
+Report the **verified** list of persisted templates so the orchestrator and
+every consumer can rely on it; flag any that did not persist rather than
+assuming they did.
 
 ## Hand off
 

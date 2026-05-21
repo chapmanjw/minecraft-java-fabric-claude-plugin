@@ -57,7 +57,12 @@ So you do *not* design around a "manual kick" by default. What you do instead:
    `reference/setblock-redstone-limits.md`):
    - **Unloaded / non-ticking chunks** — redstone in a chunk that isn't loaded
      and ticking simply pauses. Build near a player or a ticking / force-loaded
-     chunk.
+     chunk. **Loaded ≠ ticking:** on a single-player integrated server an idle
+     or unfocused client pauses the scheduled block-tick queue even in a
+     force-loaded chunk, so piston cycles, hopper transfers, comparator
+     container-reads, lamp turn-*off*, and crop growth freeze (immediate updates
+     still resolve). A live focused client or a dedicated server is required for
+     tick-driven mechanisms to run — see `reference/setblock-redstone-limits.md`.
    - **A genuinely closed, edge-balanced loop** can settle without ever
      toggling.
    - **Placement order** — a loop built block-by-block may reach a stable state
@@ -152,7 +157,10 @@ noted:
 
 - **Datapack functions** (`function_run` / `schedule_function`) — a non-redstone
   path for exact-timed sequences and self-rescheduling animations, for a build
-  that ships a datapack (`reference/design-patterns.md`).
+  that ships a datapack (`reference/design-patterns.md`). **Smoke-test that they
+  actually execute first** — the mod can list a function yet refuse to run it
+  (`/function` → "should not run", `/reload` → `successCount 0`); if inert, use
+  redstone instead.
 - **`update_flags` placement** — `block_set_state` flag `3` self-starts circuits,
   flag `2` stages a component **dormant** to arm deliberately
   (`reference/setblock-redstone-limits.md`).

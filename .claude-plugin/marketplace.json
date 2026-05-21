@@ -9,7 +9,7 @@
     {
       "name": "minecraft-java",
       "source": "./",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "description": "Guided, step-by-step setup of the Minecraft Java Fabric MCP stack (Fabric loader, the MCP mod, configuration, and the Claude connection) plus an in-world builder agent.",
       "category": "games",
       "keywords": [

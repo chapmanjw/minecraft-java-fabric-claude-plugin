@@ -51,6 +51,13 @@ Use read-only tools; gather only what a planner would need:
   sample composition, biome surface blocks, and obstructions (water, caves,
   trees). `block_scan_region` is capped at 65,536 blocks per call — page large
   areas.
+  - **Confirm what `block_get_top_y` means in this world before you trust it.**
+    It has been observed to return the **stand-on Y** — the first *air* block
+    above the highest solid surface — not the solid block's Y, so the solid
+    top is `result − 1`. Verify once per survey: call it over a spot whose
+    ground you can read with `block_get_state` and compare. Record the
+    convention in `survey.toon` (e.g. `top_y_is: stand-on` with the solid
+    offset) so the planner places floors flush instead of one block too high.
 - **Existing builds** — `structure_list` for saved blueprints;
   `block_scan_region` to check whether a candidate area is already occupied.
 - **Entities** — `entity_query` for mobs, item frames, or marker entities in

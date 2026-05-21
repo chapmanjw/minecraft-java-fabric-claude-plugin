@@ -111,7 +111,11 @@ loop an animation, drive the `entity_set_nbt` updates from a `schedule_function`
 that re-schedules itself (see the datapack-functions note in the planner /
 engineer references) — that requires the build to ship a small datapack, so
 treat looping animation as an advanced option and note the datapack requirement
-in `plan.toon`.
+in `plan.toon`. **Verify functions actually execute first** — the mod can refuse
+to run them (`/function` → "should not run", `/reload` → `successCount 0`); a
+looping animation that depends on an inert `schedule_function` will simply sit
+still. If functions don't run in this world, keep the display static (or animate
+it only via live, repeated `entity_set_nbt` calls while a session is active).
 
 ## text_display — 3D floating text and logos
 

@@ -17,6 +17,27 @@ everything ran:
    built far from any player and outside a force-loaded / ticking area will sit
    idle until the chunk loads. Build near a player or a ticking chunk, or
    force-load it.
+
+   **Loaded ≠ ticking — the idle single-player trap.** Force-loading keeps a
+   chunk *loaded*, but on a single-player integrated server the game loop only
+   advances while the session is active. An idle or unfocused client (an
+   unattended overnight build, a minimised window) **pauses the scheduled
+   block-tick queue** — even in a force-loaded chunk. The dividing line,
+   observed empirically:
+   - **Immediate updates still resolve** when something pokes the world (a tool
+     call, a player action): levers, redstone dust/torch power, observer→observer
+     pulses, redstone-lamp turn-*on*, door/trapdoor/fence-gate toggles.
+   - **Anything on the scheduled-tick queue freezes:** piston extend/retract,
+     hopper/dropper item transfer, comparator container re-reads, repeater and
+     redstone-lamp turn-*off* delays draining, and random-tick crop growth.
+
+   So a piston door, item sorter, hopper clock, or auto-farm built for an
+   unattended single-player session **will not self-cycle** — and waiting longer
+   won't help. Verify such a mechanism by watching it **fire once** (an
+   immediate update you trigger), not by waiting for a cycle. A live, focused
+   client or a **dedicated server** keeps the queue draining; that is the
+   environment a tick-driven contraption needs to actually run. Surface this in
+   the report whenever the build depends on scheduled ticks.
 2. **Some loops still need an initial trigger.** A genuinely closed,
    edge-balanced loop (e.g. certain symmetric observer rings, or a circuit whose
    only state change is the one that would have come from placement order) can
