@@ -52,10 +52,12 @@ There are two stores, and mixing them up defeats the purpose:
 
 - **Build data → the world.** Coordinates, structure names, build status,
   revisions belong in the `mcbuilder:registry` command storage record and the
-  structure files — not in memory. Before finishing, verify the registry is
-  accurate; fix it with `data_storage_set` (namespace `mcbuilder`, path
-  `registry`) if the worker left it inconsistent. Do **not** copy build data
-  into project memory.
+  structure files — not in memory. The orchestrator owns the registry; as the
+  final check, verify it is accurate against what's actually in the world
+  (`structure_list`, spot-checks) and fix it with `data_storage_set` (namespace
+  `mcbuilder`, path `registry`) if any phase left it inconsistent — including
+  any `mcb:<project>_*` template the registry claims exists but `structure_list`
+  doesn't show. Do **not** copy build data into project memory.
 - **Process lessons → Claude project memory.** Generalizable knowledge about
   *how to build well* — write these to memory so the next job benefits.
 
@@ -82,6 +84,13 @@ build to actually function. Most commonly:
   walk over them once for the inspector's functional test to pass.
 - Boats, minecarts, and item frames placed via entity_summon or block_set_state
   sometimes need a player-click to "register" properly.
+- **Tick-driven mechanisms need a live session.** Any contraption that relies on
+  the scheduled block-tick queue — pistons, hoppers, comparator container-reads,
+  redstone-lamp turn-*off*, auto-farms, crop growth — only runs while the game
+  loop is advancing. On a single-player client it freezes when idle/unfocused;
+  it needs a focused client or a dedicated server. If the build was made
+  unattended, say plainly which exhibits won't move until the user is actively
+  in-world, and that this is the environment, not a build defect.
 
 Aggregate every such item from the project's `inspection-recipe.toon` files
 (every recipe's `manual_kick` block) and the inspector's reports. Surface

@@ -93,6 +93,12 @@ This adds one extra `block_get_state` per phase. It is cheap; the alternative
   reports zero, the chunk wasn't loaded — stop and tell the orchestrator to
   ensure the work zone is loaded (via `/forceload`, or by having a player
   present) before retrying.
+- **Watch for inert `run` steps.** A `run` step that executes `/function` or
+  `/reload` can come back "successful" while doing nothing — the mod has been
+  seen to refuse function execution (`/function` → "This function should not
+  run", `/reload` → `successCount 0`). If a `run` step returns one of those,
+  stop and report it; the plan must not depend on datapack functions, and the
+  orchestrator should re-route to direct block ops.
 
 ## Verify
 
@@ -100,13 +106,16 @@ After each phase, run the plan's `acceptance` checks for that phase with
 `block_get_state` — confirm the expected block is at the expected coordinate.
 If a check fails, stop and report it.
 
-## Update state
+## Update state — report it, do not write it
 
-After completing a phase, update the **`mcbuilder:registry`** in command
-storage: read it with `data_storage_get` (namespace `mcbuilder`, path
-`registry`), set the relevant build's `status` (`in-progress` → `built`) and
-its real anchor coordinates, and write it back with `data_storage_set`. The
-world record must reflect what actually got built.
+The **orchestrator owns the `mcbuilder:registry`** and is its sole writer. Do
+**not** call `data_storage_set` on the registry yourself — when several
+sub-agents write the shared document in parallel they clobber each other's
+entries. Instead, after completing a phase, **report to the orchestrator** the
+exact facts it needs to update the registry: which build/element you completed,
+its real anchor coordinates, and the new status (`in-progress` → `built`). The
+orchestrator consolidates and writes once per phase. Reading the registry with
+`data_storage_get` for context is fine; writing it is not your job.
 
 ## Report
 

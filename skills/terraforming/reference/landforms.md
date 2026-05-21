@@ -43,6 +43,16 @@ The recipe:
    that scratch box to save it as `mcb:<project>_terrain_<tile_id>`. Clear
    the scratch area before the next tile.
 
+   **"Generated offline" means the *heightmap math* runs offline, not the
+   placement.** Emit the columns as MCP block ops (`block_fill_region` /
+   `block_set_state`) or, at most, single `/fill`-`/setblock` commands — write
+   them straight into the world. **Do not generate `.mcfunction` files and
+   `/function` them in:** the mod can refuse to execute datapack functions
+   (`/function` → "should not run", `/reload` → `successCount 0`), and a
+   heightmap baked into a function that never runs leaves the terrain patchy
+   and half-built. If you want to script the generation, have the script print
+   the block ops you'll issue, not a datapack.
+
 3. **Place tiles.** One `structure_load_to_world` per spot. Interleave reads
    and writes — place a batch, verify one spot with `block_get_state` or
    `block_get_top_y`, then continue.

@@ -6,6 +6,56 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-21
+
+Fold in lessons from a large multi-agent autonomous build (the "Aurelia
+Exposition" overnight run), whose final QA revealed several skill-level gaps.
+Skill-level changes only; still pairs with
+[`minecraft-java-fabric-mcp-server`](https://github.com/chapmanjw/minecraft-java-fabric-mcp-server)
+v0.1.0.
+
+### Changed
+
+- **Registry has a single writer.** The orchestrator now solely owns
+  `mcbuilder:registry`; the `worker` and `blueprinter` report their results as
+  text instead of calling `data_storage_set` themselves. Parallel sub-agents
+  writing the shared document were clobbering each other's entries. Updated in
+  `minecraft-builder` (workflow + state model), `worker`, `blueprinter`, and
+  `philosopher`.
+- **Datapack functions: resolving ≠ executing.** Every place that recommends
+  `function_run` / `schedule_function` / `/reload` (`engineer` skill and
+  `reference/design-patterns.md`, `planner`, `monument-builder`'s
+  `display-entities.md`, and the orchestrator's Conduct) now requires a
+  smoke-test that the function actually runs before planning around it — the mod
+  has been seen to accept the call but refuse execution (`/function` → "should
+  not run", `/reload` → `successCount 0`). Never generate `.mcfunction` files
+  expecting `/function` to run them; emit direct block ops instead. The
+  `terraforming` heightmap method now spells this out (a heightmap baked into a
+  function that never runs leaves terrain patchy).
+- **Loaded ≠ ticking.** The `engineer` skill and
+  `reference/setblock-redstone-limits.md`, plus the orchestrator's honesty
+  contract, now distinguish immediate redstone updates (which resolve) from the
+  scheduled block-tick queue (pistons, hoppers, comparator container-reads, lamp
+  turn-*off*, crop growth), which **freezes on an idle/unfocused single-player
+  client even in a force-loaded chunk**. Verify tick-driven mechanisms by an
+  immediate fire, not by waiting; they need a focused client or dedicated server
+  to run. `philosopher` surfaces this as an outstanding step for unattended
+  builds.
+- **`block_get_top_y` semantics.** The `surveyor` now confirms, once per survey,
+  whether the tool returns the stand-on (air) Y vs. the solid-block Y (observed:
+  solid = `result − 1`) and records the convention in `survey.toon`, so floors
+  land flush instead of one block high.
+
+### Added
+
+- **Large / autonomous multi-site build discipline** in the `minecraft-builder`
+  agent: a completion ledger gated on per-phase inspection (an element is
+  `built` only after the inspector passes it), mandatory verification that the
+  blueprinter actually persisted each template before any consumer references it
+  (consumers alert rather than substitute), a ~3 background-sub-agent
+  parallelism ceiling on non-overlapping zones, and an explicit rule never to
+  report "done" until every planned element has a passing inspection.
+
 ## [0.2.0] - 2026-05-20
 
 Optimize the builder skills for Java-exclusive techniques the Fabric mod's tool

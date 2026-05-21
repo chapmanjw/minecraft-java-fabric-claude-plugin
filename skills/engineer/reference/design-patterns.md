@@ -103,6 +103,17 @@ datapack is enabled: check `datapack_list_enabled`, enable with
 `function_get_definition` before relying on it. So this is an **advanced option
 for a build that already ships a small datapack.**
 
+**Caveat — resolving is not executing.** The mod can list a function and still
+**refuse to run it**: a live build saw `function_run` / `/function` return
+"This function should not run" and `/reload` return `successCount 0`, with the
+execution gate in the mod rather than in the pack metadata. Before you design
+any timing around functions, **smoke-test that they actually execute** — run a
+one-line function that sets a marker block at a known coordinate, then read that
+block back with `block_get_state`. If the marker didn't change, functions are
+inert in this world: do **not** plan a function-driven sequence, and fall back
+to vanilla redstone (or, for one-shot setup, direct MCP block ops). Never emit
+`.mcfunction` files expecting `/function` to run them.
+
 **Trade-off — prefer self-contained redstone for portability.** A redstone
 machine works in any world the moment it's placed, with nothing else installed.
 A function path needs the datapack to travel with the build. Use functions when

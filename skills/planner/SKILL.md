@@ -142,6 +142,11 @@ Write `.minecraft-builder/<project>/plan.toon` in **TOON**
   - **Datapack function sequencing** — for timed reveals, staged animations,
     or recurring logic, plan a `run` step that calls `schedule_function` (the
     function must exist in a loaded datapack; note the requirement).
+    **Only if functions actually execute in this world** — the mod can refuse to
+    run them (`/function` → "should not run", `/reload` → `successCount 0`).
+    Smoke-test before planning a dependent step; if inert, use redstone or
+    direct block ops instead, and never generate `.mcfunction` files expecting
+    `/function` to run them.
 
 - **Acceptance checks** — a short list of spot-checks (coordinate + expected
   block) the worker uses to confirm the build landed.

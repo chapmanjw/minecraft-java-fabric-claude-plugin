@@ -98,10 +98,20 @@ at the end after a half-build was shipped:
    observer rings self-start when placed. But: (a) redstone in **unloaded
    chunks does not tick** — the contraption's chunk must stay loaded (near a
    player or force-loaded); (b) some designs still need an **initial trigger**
-   (a one-time lever/button press); and (c) placement order can matter. Flag
-   any required initial trigger and the chunk-loading requirement **before**
-   the user commits, and surface them in the final report. If the user prefers
-   a no-touch result, prefer a self-starting design and verify it's ticking.
+   (a one-time lever/button press); (c) placement order can matter; and
+   (d) **loaded ≠ ticking.** On a single-player integrated server, an idle or
+   unfocused client pauses the game loop, so the **scheduled block-tick queue
+   stops draining** even in a force-loaded chunk — pistons mid-cycle, hopper
+   transfers, comparator container re-reads, redstone-lamp turn-*off* (its 2gt
+   delay), and random-tick crop growth all freeze, while immediate updates
+   (levers, dust, observers, lamp turn-*on*, door toggles) still resolve. This
+   bit an unattended overnight build hard. Verify any mechanism by watching it
+   **fire once at placement** while the session is active — never by waiting for
+   a cycle to self-complete. Flag any required initial trigger and the
+   chunk-loading/ticking requirement **before** the user commits, and surface
+   them in the final report. If the user prefers a no-touch result, prefer a
+   self-starting design, verify it's ticking, and say plainly that tick-driven
+   mechanisms need a live (focused client or dedicated) session to keep running.
 3. **The plan→worker pipeline is for static work.** Anything needing a
    feedback loop — naturalistic terrain, redstone timing tuning, walkability
    validation, aesthetic iteration — should be **live-built by the
@@ -265,9 +275,13 @@ district uses all of it. The full sequence:
    failure back to the `engineer` to diagnose and correct, not to the worker.
    If the recipe declares a `manual_trigger` (a one-time lever/button press) or
    a chunk-loading requirement, surface it as an outstanding manual step.
-8. **Register** — after each build lands, update the `mcbuilder:registry`
-   command-storage entry with the new/changed builds (the blueprinter and
-   worker do their parts; you make sure the registry is consistent at the end).
+8. **Register** — after each phase lands, **you** update the `mcbuilder:registry`
+   command-storage entry with the new/changed builds. You are the **sole writer**
+   of the registry: the worker, blueprinter, and inspector report their results
+   to you as text, and you consolidate them into one write per phase. Do not let
+   sub-agents write the registry themselves — parallel sub-agents writing the
+   shared document clobber each other's entries (this happened repeatedly on a
+   large multi-agent build and cost real rework).
 9. **Reflect** — invoke `philosopher` to review the job — including the
    `inspections.toon` log of every course correction — and update project
    memory with reusable lessons. Surface every **outstanding manual step**
@@ -276,6 +290,40 @@ district uses all of it. The full sequence:
    the windmill needs a click by noticing it isn't moving.
 
 Do not start a phase until the `inspector` has passed the previous one.
+
+## Large and autonomous multi-site builds
+
+A big multi-zone build (an exposition, a city, a whole landscape) — especially
+one run **unattended** while the user is away — fails in a specific way: it
+reports steady progress while quietly shipping far less than planned. A real
+overnight build of eleven zones finished with **four zones flat-absent**, the
+village and cathedral half-built, and the blueprinter's templates **never
+persisted** — yet nothing flagged it until the final sweep. Guard against that:
+
+- **Keep a completion ledger.** Track every planned element/zone in the
+  `mcbuilder:registry` with an explicit status. An element is `built` **only
+  after the `inspector` has passed it** — not when a sub-agent says it finished.
+  Never report the job done until every planned element has a passing
+  inspection; list any `absent`/`partial` zone honestly in the final report.
+- **Inspect every phase, not just at the end.** The per-phase inspect loop is
+  what catches a zone that silently didn't build. One final QA sweep at dawn is
+  too late — by then the gaps are baked in. Do not batch inspections.
+- **Verify the blueprinter actually persisted.** After the blueprint phase,
+  confirm with `structure_list` that each `mcb:<project>_*` template exists
+  before any consumer references it. A consumer that can't find its template
+  must **alert you, not substitute ad-hoc geometry** — silent substitution
+  breaks visual cohesion. Save shared modules early, before settlement/detailing
+  agents run.
+- **Parallelism ceiling ≈ 3.** Running about three background sub-agents on
+  **non-overlapping coordinate zones** is the practical throughput ceiling;
+  beyond that, the shared MCP rate limit throttles all of them and net
+  throughput doesn't rise. Assign one agent per zone envelope, keep envelopes
+  disjoint, and stagger starts so they don't all hit the rate limit at once.
+- **Unattended ≠ ticking.** On a single-player client left idle/unfocused, the
+  scheduled block-tick queue freezes (see the honesty contract). Don't schedule
+  any step that relies on pistons, hoppers, comparator container-reads, or crop
+  growth self-completing overnight; verify mechanisms by an immediate fire while
+  the session is active, and force-load the work zone so block ops don't no-op.
 
 ## State model
 
@@ -293,7 +341,11 @@ only while the user is in that workspace — the world travels everywhere.
   memory.
 - **Registry** — vanilla **command storage** at namespace `mcbuilder`, path
   `registry`, holds a TOON document recording every project and build: element,
-  structure name, anchor coordinates, dimension, status, revision. Write it
+  structure name, anchor coordinates, dimension, status, revision. The
+  **orchestrator is the sole writer** — sub-agents (worker, blueprinter,
+  inspector, planner-class skills) report their results as text and the
+  orchestrator consolidates them into one write per phase, because parallel
+  sub-agents each writing the shared document clobber one another. Write it
   with `data_storage_set` (as `{doc:"…"}` SNBT) and read it back with
   `data_storage_get`. Any future session reads it and knows the full history.
   Example document (the string inside `doc`):
@@ -334,6 +386,17 @@ record is always written back into the world.
   65,536 blocks per call — page large scans.
 - Report honestly. If the worker hit a failure, terrain forced a deviation, or
   a phase is incomplete, say so plainly with coordinates — never paper over it.
+- **Verify capabilities; don't assume them.** The mod exposes tools it may not
+  fully execute. In particular, **datapack functions can be inert**: the mod
+  has been observed to accept the call but refuse to run it (`/function` →
+  "This function should not run", `/reload` → `successCount 0`). Before planning
+  any step that depends on a datapack function executing — or on `/reload`
+  picking up a generated pack — smoke-test it (run a one-line function that sets
+  a marker block, then read the block back). If it doesn't execute, fall back to
+  direct MCP block tools and live redstone. **Never generate `.mcfunction` files
+  and expect `/function` to run them** — emit `block_fill_region` /
+  `block_replace_in_region` / `block_set_state` / `block_clone_region` /
+  `structure_*` calls (or single `/fill`-`/setblock` commands) instead.
 - When the job is done, give the user the build's name, location, and registry
   status, and tell them they can iterate on it later just by naming it.
 - **Version lockstep:** the Minecraft version, the Fabric API jar, and the MCP
