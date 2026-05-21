@@ -6,6 +6,56 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-20
+
+Optimize the builder skills for Java-exclusive techniques the Fabric mod's tool
+surface exposes but Bedrock's MCP could not. Skill-level changes only; still
+pairs with [`minecraft-java-fabric-mcp-server`](https://github.com/chapmanjw/minecraft-java-fabric-mcp-server)
+v0.1.0. Every technique below was verified live against the running server
+before being documented; version-sensitive SNBT is flagged with
+round-trip-verify guidance rather than asserted.
+
+### Added
+
+- **Display entities** — new `monument-builder/reference/display-entities.md`
+  covering `text_display` (3D floating text and logos), `block_display` (blocks
+  rendered at arbitrary scale / rotation / translation — sub-block detail,
+  impossible angles, giant glowing forms), and `item_display`, with
+  transformation/quaternion, billboard, brightness, and glow guidance. Wired
+  into the `monument-builder` skill, catalog, and sculpting; signage pointers
+  added to `transit-architect` and `city-planner`.
+- **Direct block-entity NBT** (`block_entity_set_nbt`) — signs with text,
+  banners, configured mob spawners, lecterns with books, decorated pots,
+  player-head skulls, and pre-loaded containers — added to `building-architect`
+  and `player-house` interiors and to `engineer` (pre-loaded
+  dispensers/droppers/spawners).
+- **Item components** — named / enchanted / lore / dyed items via `components`
+  SNBT on `player_give_item` / `inventory_set_slot`, for museum displays,
+  labeled storage, and stocked gear.
+- **Scripted villagers** (`entity_summon` / `entity_set_nbt`) — exact
+  profession, biome type, level, and full trade lists, documented in
+  `village-planner` as complementary to the emergent village mechanics.
+- **Loot-table seeding** (`loot_table_generate`) — believable container
+  contents for villages, treasure/library rooms, and starter chests.
+- **Datapack functions** (`function_run` / `schedule_function`) — a non-redstone
+  path for timed sequences and animations in `engineer`, with the
+  datapack-required caveat.
+- **Biome-aware design** (`level_get_biome_at`) — read the real biome to drive
+  palette, vegetation, and roof choices in `surveyor`, `planner`, and the
+  terraforming / natural-landmarks / landscape palettes.
+- **Event-based functional verification** (`events_subscribe` / `events_poll`)
+  in `engineer` and `inspector`, plus two new `quality_contract` row types
+  (`event_trigger`, `block_entity_nbt`) in the inspector's contract checks.
+
+### Changed
+
+- `engineer` gains `block_set_state` `update_flags` guidance — place a circuit
+  dormant (flag `2`) versus self-starting (flag `3`).
+- New `block-nbt` and `set-slot` plan operations, consistent across `planner`
+  and `worker`; `place-structure` documents the exact `structure_load_to_world`
+  enum strings (`rotation` none/clockwise_90/180/counterclockwise_90, `mirror`
+  none/front_back/left_right, `integrity`, `include_entities`).
+
 ## [0.1.0] - 2026-05-20
 
 Initial release of the **Minecraft Java** Claude plugin. Pairs with the

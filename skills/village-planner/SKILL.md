@@ -112,7 +112,7 @@ Read the file for the step you are on — do not load them all up front:
 | `reference/buildings.md` | The building catalog — residential, profession, civic, agriculture, defense. |
 | `reference/layouts.md` | Layout patterns, path networks, and the hamlet/standard scale tiers. |
 | `reference/styles.md` | Biome palettes and custom architectural styles. |
-| `reference/population.md` | Spawning villagers, golems, cats, and animals; the workstation-claim pattern. |
+| `reference/population.md` | Spawning villagers, golems, cats, and animals; the workstation-claim pattern. Also covers Java-exclusive scripted villagers (exact profession/level/trades via `entity_summon` NBT) and mob loadout NBT for named/equipped/static mobs — use these when the user wants specific traders or decorative guards rather than emergent behavior. |
 | `reference/interview.md` | The adaptive interview script. |
 | `reference/blueprints.md` | The three rendering modes and the village legend. |
 

@@ -75,6 +75,42 @@ state it in redstone ticks.
 - Repeaters both **extend range** (every ≤15 blocks) and **add delay** — use
   them deliberately for retiming, especially to absorb observer drift.
 
+## Java-exclusive: command-driven path (datapack functions)
+
+A **non-redstone** way to sequence, time, and animate — something Bedrock's MCP
+could not do. Two tools:
+
+- **`function_run(function_id, as_entity?)`** — runs a datapack function *now*.
+- **`schedule_function(function_id, ticks, mode)`** — runs one after N game
+  ticks. `mode` is `append` (queue alongside any existing schedule for that
+  function) or `replace` (overwrite the pending schedule — the right choice for
+  a self-rescheduling loop so it can't double up).
+
+What it unlocks:
+
+- **Timed sequences** — staged light/door reveals: `function_run` step one, then
+  `schedule_function("build:reveal_2", 40, "replace")`, etc.
+- **Recurring animations** — a function whose last line re-schedules itself
+  (`schedule_function(<self>, 5, "replace")`) is a clean software clock with
+  *exact* tick timing, no redstone-clock drift or footprint. Pairs naturally
+  with display-entity `transformation` tweens (`entity_set_nbt` per frame).
+- **Staged reveals / firework shows** — choreograph events to the exact tick
+  without a physical clock.
+
+**Caveat — the datapack must be loaded.** The function only exists if its
+datapack is enabled: check `datapack_list_enabled`, enable with
+`datapack_enable`, and verify the function resolves with `function_list` /
+`function_get_definition` before relying on it. So this is an **advanced option
+for a build that already ships a small datapack.**
+
+**Trade-off — prefer self-contained redstone for portability.** A redstone
+machine works in any world the moment it's placed, with nothing else installed.
+A function path needs the datapack to travel with the build. Use functions when
+the build *ships a datapack* and wants exact, frame-accurate timing (animations,
+choreographed reveals); use in-world redstone for a self-contained machine the
+user can copy anywhere. State the datapack requirement up front, the same way
+you'd surface an `initial_trigger` or chunk-load requirement.
+
 ## Composing
 
 When you compose a contraption from these: write the **timing budget** — sum the

@@ -35,6 +35,51 @@ Give every contraption a test — even a "trivial" one. The whole point of the
 inspector loop is to confirm the machine actually runs: that a clock is
 oscillating, a chunk is ticking, and timing landed where the budget said.
 
+## Java-exclusive: event-based functional verification
+
+Sampling block state is a snapshot — it can miss a mechanism that fired and
+reset between reads. Java exposes a **real feedback channel** Bedrock's MCP did
+not: subscribe to world events, trigger, then drain them.
+
+- **`events_subscribe(event_types, filters?)`** → a `subscription_id`. Useful
+  types: `block.use` (a button/lever/door interacted), `block.place` /
+  `block.break`, `container.open` / `container.close`, `entity.death`,
+  `player.chat`. Narrow with `filters` (e.g. an area or entity type) to avoid
+  noise.
+- **`events_poll(subscription_id)`** drains the events captured since the last
+  poll.
+- **`events_unsubscribe`** when done so the subscription doesn't accumulate.
+
+The flow is **subscribe → trigger → wait → poll → expect events**, a complement
+to the snapshot `sample` step rather than a replacement. It confirms the
+mechanism *fired*, not just that geometry ended up in some state:
+
+```toon
+test: mob-farm-is-killing
+steps[4]{action,target,detail}:
+  subscribe,,events_subscribe(["entity.death"]) over the kill chute → sub_id
+  wait,,600 game ticks
+  poll,,events_poll(sub_id) expect ≥1 entity.death of the farmed mob
+  sample,{x:10,y:62,z:8},and the collection chest holds drops
+```
+
+Where it earns its place:
+
+- **Mob farm / collector** — `entity.death` events prove the kill chamber is
+  actually killing, even if the chest is briefly empty between hopper pulls.
+- **Door / button / trap** — `block.use` confirms a player (or a redstone-driven
+  interaction) triggered it; pair with the door-block `sample`.
+- **Sorter / storage** — `container.open` / `container.close` and item movement
+  confirm the right chest received the stream.
+- **Interactive builds** — watch `player.chat` or `block.use` to drive a build
+  that responds to the user in real time.
+
+Not a substitute for sampling geometry (it can't read a static block state), but
+a genuine signal that a mechanism is firing under load. Event payload shapes are
+version-sensitive — confirm against the running version (`server_get_status`)
+with one `events_subscribe` / trigger / `events_poll` round trip before relying
+on a specific field.
+
 ## Per-type test contracts
 
 | Contraption | Trigger | Sample after wait | Pass criterion |

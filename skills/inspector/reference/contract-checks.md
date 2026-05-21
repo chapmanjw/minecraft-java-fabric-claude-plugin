@@ -144,6 +144,43 @@ registered anchor of `site_b`, optionally following the path named in `via`
 **Correction:** route back to the `transit-architect` skill to connect the
 sites; do not insert ad-hoc fills.
 
+## event_trigger[]{event_types,trigger_note,expect_type,expect_pos_radius} (Java-exclusive)
+
+A functional check using the event system rather than geometry sampling. Use
+when a contract row must confirm an interactive feature works (a door can be
+opened, a mechanism fires, a mob farm is killing).
+
+1. Call `events_subscribe(event_types)` → `subscription_id`.
+2. Apply the trigger described in `trigger_note` (ask the user, or run
+   `command_execute` / `command_execute_as`).
+3. Call `events_poll(subscription_id)` and inspect the returned events.
+4. Call `events_unsubscribe(subscription_id)`.
+
+**Fail** if no event of type `expect_type` was received within the expected
+timeframe, or if the event's position is outside `expect_pos_radius` blocks
+of the declared position.
+
+**Correction:** the mechanism is not functioning. Route to the `engineer`
+for diagnosis; do not patch with fill steps.
+
+## block_entity_nbt[]{at,field_path,expected_value} (Java-exclusive)
+
+A content-precision check using `block_entity_get_nbt`. Use when the contract
+requires verifying exact block-entity content — sign text, container items,
+spawner config, lectern book — beyond what `block_get_state` can confirm.
+
+1. Call `block_entity_get_nbt(at)` → NBT object.
+2. Navigate to `field_path` (dot-separated, e.g. `front_text.messages.0`).
+3. Compare the value to `expected_value`.
+
+**Fail** if the field is absent or does not match `expected_value`. A sign
+with wrong text, a chest missing the seeded items, or a spawner with the
+wrong entity ID all fail here — even if the block ID and state are correct.
+
+**Correction:** emit a `block-nbt` correction step (op `block-nbt` at the
+failing position, `note` = the corrected SNBT). The worker applies it with
+`block_entity_set_nbt`. Re-read with `block_entity_get_nbt` to confirm.
+
 ## How to run the full contract
 
 For each phase in the plan, the inspector reads the phase's slice of the

@@ -87,3 +87,32 @@ The user may want a deliberate fusion (a French parterre in a Mughal palette,
 a Japanese stroll garden in a cherry biome). Keep one tradition's *geometry* as
 the governing structure and borrow the other's palette or features — do not
 blend the structural logic of two, or the garden loses its order.
+
+## Biome-aware plant and material selection (Java-exclusive)
+
+Before choosing plant species and materials, read the site's actual biome with
+`level_get_biome_at`:
+
+```
+level_get_biome_at("minecraft:overworld", {x:80,y:64,z:200})
+→ {id:"minecraft:flower_forest", temperature:0.7, downfall:0.8, hasPrecipitation:true}
+```
+
+Map the biome id to appropriate plant species and path/wall materials:
+- `minecraft:cherry_grove` → `cherry_log` pergolas, `cherry_leaves` canopy,
+  `pink_petals` ground cover, stone lanterns. (Requires Java 1.20+.)
+- `minecraft:jungle` / `minecraft:sparse_jungle` → `jungle_log` frames,
+  heavy `vine`, `fern`, `cocoa` on logs, mossy stone.
+- `minecraft:taiga` / `minecraft:snowy_taiga` → `spruce_log` pergolas,
+  `spruce_leaves`, `fern`, `sweet_berry_bush`; paths in `cobblestone` /
+  `stone` (no bare soil — it snows).
+- `minecraft:plains` / `minecraft:sunflower_plains` → `oak_log` trellises,
+  mixed wildflower beds, `grass_block` lawns, gravel paths.
+- `minecraft:desert` → `sandstone` / `cut_sandstone` paths, `dead_bush`
+  accents, `cactus` (sparse), palm-silhouette `jungle_log` columns.
+- `temperature < 0.15` → use `snow_block` / `snow_layer` ground cover on
+  terraces; avoid moisture-dependent plants.
+- High `downfall` (≥ 0.8) → favour moss, `mud` edging, water channels, and
+  lush vegetation; low downfall (≤ 0.2) → favour gravel, sand, dry stone.
+
+Pick the tradition's geometry; let the biome govern the species and materials.

@@ -71,6 +71,15 @@ bubble-elevator activator) is an `engineer` handoff.
 - **Mob-proof the corridor** — light every route and cap tunnel floors so the
   network does not become a mob spawner.
 
+### Java-exclusive: station and route signage
+
+Station nameplates, platform signs, and floating route labels are Java-exclusive:
+
+- **`text_display` entities** (via `spawn` op / `entity_summon`) — floating text at any scale, any color, any position; `billboard:"center"` faces the player automatically. Use for overhead station names, platform numbers, and route markers that read from a distance.
+- **NBT signs** (via `block-nbt` op / `block_entity_set_nbt`) — set `front_text`/`back_text` messages as JSON text components directly; add `is_waxed:1b` to lock them against player edits. Standing, wall, and hanging signs all use the same NBT shape.
+
+Both are plan ops the `worker` executes — emit `spawn` steps for display entities and `block-nbt` steps for sign text in `plan.toon`.
+
 ## Inputs
 
 - **From `surveyor`** — the coordinates and surroundings of every site to

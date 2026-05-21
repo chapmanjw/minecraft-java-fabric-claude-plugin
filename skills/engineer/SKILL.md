@@ -144,6 +144,24 @@ For volume limits, the 64×384×64 structure cap, tiled fills, and ticking
 areas/force-loading, follow the **`terraforming` skill's
 `reference/command-budget.md`**.
 
+### Java-exclusive options beyond plain redstone
+
+Keep the *contraption* on vanilla redstone for portability, but these Java-only
+surfaces (which Bedrock's MCP lacked) materially help — reach for them where
+noted:
+
+- **Datapack functions** (`function_run` / `schedule_function`) — a non-redstone
+  path for exact-timed sequences and self-rescheduling animations, for a build
+  that ships a datapack (`reference/design-patterns.md`).
+- **`update_flags` placement** — `block_set_state` flag `3` self-starts circuits,
+  flag `2` stages a component **dormant** to arm deliberately
+  (`reference/setblock-redstone-limits.md`).
+- **Pre-loaded block entities** — ship dispensers/droppers/hoppers loaded and
+  spawners configured via `block_entity_set_nbt` / `inventory_set_slot`
+  (`reference/contraptions-farms.md`, `reference/contraptions-mechanisms.md`).
+- **Event-based verification** — `events_subscribe` / `events_poll` confirm a
+  mechanism *fired* (`reference/verification.md`).
+
 ## Verification and automated correction
 
 A contraption built correctly block-for-block can still **not function** —

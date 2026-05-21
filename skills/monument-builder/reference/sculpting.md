@@ -56,6 +56,32 @@ For a form that is best derived from an actual 3D model rather than computed:
 - For everything else — spheres, creatures, abstract curves — compute the
   voxels here, with the primitives above.
 
+## Java-exclusive: display entities for detail and angles voxels can't reach
+
+Voxel blocks are locked to the 1-block grid and to axis-aligned placement.
+Where a form needs finer detail or an off-grid angle, **display entities**
+(`block_display`, see `reference/display-entities.md`) render a block at
+arbitrary scale, rotation, and translation — with no collision, as a late
+decoration phase over the blockwork. Reach for them where blockwork stalls:
+
+- **Below grid resolution** — a `block_display` scaled to `[0.25f,0.25f,0.25f]`
+  is a quarter-block cube. Tile a few to carve detail finer than any voxel:
+  rivets and inlay, gem facets, small facial features (eye, nostril, lip),
+  fingertips, claw tips — the things that always look chunky at 1-block size.
+- **Off-grid angles** — a placed block can only sit axis-aligned and stair-
+  stepped. A `block_display` rotated by a quaternion sits at a true 45° (or any
+  angle) — diagonal banding, tilted crystal/scale facets, slanted fins, angled
+  spar lines on a wing, a chamfer that reads smoother than a staircase. Quaternion
+  rotation is fiddly; verify one before stamping a row (see the reference).
+- **Giant seamless forms** — a single block scaled `[8f,8f,8f]`+ is one smooth
+  massive cube/face with no block seams — a monolith, a giant gem, an abstract
+  core.
+- **Glowing accents** — `Glowing:1b` + `glow_color_override` gives tinted edges
+  (energy lines, runes, eye-glow) that read at night and through fog.
+
+The main mass stays **real blocks** — displays have no collision and are accent
+and finishing detail only, never load-bearing or walkable.
+
 ## Solid vs. shell
 
 - A small monument can be **solid**.

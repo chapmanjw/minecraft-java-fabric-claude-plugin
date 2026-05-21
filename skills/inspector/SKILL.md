@@ -121,6 +121,54 @@ many clocks self-start; but some loop configurations still need an initial
 trigger to begin ticking — verify the contraption is actually running before
 marking the recipe complete.
 
+### Java-exclusive: events-based functional verification
+
+Beyond geometry sampling, the inspector can use the event system as a live
+feedback channel to confirm interactive features actually work:
+
+1. **Subscribe** before triggering:
+   ```
+   events_subscribe(["block.use", "container.open", "entity.death"])
+   → subscription_id: "insp-001"
+   ```
+2. **Trigger** the mechanism — ask the user to interact (open a door, step
+   on a pressure plate, open a chest, walk through a mob farm) or use
+   `command_execute` / `command_execute_as` to simulate the trigger.
+3. **Poll** and confirm:
+   ```
+   events_poll("insp-001")
+   → [{type:"container.open", pos:{x:…,y:…,z:…}}, …]
+   ```
+4. **Unsubscribe** after the check.
+
+Use cases: confirm a chest can be opened (`container.open`), a lever fires
+`block.use`, or a mob farm is killing (`entity.death` from the farm region).
+This is a real signal — not geometry — and catches failures that block-sampling
+cannot. See `reference/contract-checks.md` for how to integrate event checks
+into contract rows.
+
+### Java-exclusive: block_entity_get_nbt content verification
+
+When a contract row requires precise content verification (sign text, spawner
+configuration, container contents, lectern book), read the block entity NBT
+directly with `block_entity_get_nbt` rather than inferring from block state:
+
+```
+block_entity_get_nbt({x:122,y:65,z:-338})
+→ {front_text:{messages:["…","…","",""]}, is_waxed:1}
+```
+
+Apply this to:
+- **Signs** — verify the four `messages` lines match the plan's intended text.
+- **Containers** — verify `Items` list contents and counts match the seeded
+  loot or `set-slot` steps.
+- **Spawners** — verify `SpawnData.entity.id`, `SpawnCount`, and range fields.
+- **Lecterns** — verify the `Book` component is present and on the right `Page`.
+
+A block entity with the wrong content is a plan-fidelity failure even if the
+block ID and state are correct. Emit the discrepancy as a correction step
+(a `block-nbt` op) for the worker.
+
 ### 5. Adjustments — what needs to change
 
 For every issue, produce a **concrete correction**: the coordinates, what is

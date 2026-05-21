@@ -73,7 +73,33 @@ Representative entries — confirm dimensions with `researcher`.
   accept it as a stylization. Pure voxel-curve work.
 - **Land art** (Spiral Jetty, Sun Tunnels, Lightning Field) — large, flat or
   low, geometric earthworks; mostly footprint, tiled heavily, simple palettes.
-- **Logos and text** — see `pixel-art.md`.
+- **Logos and text** — block-lettered or pixel-mapped: see `pixel-art.md`. For
+  crisp **3D floating text and logos** at any size, use a `text_display`
+  display entity instead (`reference/display-entities.md`) — true smooth
+  glyphs, color, and a backing panel, which block letters cannot match.
+
+## Display-entity-suited builds (Java-exclusive)
+
+These piece types are best served (or only possible) with display entities —
+see `reference/display-entities.md`. They are a late decoration phase.
+
+- **Giant 3D text and logos** — dedication plaques, monument titles, brand
+  marks, crests. A `text_display` gives smooth scalable glyphs with color and a
+  backing panel; a `block_display` logo lets you tilt/lay a mark on a wall at
+  any angle. Far cleaner than block-lettered text.
+- **Glowing sculpture accents** — energy lines, runes, neon-style edges, halos,
+  glowing crystal facets: any display with `Glowing:1b` + `glow_color_override`
+  for a tinted outline that reads at night and through fog.
+- **Scaled-block detail and impossible angles** — sub-block detail (rivets,
+  inlay, gem facets, fine facial features) via blocks scaled below `1f`, and
+  diagonal banding or tilted facets via blocks rotated to angles no placed
+  block can sit at. Use to finish a voxel sculpture past the grid resolution.
+- **Giant single-block forms** — a monolith, a giant gem, a floating cube: one
+  `block_display` scaled `[8f,8f,8f]` or larger reads as a seamless massive
+  form, useful as the core of an abstract piece.
+- **Museum / pedestal item displays** — a sword or crown floating over a
+  pedestal, a case of artifacts, a scaled-up item as a sculpture, via
+  `item_display`.
 
 ## Sourcing
 

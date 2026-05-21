@@ -110,6 +110,11 @@ the user to run the `minecraft-mcp-setup` agent.
 
 ## Reference library
 
+> **Java-exclusive detail:** storage rooms can now use NBT sign labels on
+> barrels and chests, loot-seeded starter chests, and component-named or
+> -enchanted tools — see `reference/interiors.md` and `reference/utilities.md`
+> § "Java-exclusive".
+
 Read the file for the step you are on — do not load them all up front:
 
 | File | Covers |

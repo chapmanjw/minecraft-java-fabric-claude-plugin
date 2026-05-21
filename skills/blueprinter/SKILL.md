@@ -80,6 +80,16 @@ area, edit the blocks, capture it again under the **same name** with
 structure lives in the world, anyone in a later session can do this — no
 project files needed.
 
+### Java-exclusive: structure placement options
+
+When stamping with `structure_load_to_world` (for iteration or for the worker's
+`place-structure` op), use the exact enum strings:
+
+- **`rotation`** ∈ {`none`, `clockwise_90`, `180`, `counterclockwise_90`} — never bare numbers or "90 degrees".
+- **`mirror`** ∈ {`none`, `front_back`, `left_right`}.
+- **`integrity`** — float 0..1; `1.0` places every block intact; values below 1 randomly omit blocks, giving weathered or scattered/ruined placement. Useful for pre-aged ruins and naturalistic scattering.
+- **`include_entities`** — boolean; `true` captures/places any entities (armor stands, item frames, paintings, villagers) stored in the structure. Set `false` when stamping structural geometry only.
+
 ## Register
 
 Record every blueprint in the **`mcbuilder:registry`** command storage record

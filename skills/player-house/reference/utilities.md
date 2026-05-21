@@ -88,3 +88,64 @@ Every utility a base includes becomes rooms and steps in `plan.toon`. Give the
 `planner`/`worker` a concrete block list and footprint — never "add a farm
 here" without the dimensions. A redstone clock or always-loaded contraption
 should carry a brief lag warning for the user.
+
+---
+
+## Java-exclusive: labeled storage and seeded starter chests
+
+### Labeling barrels and chests with signs (capability A)
+
+Place a `*_sign` adjacent to each container, then write its label with
+`block_entity_set_nbt`:
+
+```
+block_entity_set_nbt(pos, nbt='{front_text:{messages:[
+  "{\"text\":\"ORES\",\"color\":\"yellow\",\"bold\":true}",
+  "{\"text\":\"coal / iron / gold / diamond\"}", "\"\"", "\"\""],
+  has_glowing_text:0b}, is_waxed:1b}')
+```
+
+This is faster and more reliable than placing item-frame labels, and the text
+is readable from further away. `is_waxed:1b` prevents accidental edits.
+
+### Seeding starter chests with loot tables (capability E)
+
+Use `loot_table_generate` to fill a starting chest with believable contents,
+then place the items with `inventory_set_slot`:
+
+```
+# 1. Generate a realistic starter loot list
+items = loot_table_generate("minecraft:chests/village/village_weaponsmith")
+
+# 2. Write each item into the chest at pos
+for slot, item in enumerate(items):
+    inventory_set_slot(pos, slot=slot, item=item)
+```
+
+Useful table IDs for a player home (enumerate all with `loot_table_list`):
+- `minecraft:chests/village/village_weaponsmith` — starter weapons and ingots.
+- `minecraft:chests/village/village_toolsmith` — pickaxes, axes, shovels.
+- `minecraft:chests/village/village_fletcher` — bows, arrows, flint.
+- `minecraft:chests/simple_dungeon` — saddles, records, enchanted gear.
+
+Combine loot seeding with component-named hero items (see `interiors.md`
+§ "Java-exclusive") to add one named tool or weapon among otherwise random
+loot — the named item stands out immediately.
+
+### Named and enchanted tools in the storage room (capability B)
+
+For a storage room's dedicated tool wall or tool chest, use `inventory_set_slot`
+with `components` to pre-place a named, enchanted kit:
+
+```
+inventory_set_slot(container_pos, slot=0, item={
+  id:"minecraft:netherite_axe", count:1,
+  components:'{"minecraft:custom_name":"{\"text\":\"Woodsman\",
+    \"italic\":false}",
+    "minecraft:enchantments":{"minecraft:efficiency":5,
+      "minecraft:unbreaking":3,"minecraft:mending":1}}'})
+```
+
+**Version note:** the `minecraft:enchantments` component shape changed between
+1.20.5 and 1.21. Verify with a round-trip read on the running server version
+(`server_get_status`) before finalising the SNBT in `plan.toon`.

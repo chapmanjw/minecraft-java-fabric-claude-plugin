@@ -98,6 +98,27 @@ structure module at the matching `integrity` (see `command-budget.md`).
   `warped_nylium` 10%, `basalt` 10%, `magma_block` 5%, `soul_sand` 5%,
   `glowstone` 5% as ceiling lights.
 
+## Biome-matched palette step (Java-exclusive)
+
+Before committing to any palette above, read the actual biome at the build
+site with `level_get_biome_at` and bias your selection to match:
+
+```
+level_get_biome_at("minecraft:overworld", {x:120,y:64,z:-340})
+→ {id:"minecraft:taiga", temperature:0.25, downfall:0.8, hasPrecipitation:true}
+```
+
+- `id` maps directly to the palette sections above — use it to pick the
+  starting defaults rather than guessing from nearby surface blocks.
+- `temperature < 0.15` → expect snow; add `snow_layer` / `snow_block` and
+  increase `packed_ice` in water palette.
+- `temperature > 1.0` → hot/arid; bias toward sand, coarse dirt, and
+  dead vegetation.
+- `downfall` and `hasPrecipitation` determine moss, mud, and water-feature
+  plausibility — high downfall favours `moss_block`, `mud`, and heavy vine.
+- At biome boundaries, call `level_get_biome_at` at multiple points and
+  blend the two palettes across a 10–30 block transition zone.
+
 ## Version note
 
 Cherry blossom, mangrove, deep dark, and pink petals need Java **1.20+**;

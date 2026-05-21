@@ -72,6 +72,46 @@ cycle.
 Defensive builds near a settlement must not seal it — see the `village-planner`
 raid rules.
 
+## Java-exclusive: ship the mechanism pre-loaded (block-entity NBT)
+
+Bedrock's MCP couldn't set block-entity contents; Java can, so a contraption can
+**arrive loaded and ready** instead of needing the user to hand-fill it.
+Pre-load any dispenser, dropper, or hopper with exact contents — either with
+`inventory_set_slot` (cleaner, slot-by-slot) or `block_entity_set_nbt` with an
+`Items` list:
+
+```
+block_entity_set_nbt(pos, nbt='{Items:[
+  {slot:0,id:"minecraft:arrow",count:64},
+  {slot:1,id:"minecraft:arrow",count:64}]}')
+```
+
+Targets that matter for mechanisms:
+
+- **Arrow turret** — pre-fill its dispenser with arrows (or fireworks / fire
+  charges) so it fires the moment its trigger fires.
+- **TNT cannon** — load the propellant dispensers (and the loading dropper) so
+  the cannon is charged on arrival; still budget the propellant *timing* in
+  redstone, only the *ammo* is pre-loaded.
+- **Auto-brewer / dispenser chains** — seed the dispensers with potions,
+  ingredients, or splash items.
+- **Note-block / show machines** — pre-load any dropper-fed staging container.
+
+For a **spawner-driven** mechanism, configure the `minecraft:spawner` block
+entity directly — entity, count, range, delays — so it ships working:
+
+```
+block_entity_set_nbt(pos, nbt='{SpawnData:{entity:{id:"minecraft:zombie"}},
+  SpawnCount:4,MaxNearbyEntities:6,RequiredPlayerRange:16,SpawnRange:4,
+  MinSpawnDelay:200,MaxSpawnDelay:800}')
+```
+
+Verify the merge by reading it back with `block_entity_get_nbt` (or
+`block_get_state`, which includes `blockEntityNbt`). The container/spawner SNBT
+shape is version-sensitive — on 1.20.5+ item entries use the components system —
+so do a round-trip read on the running version (`server_get_status` for the
+version) rather than trusting a literal blindly.
+
 ## Always
 
 Whatever the mechanism, it ships with a functional test recipe

@@ -112,6 +112,11 @@ which to follow, and cite it. See `reference/fictional.md`.
 
 ## Reference library
 
+> **Java-exclusive detail:** hero-room interiors can now use NBT signage
+> (signed banners, lecterns, decorated pots), component-named or -enchanted
+> display items, and loot-seeded chests — see `reference/interiors.md` §
+> "Java-exclusive: NBT detailing & loot".
+
 Read the file for the step you are on — do not load them all up front:
 
 | File | Covers |

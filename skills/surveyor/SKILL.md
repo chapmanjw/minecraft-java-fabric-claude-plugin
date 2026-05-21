@@ -54,7 +54,34 @@ Use read-only tools; gather only what a planner would need:
 - **Existing builds** — `structure_list` for saved blueprints;
   `block_scan_region` to check whether a candidate area is already occupied.
 - **Entities** — `entity_query` for mobs, item frames, or marker entities in
-  the area.
+  the area. Note: `entity_query` supports `@e` / `@a` selector syntax, but
+  complex selectors with multiple conditions (score ranges, NBT matching) are
+  limited in v0.1.0 — keep selectors simple.
+
+### Java-exclusive: biome sampling
+
+Always sample the biome at the build site with `level_get_biome_at`. The
+return value grounds every downstream palette and vegetation choice in the
+**actual** biome rather than a guess from surface blocks:
+
+```
+level_get_biome_at("minecraft:overworld", {x:120,y:64,z:-340})
+→ {id:"minecraft:plains", temperature:0.8, downfall:0, hasPrecipitation:true}
+```
+
+The `id` field maps to a palette in `terraforming/reference/palettes.md`.
+`temperature` and `downfall` drive roof pitch (snow load at temp < 0.15) and
+vegetation moisture tolerance. `hasPrecipitation` signals whether rain/snow
+falls at the site.
+
+If the build site spans a biome boundary, call `level_get_biome_at` at
+several points (e.g. corners + center) to characterise the transition.
+Use `level_list_biomes_in_dimension("minecraft:overworld")` to enumerate all
+biomes present in the dimension — useful for scoping a multi-biome landscape
+survey.
+
+Record the biome result in `survey.toon` under `biome:` and include the full
+return object so the planner and terraforming skill can consume it directly.
 
 Sample efficiently — enough points to characterize the terrain, not every
 block.
@@ -70,7 +97,7 @@ survey:
   surveyed: 2026-05-16
   area: {x1: 90, z1: 90, x2: 140, z2: 140}
   ground_y: {min: 62, max: 71, typical: 64}
-  biome: plains
+  biome: {id: "minecraft:plains", temperature: 0.8, downfall: 0, hasPrecipitation: true}
   flat_buildable: {x: 100, z: 100, w: 30, d: 30}
 obstructions[2]{type,x,y,z,note}:
   water,112,63,118,small pond

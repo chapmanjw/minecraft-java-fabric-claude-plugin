@@ -71,6 +71,32 @@ sources (`community-sources.md`) for anything not standard.
   useful XP source. Add overflow protection if input can outpace smelting.
 - **Auto-brewer** — dispenser-fed brewing stands in a chain.
 
+## Java-exclusive: ship a farm pre-configured (block-entity NBT)
+
+Bedrock's MCP couldn't set block-entity contents; Java can, so a farm can
+**arrive configured and loaded** rather than requiring the user to set it up:
+
+- **Mob-spawner farms** — configure a placed `minecraft:spawner` directly so the
+  build ships a working, tuned spawner instead of relying on a found one:
+  ```
+  block_entity_set_nbt(pos, nbt='{SpawnData:{entity:{id:"minecraft:zombie"}},
+    SpawnCount:4,MaxNearbyEntities:6,RequiredPlayerRange:16,SpawnRange:4,
+    MinSpawnDelay:200,MaxSpawnDelay:800}')
+  ```
+  Set `SpawnData`, `SpawnCount`, `MaxNearbyEntities`, `RequiredPlayerRange`,
+  `SpawnRange`, and the delay bounds to match the collector's throughput.
+- **Auto-smelter / auto-brewer** — pre-load the **fuel hopper** (coal/blast
+  fuel) and seed input/output hoppers via `inventory_set_slot` or an `Items`
+  list, so the bank starts smelting/brewing immediately.
+- **Tree / animal farms** — pre-fill the bone-meal dispenser or the breeder's
+  feed dropper so the farm runs on first tick.
+
+Use `inventory_set_slot` (cleaner, slot-by-slot) or `block_entity_set_nbt` with
+an `Items:[{slot:0,id:"minecraft:coal",count:64}]` list. Read it back with
+`block_entity_get_nbt` to confirm the merge. The container/spawner SNBT shape is
+version-sensitive (1.20.5+ uses the item-components system) — round-trip it on
+the running version (`server_get_status`) rather than trusting a literal blindly.
+
 ## Throughput budgeting
 
 A hopper moves 2.5 items/s. If several harvested streams converge on one sorter

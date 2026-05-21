@@ -113,3 +113,22 @@ between releases. State the assumption in the design and verify in-world:
 - **AFK fishing works on Java** (a clock-triggered fishing-rod-use farm). It is
   a valid Java design — but note many servers discourage or patch AFK farms, so
   verify the server permits it before recommending it.
+
+## Java-exclusive options worth reaching for
+
+Modern Java + this mod expose surfaces Bedrock's MCP lacked. Keep the
+*contraption* on vanilla redstone, but use these where they materially help —
+each is detailed in its reference file:
+
+- **Datapack functions** (`function_run` / `schedule_function`) — a non-redstone
+  path for exact-timed sequences and self-rescheduling animations, when a build
+  ships a datapack. See `design-patterns.md`.
+- **`update_flags` placement control** — `block_set_state` default `3` self-
+  starts circuits; flag `2` stages a component **dormant** to trigger later. See
+  `setblock-redstone-limits.md`.
+- **Pre-loaded block entities** — ship dispensers/droppers/hoppers loaded and
+  spawners configured via `block_entity_set_nbt` / `inventory_set_slot`. See
+  `contraptions-farms.md` and `contraptions-mechanisms.md`.
+- **Event-based verification** — `events_subscribe` / `events_poll` confirm a
+  mechanism *fired* (`entity.death`, `block.use`, `container.open`). See
+  `verification.md`.

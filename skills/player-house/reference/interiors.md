@@ -67,3 +67,75 @@ reading as an empty shell.
   sapling + bone-meal path for organic, varied results. Mix flower types and
   planters; keep paths and bushes irregular (see also the `terraforming`
   skill's `reference/weathering.md`).
+
+---
+
+## Java-exclusive: NBT detailing for a home interior
+
+### Labeled storage with signs (capability A)
+
+Place a `*_sign` beside or above each chest or barrel, then write a label
+with `block_entity_set_nbt`:
+
+```
+block_entity_set_nbt(pos, nbt='{front_text:{messages:[
+  "{\"text\":\"FOOD\",\"color\":\"green\",\"bold\":true}",
+  "{\"text\":\"seeds / crops / cooked\"}", "\"\"", "\"\""],
+  has_glowing_text:0b}, is_waxed:1b}')
+```
+
+`is_waxed:1b` prevents accidental edits. Four lines per face; `back_text`
+follows the same shape for double-sided standing signs. Verify with
+`block_entity_get_nbt` after merging.
+
+### Lecterns as readable displays (capability A)
+
+A lectern in a study or library can hold a written book pre-loaded via NBT:
+
+```
+block_entity_set_nbt(pos, nbt='{Book:{id:"minecraft:written_book",count:1,
+  components:{"minecraft:written_book_content":{title:"House Rules",
+  author:"Owner",pages:["\"Welcome home.\""]}},Page:0}')
+```
+
+### Decorated pots as ornaments (capability A)
+
+```
+block_entity_set_nbt(pos, nbt='{sherds:["minecraft:brick",
+  "minecraft:angler_pottery_sherd","minecraft:brick",
+  "minecraft:arms_up_pottery_sherd"]}')
+```
+
+Place in entrance alcoves, on fireplaces, or as garden ornaments. Rotate the
+sherd IDs to match the home's style.
+
+### Player-head decor (capability A)
+
+`minecraft:player_head` blocks can be given a named profile for a
+recognizable skin, or a custom base64 texture for fully bespoke ornament
+(a carved knob, a trophy head, a unique nameplate on a door):
+
+```
+block_entity_set_nbt(pos, nbt='{profile:"Notch"}')
+```
+
+### Named and enchanted gear in storage (capability B)
+
+`inventory_set_slot` accepts `components` SNBT to name, enchant, or add lore
+to any item placed into a chest, barrel, or display case:
+
+```
+inventory_set_slot(container_pos, slot=0, item={
+  id:"minecraft:diamond_pickaxe", count:1,
+  components:'{"minecraft:custom_name":"{\"text\":\"Vein Seeker\",
+    \"italic\":false,\"color\":\"gold\"}",
+    "minecraft:enchantments":{"minecraft:fortune":3,
+      "minecraft:efficiency":5,"minecraft:unbreaking":3}}'})
+```
+
+**Version note:** the `minecraft:enchantments` component shape changed between
+1.20.5 and 1.21. Verify the exact SNBT with a round-trip (`itemstack_describe`
+or give-then-read) on the running version (`server_get_status`).
+
+Use this for a "hero kit" chest near the front door, a trophy sword above the
+fireplace, or a named heirloom in a display case.

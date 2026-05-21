@@ -92,6 +92,42 @@ usually apply the initial trigger itself with a tool call — so this is rarely 
 user chore. Reserve a *player* action for cases that genuinely need one (a
 button the user wants to press).
 
+## Java-exclusive: `update_flags` — place dormant, then trigger deliberately
+
+`block_set_state` takes an `update_flags` argument (the vanilla `/setblock`
+update bitfield) that Bedrock's interface lacked. This is **precise placement
+control** — choose whether a placed block fires neighbour/redstone updates:
+
+- **`3` (default) — notify neighbours + sync to clients.** A placed block
+  behaves like a player-placed one: power propagates, redstone self-starts,
+  water flows, observers and pistons react. This is why most clocks self-start
+  (above) and is what you want for nearly every placement.
+- **`2` — sync to clients *without* notifying neighbours.** The block appears
+  and is real, but fires **no** neighbour/redstone update. Use it to stage a
+  component **dormant**: place a redstone block, lever, or torch with
+  `update_flags:2` and the circuit around it does **not** react yet. Then
+  trigger the circuit deliberately — e.g. set one adjacent block with the
+  default flag `3`, or do a one-tick `redstone_block` nudge — so it starts on
+  *your* signal rather than on placement order.
+
+When this helps the engineer:
+
+- **Stage a circuit cold, arm it on cue.** Build a sequence with `update_flags:2`
+  so nothing self-starts mid-build, then fire a single default-flag update to
+  launch the whole thing at once — sidesteps placement-order races on a
+  symmetric loop.
+- **Avoid mid-build misfires.** Lay a long redstone line or a powered component
+  without it kicking pistons before the rest of the machine exists.
+- **Performance on big static fills** — flag `2` skips the neighbour-update
+  cascade on large decorative placements that have no redstone purpose.
+
+Trade-off: a `update_flags:2` redstone component is intentionally inert until
+something updates it, so it *will* read static in a functional test until you
+arm it. Treat "armed it with a deliberate trigger" as a recipe step, not a
+fault. (Default `3` placement plus the one-tick nudge remains the simplest path
+for an ordinary self-starting machine — reach for `2` only when you specifically
+want dormant staging.)
+
 ## What about structure-placing a running mechanism?
 
 `structure_load_to_world` places blocks with neighbour updates by default too,

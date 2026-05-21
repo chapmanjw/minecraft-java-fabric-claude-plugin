@@ -148,6 +148,16 @@ A **breeding-ready** village design therefore needs:
 - Leave a few blocks of clearance near the bell and main paths so its llamas
   do not get stuck on fences or doorways.
 
+## Scripted villagers vs. emergent profession assignment
+
+The spawn-then-claim pattern described in `population.md` is the default: the
+game assigns a profession organically when a villager claims its workstation.
+For **specific traders with fixed trade lists** (a named quest merchant, a
+player-economy shop), use the scripted `entity_summon` NBT approach documented
+in `population.md` instead — the two techniques are complementary, not
+exclusive. Most villages mix both: organic workers for atmosphere, scripted
+merchants for deliberate player-facing shops.
+
 ## Java-specific notes to plan around
 
 - **Pillager outposts** in Java do *not* spawn inside villages the way they

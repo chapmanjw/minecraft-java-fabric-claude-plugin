@@ -81,3 +81,46 @@ A villager with no workstation stays unemployed (use spares for breeding).
 Inn / tavern, market stalls, guard post, chapel, manor — themed extras for
 character. They follow the same rules: a bed and workstation if a villager
 uses them, otherwise purely decorative.
+
+## Java-exclusive: seeding building chests with loot tables
+
+Rather than hand-picking chest contents item by item, use `loot_table_generate`
+to produce a believable set of items from a vanilla loot table, then slot them
+in with `inventory_set_slot`.
+
+```
+# 1. Generate loot from the matching village loot table
+loot_table_generate("minecraft:chests/village/village_weaponsmith")
+→ iron_ingot×5, obsidian×4, apple×3, iron_sword×1   (example — rolls are random)
+
+# 2. Place each result into the chest at the building's position
+inventory_set_slot(pos=<chest_pos>, slot=0, item={id:"minecraft:iron_sword",count:1})
+inventory_set_slot(pos=<chest_pos>, slot=1, item={id:"minecraft:iron_ingot",count:5})
+# … continue for each item returned
+```
+
+Vanilla village chest loot-table ids follow the pattern
+`minecraft:chests/village/village_<profession>`. Common ones:
+
+| Building | Loot table id |
+| -------- | ------------- |
+| Weaponsmith | `minecraft:chests/village/village_weaponsmith` |
+| Toolsmith | `minecraft:chests/village/village_toolsmith` |
+| Armorer | `minecraft:chests/village/village_armorer` |
+| Cartographer | `minecraft:chests/village/village_cartographer` |
+| Shepherd | `minecraft:chests/village/village_shepherd` |
+| Fisher | `minecraft:chests/village/village_fisher` |
+| Fletcher | `minecraft:chests/village/village_fletcher` |
+| Mason | `minecraft:chests/village/village_mason` |
+| Tannery (leatherworker) | `minecraft:chests/village/village_tannery` |
+| Temple (cleric) | `minecraft:chests/village/village_temple` |
+| Desert house | `minecraft:chests/village/village_desert_house` |
+| Plains house | `minecraft:chests/village/village_plains_house` |
+| Taiga house | `minecraft:chests/village/village_taiga_house` |
+| Savanna house | `minecraft:chests/village/village_savanna_house` |
+| Snowy house | `minecraft:chests/village/village_snowy_house` |
+
+Use `loot_table_list` to enumerate all available ids on the running server.
+The optional `position` parameter makes the roll biome-aware (affects
+biome-sensitive tables). Rolls are random each call — re-roll if the result
+feels wrong for the building's flavor.

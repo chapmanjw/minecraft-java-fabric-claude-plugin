@@ -50,7 +50,7 @@ not from raw size. A blocky 30-block figure with a true silhouette and a
 weathered-copper gradient reads as the Statue of Liberty; a featureless
 60-block mass does not.
 
-Five techniques carry the work — pick the ones the piece needs:
+Six techniques carry the work — pick the ones the piece needs:
 
 1. **Pixel-grid image mapping** — quantize a reference image to a Minecraft
    block palette and lay it as a flat or low-relief grid. See
@@ -64,6 +64,12 @@ Five techniques carry the work — pick the ones the piece needs:
    marble blends, stone tones. See `reference/palettes.md`.
 5. **Armor-stand detailing** — fine decorative elements and posed figures.
    See `reference/armor-stands.md`.
+6. **Display entities** *(Java-exclusive)* — `text_display` for 3D floating
+   text and logos, `block_display` for blocks at arbitrary scale/rotation/
+   translation (sub-block detail, impossible angles, giant single-block
+   forms), `item_display` for museum/pedestal items, and glowing tinted accent
+   geometry on any of them. Bedrock cannot do this. See
+   `reference/display-entities.md`.
 
 ## Inputs
 
@@ -109,7 +115,11 @@ Pass siblings a shared anchor coordinate through the `mcbuilder:registry`.
 3. **Research** — invoke `researcher` for a named monument or creature.
 4. **Resolve scale** against the Java envelope; decide tiling.
 5. **Select palette and technique** (`reference/palettes.md` and the technique
-   files).
+   files). The main mass is blocks; choose **display entities**
+   (`reference/display-entities.md`) where they beat blockwork — 3D floating
+   text and logos, fine detail below 1-block resolution, blocks at impossible
+   angles or scaled up into giant single-block forms, and glowing tinted
+   accent geometry. They are a late decoration phase, like armor stands.
 6. **Coordinate siblings** — emit handoffs for any cliff, pedestal, or plinth.
 7. **Design into the plan** — write pre-tiled phases and steps into
    `plan.toon`; save reusable tiles as `mcb:<project>_<element>` (colon
@@ -121,7 +131,18 @@ Pass siblings a shared anchor coordinate through the `mcbuilder:registry`.
    `structure_load_to_world`. (Alternatively, if a script produces the NBT
    directly, write it with `structure_file_write` as base64.) Do not use
    thousands of individual `fill`/`set` rows when a captured structure serves.
-   Queue armor-stand decoration as a late phase.
+
+   When a tile is placed mirrored or turned (a left/right pair of wings, four
+   faces of an obelisk, scattered weathered fragments), pass
+   `structure_load_to_world` the exact enum strings: `rotation` ∈
+   {`none`, `clockwise_90`, `180`, `counterclockwise_90`}, `mirror` ∈
+   {`none`, `front_back`, `left_right`}, and `integrity` (0..1) for random
+   block decay to weather or scatter a placement. Never write "rotate 90/180/270"
+   in `plan.toon` — write the enum.
+
+   Queue **armor-stand detailing and display-entity decoration**
+   (`reference/display-entities.md`) as a late phase, after all blockwork, so
+   fills don't disturb the spawned entities.
 
    **Emit a `quality_contract` block** per the schema in `planner/SKILL.md`.
    For monuments and sculptures the contract should include:
@@ -148,6 +169,7 @@ Read the file for the step you are on — do not load them all up front:
 | `reference/sculpting.md` | Organic-curve construction and voxelization technique. |
 | `reference/palettes.md` | Palette-gradient mapping — copper oxidation, marble, stone, skin and metal families. |
 | `reference/armor-stands.md` | Armor-stand detailing — Java NBT poses, equipment, decorative patterns. |
+| `reference/display-entities.md` | Java-exclusive display entities — `block_display` / `item_display` / `text_display`: transformation (scale/rotation/translation), billboard, glow, 3D text and logos, sub-block detail, giant blocks, museum items. |
 | `reference/interview.md` | The adaptive interview decision tree. |
 | `reference/blueprints.md` | Rendering modes and the validation checklist. |
 
@@ -172,4 +194,6 @@ State the piece back to the user — subject, technique, scale, palette, tile
 plan — and confirm `plan.toon` is written. Tell the orchestrator: the sibling
 skills build any cliff/pedestal/plinth first, then `blueprinter` saves the
 monument's tiles, the `worker` builds and assembles them, and the armor-stand
-decoration runs as the final phase.
+and display-entity decoration runs as the final phase. For a display-heavy
+piece (3D text, logos, glowing accents), include a user visual checkpoint on
+the first placed display before the rest are stamped.

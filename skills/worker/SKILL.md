@@ -34,8 +34,10 @@ table, and `acceptance` checks. Each step row is one operation:
 | `set` | `block_set_state` | Place `block` at `a`. |
 | `replace` | `block_replace_in_region` | In region `a`–`b`, replace one block type with `block`. |
 | `clone` | `block_clone_region` | Clone region `a`–`b` to the destination in `note`. |
-| `place-structure` | `structure_load_to_world` | Stamp structure `block` at `a`. |
-| `spawn` | `entity_summon` | Spawn entity `block` at `a` (`note` carries any SNBT tags). |
+| `place-structure` | `structure_load_to_world` | Stamp structure `block` at `a`. `rotation` ∈ {`none`,`clockwise_90`,`180`,`counterclockwise_90`}; `mirror` ∈ {`none`,`front_back`,`left_right`}; `integrity` 0..1 (1 = intact, <1 = random decay/weathering); `include_entities` boolean. Use the exact enum strings — never "90 degrees" or bare numbers. |
+| `spawn` | `entity_summon` | Spawn entity `block` at `a` (`note` carries any SNBT tags). Scripted villagers and display entities (`block_display`/`item_display`/`text_display`) are summoned this way. |
+| `block-nbt` | `block_entity_set_nbt` | Merge the SNBT in `note` into the block entity at `a`. Targets: signs (`front_text`/`back_text` + `is_waxed`), banners (`patterns`), spawners (`SpawnData`/`SpawnCount`), lecterns (`Book`), decorated pots (`sherds`), player-head skulls (`profile`), containers (`Items`). |
+| `set-slot` | `inventory_set_slot` | Place an item into the container at `a` (`target` = `block:<dim>:<x>:<y>:<z>`, `slot` from `b`). Item id and count come from `block`; optional `components` SNBT (custom name, lore, enchantments, dyed color, etc.) comes from `note`. Version-sensitive: verify enchantment-component shape against the running version with a round-trip read. |
 | `run` | `command_execute` | Run the raw command in `note`. Last resort. |
 
 Coordinates are absolute `x y z` strings — use them literally. Do no arithmetic.

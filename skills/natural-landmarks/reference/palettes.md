@@ -87,6 +87,28 @@ Diagonal contour stripes (Vinicunca): `red_terracotta`, `orange_terracotta`,
 `yellow_terracotta`, `lime_terracotta`, `cyan_terracotta`, `purple_terracotta`,
 `brown_terracotta` — bands running *along contour lines*, across the slope.
 
+## Biome-matched palette step (Java-exclusive)
+
+Natural landmarks sit in a real biome — read it before finalising any palette
+above. Call `level_get_biome_at` at the landmark's center point:
+
+```
+level_get_biome_at("minecraft:overworld", {x:200,y:80,z:50})
+→ {id:"minecraft:badlands", temperature:2.0, downfall:0, hasPrecipitation:false}
+```
+
+Use the result to bias secondary choices and vegetation:
+- A high-temperature, zero-downfall biome (badlands, desert) confirms
+  `dead_bush`, `cactus`, `red_sand` and excludes moss or heavy vegetation.
+- A cold biome (`temperature < 0.15`) confirms snow cap, `packed_ice` on
+  shaded ledges, and no liquid-water features at altitude.
+- `hasPrecipitation: false` means no rain/snow regardless of temperature —
+  adjust vegetation accordingly.
+
+The landmark palette above governs the landmark's primary rock/mineral body.
+The biome read governs the ground surround, vegetation, and accent materials
+that tie the landmark to its setting.
+
 ## Palette notes
 
 - **Water colour comes from what is under the water**, not the water itself —

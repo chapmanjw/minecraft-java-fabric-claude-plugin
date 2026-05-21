@@ -58,6 +58,11 @@ the user to run the `minecraft-mcp-setup` agent.
    street furniture — lamps, signage, fountains, benches, market stalls,
    paving patterns. Plan it in; do not leave bare streets.
 
+### Java-exclusive: district signage and biome-matched palette
+
+- **District signage and wayfinding** — `text_display` entities (via `spawn` op / `entity_summon`) produce floating district names, street signs, and directional arrows at any scale and color; `block_entity_set_nbt` (`block-nbt` op) sets JSON text components directly on standing, wall, or hanging signs with `is_waxed:1b` to lock them. Both are first-class `plan.toon` ops the `worker` executes.
+- **Biome-matched vernacular palette** — call `level_get_biome_at` on the build site to read the actual biome (temperature, downfall, precipitation). Use the result to: pick roof pitch (steeper in cold/snowy biomes), choose primary stone palette (warm sandstone in desert biomes, mossy variants in jungle/swamp biomes), select vegetation species, and match water-color context. Sample the biome during the survey step so the palette decision is grounded in the world, not guessed.
+
 ## Inputs
 
 - **From `surveyor`** — the site: bounding box, biome, elevation, water,

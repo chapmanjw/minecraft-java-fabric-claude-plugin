@@ -101,10 +101,47 @@ Write `.minecraft-builder/<project>/plan.toon` in **TOON**
   ```
 
   Allowed `op` values: `fill`, `set`, `replace`, `clone`, `place-structure`,
-  `spawn`, `run` (raw command, last resort). `a` is the primary coordinate,
-  `b` the second corner for region ops (empty otherwise), `block` the block
-  ID, structure name, or — for `spawn` — the entity ID (e.g.
-  `minecraft:villager`), `note` a short human hint or any entity tags.
+  `spawn`, `block-nbt`, `set-slot`, `run` (raw command, last resort). `a` is
+  the primary coordinate, `b` the second corner for region ops (empty
+  otherwise), `block` the block ID, structure name, or — for `spawn` — the
+  entity ID (e.g. `minecraft:villager`), `note` a short human hint or any
+  entity SNBT / NBT tags.
+
+  New Java-exclusive op vocabulary:
+  - **`block-nbt`** — calls `block_entity_set_nbt(pos=a, nbt=note)`. Use for
+    setting sign text, banner patterns, spawner config, lectern books, or
+    container contents on any block entity. The `note` field carries the SNBT
+    string to merge. Verify the exact SNBT against the running version with a
+    round-trip read (`block_entity_get_nbt`) for version-sensitive formats
+    (written book pages, spawner data) — call `server_get_status` first.
+  - **`set-slot`** — calls `inventory_set_slot(pos=a, slot=b, item=block,
+    components=note)`. Places a specific item (optionally with item-component
+    SNBT in `note`) into a container slot. Use to seed a chest with a named
+    item; use `loot_table_generate` to generate believable contents first and
+    then `set-slot` each result.
+  - For **`spawn`**, the `note` field carries SNBT for scripted entities —
+    e.g. villager profession/trades or display-entity transformation. Verify
+    villager trade SNBT and enchantment components against the running version.
+
+- **Java capabilities to plan around** — where relevant, plan steps that use
+  these Java-exclusive features (the worker executes them with the op
+  vocabulary above):
+  - **Biome-matched palettes** — the surveyor's `biome:` entry gives the
+    `id`; cross-reference `terraforming/reference/palettes.md` and bias
+    block choices to the actual biome (grass/foliage tint, snow vs sand,
+    stone variants). Call `level_get_biome_at` if no survey data is present.
+  - **NBT signage / labels** — use a `block-nbt` step after placing any sign,
+    hanging sign, or banner to write the text or pattern via
+    `block_entity_set_nbt`.
+  - **Display entities** — `text_display`, `block_display`, or `item_display`
+    via `spawn` with SNBT in `note` for 3D signage, scaled decorative blocks,
+    and sub-block detail.
+  - **Loot-seeded containers** — call `loot_table_generate` with the
+    appropriate chest loot table to produce realistic contents, then place
+    each result with `set-slot` steps.
+  - **Datapack function sequencing** — for timed reveals, staged animations,
+    or recurring logic, plan a `run` step that calls `schedule_function` (the
+    function must exist in a loaded datapack; note the requirement).
 
 - **Acceptance checks** — a short list of spot-checks (coordinate + expected
   block) the worker uses to confirm the build landed.
