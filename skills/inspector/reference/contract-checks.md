@@ -11,7 +11,7 @@ worker as a paint-over.
 ## walkability[]{from,to,note}
 
 Sample a straight-line ray from `from` to `to`, step 1 block at a time. At
-each step, sample two cells with `mc_block_get`:
+each step, sample two cells with `block_get_state`:
 
 - **Floor cell** at `(x, y, z)` — must be a stand-on-able block (any solid;
   not air, water, lava, or fence-top).
@@ -58,11 +58,17 @@ for the worker only if it is a one-off obstruction.
 
 ## block_mix_ratios[]{region_a,region_b,palette,max_single_ratio}
 
-`palette` is a comma-separated list of expected block IDs. Sample every cell
-in the region between `region_a` and `region_b` with `mc_block_get_volume`:
+`palette` is a comma-separated list of expected block IDs. Use
+`block_scan_region` over the region between `region_a` and `region_b`. Its
+bounding box is capped at 65,536 blocks per call, so split a larger region into
+sub-boxes that each fit. Tally either way:
 
-- Count the occurrences of each palette member.
-- Compute the ratio for each: `count(block) / total_cells`.
+- **Per-member:** call once per palette member with `match_block_id` set, and
+  read the returned match count for each.
+- **Full:** omit `match_block_id` to get every block in the box (results capped
+  at 65,536), and tally the IDs yourself.
+
+Then compute the ratio for each: `count(block) / total_cells`.
 
 **Fail** if any single block exceeds `max_single_ratio`, **or** if any
 palette member is missing entirely. A 100%-white_concrete wall, or a wall
@@ -75,7 +81,7 @@ at the right ratio. Do not paint over with a single block.
 ## silhouette[]{region_a,region_b,sample_count,min_y_variance}
 
 Sample `sample_count` random `(x, z)` points in the region's footprint,
-spaced at least 5 blocks apart. For each, call `mc_block_get_top` to find
+spaced at least 5 blocks apart. For each, call `block_get_top_y` to find
 the surface Y.
 
 **Fail** if `max(y) - min(y) < min_y_variance` — the silhouette is too flat

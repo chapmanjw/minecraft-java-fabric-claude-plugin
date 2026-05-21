@@ -87,8 +87,8 @@ water_continuity[1]{coast_name,from,to,sample_count}:
 ## How the inspector uses these
 
 The `inspector` reads the phase's `quality_contract` block from `plan.toon`,
-runs every row's sampling algorithm against the world with `mc_block_get` /
-`mc_block_get_top`, and produces:
+runs every row's sampling algorithm against the world with `block_get_state` /
+`block_get_top_y`, and produces:
 
 - **PASS** — every row passes its threshold.
 - **CORRECTIONS NEEDED** — one or more rows fail; the inspector emits the

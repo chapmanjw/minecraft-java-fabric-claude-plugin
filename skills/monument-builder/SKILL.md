@@ -2,7 +2,7 @@
 name: monument-builder
 description: >-
   Designs and blueprints monuments, sculptures, and build-art in a live
-  Minecraft Bedrock world — giant statues, organic creatures and dragons,
+  Minecraft Java Edition world — giant statues, organic creatures and dragons,
   abstract sculpture, pixel art and murals, large 3D text and logos. Produces
   solid or shell-only figurative forms with no habitable interiors, using
   pixel-grid image mapping, organic-curve construction, palette-gradient
@@ -40,7 +40,7 @@ logo, giant 3D text, or a large creature. Do not use for:
 
 ## Connection
 
-If an `mc_*` call fails because the MCP server is unreachable, stop and tell
+If a tool call fails because the MCP server is unreachable, stop and tell
 the user to run the `minecraft-mcp-setup` agent.
 
 ## Core principle
@@ -72,9 +72,10 @@ Five techniques carry the work — pick the ones the piece needs:
   piece; record citations for the `philosopher` to verify.
 - **From `surveyor`** — the site, space, and viewing angles.
 - **From the user** — the adaptive interview (`reference/interview.md`).
-- **From the world** — the `mcbuilder:registry`, for iteration.
+- **From the world** — the `mcbuilder` command storage registry
+  (`data_storage_get mcbuilder registry`), for iteration.
 
-## Scale and the Bedrock envelope
+## Scale and the Java envelope
 
 - The world spans Y -64 to 320. Most real monuments fit at 1:1; the very
   tallest (a 240 m statue) do not — offer a reduced scale, or split the base
@@ -106,7 +107,7 @@ Pass siblings a shared anchor coordinate through the `mcbuilder:registry`.
 2. **Interview** — `reference/interview.md`; record answers in
    `requirements.md`.
 3. **Research** — invoke `researcher` for a named monument or creature.
-4. **Resolve scale** against the Bedrock envelope; decide tiling.
+4. **Resolve scale** against the Java envelope; decide tiling.
 5. **Select palette and technique** (`reference/palettes.md` and the technique
    files).
 6. **Coordinate siblings** — emit handoffs for any cliff, pedestal, or plinth.
@@ -114,8 +115,13 @@ Pass siblings a shared anchor coordinate through the `mcbuilder:registry`.
    `plan.toon`; save reusable tiles as `mcb:<project>_<element>` (colon
    namespace) structures via the `blueprinter`. A pixel-art grid or a
    voxelized form is a **generated grid** — have the `blueprinter` build it
-   with `mc_structure_create_from_blocks` rather than as thousands of
-   `fill`/`set` rows. Queue armor-stand decoration as a late phase.
+   into a scratch area using `block_fill_region` / `block_set_state`, then
+   capture it with `structure_save_from_world` into the named template, then
+   clear the scratch and place the template wherever needed with
+   `structure_load_to_world`. (Alternatively, if a script produces the NBT
+   directly, write it with `structure_file_write` as base64.) Do not use
+   thousands of individual `fill`/`set` rows when a captured structure serves.
+   Queue armor-stand decoration as a late phase.
 
    **Emit a `quality_contract` block** per the schema in `planner/SKILL.md`.
    For monuments and sculptures the contract should include:
@@ -141,7 +147,7 @@ Read the file for the step you are on — do not load them all up front:
 | `reference/pixel-art.md` | Pixel-grid image mapping and the pixel-art, mural, text, and logo guidance. |
 | `reference/sculpting.md` | Organic-curve construction and voxelization technique. |
 | `reference/palettes.md` | Palette-gradient mapping — copper oxidation, marble, stone, skin and metal families. |
-| `reference/armor-stands.md` | Armor-stand detailing — the 13 Bedrock poses, equipment, decorative patterns. |
+| `reference/armor-stands.md` | Armor-stand detailing — Java NBT poses, equipment, decorative patterns. |
 | `reference/interview.md` | The adaptive interview decision tree. |
 | `reference/blueprints.md` | Rendering modes and the validation checklist. |
 

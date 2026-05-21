@@ -1,8 +1,8 @@
 ---
 name: inspector
 description: >-
-  Verifies a Minecraft Bedrock build in-world after each phase — checks the
-  plan was carried out as specified, that the result fits the world cleanly
+  Verifies a Minecraft Java Edition build in-world after each phase — checks
+  the plan was carried out as specified, that the result fits the world cleanly
   (no dangling edges, blocked paths, or unintended overrides), and proposes
   concrete course corrections. Use after every major phase of executing a
   build plan, as the build's self-correction checkpoint. Part of the
@@ -28,7 +28,7 @@ philosopher can learn from them later.
 
 ## Connection
 
-If an `mc_*` call fails because the MCP server is unreachable, stop and report
+If a tool call fails because the MCP server is unreachable, stop and report
 that the world is not connected.
 
 ## Inputs
@@ -38,8 +38,9 @@ that the world is not connected.
 - `.minecraft-builder/<project>/survey.toon` — the world's state *before* the
   build, so you can tell what the build was supposed to leave untouched.
 - The `worker`'s execution report for the phase.
-- The world itself, read with `mc_block_get`, `mc_block_get_top`,
-  `mc_block_get_volume`, `mc_structure_list`, `mc_entity_get`.
+- The world itself, read with `block_get_state`, `block_get_top_y`,
+  `block_scan_region` (capped 65,536 blocks/call, page large scans),
+  `structure_list`, `entity_query`.
 
 ## Reference library
 
@@ -52,10 +53,10 @@ that the world is not connected.
 ### 1. Plan fidelity — was the phase carried out?
 
 - Run the phase's **acceptance checks** from `plan.toon` — confirm the expected
-  block is at each expected coordinate with `mc_block_get`.
+  block is at each expected coordinate with `block_get_state`.
 - Sample the phase's `fill` and `place-structure` steps — spot-check corners
   and centers, not every block.
-- Confirm any `spawn` steps produced their entities (`mc_entity_get`).
+- Confirm any `spawn` steps produced their entities (`entity_query`).
 - Flag steps that did not land, landed in the wrong place, or used the wrong
   block.
 
@@ -106,16 +107,19 @@ This is the check a literal step-by-step verifier misses. Look for:
 
 If the build has an `inspection-recipe.toon` (written by the `engineer` for a
 redstone or mechanical contraption), run its functional tests: apply each
-**trigger** with `mc_run_command`, **wait** the budgeted ticks, **sample** the
+**trigger** with `command_execute`, **wait** the budgeted ticks, **sample** the
 result, and compare to the **expected** value. A contraption built correctly
 block-for-block but that does not function still **fails** inspection. Route a
 functional failure back to the `engineer` to diagnose, not to the worker.
 
-If the recipe declares a **manual kick step** (a player right-click required
-to start a self-cycling redstone clock — see the engineer's
-`reference/setblock-redstone-limits.md`), record the kick step as an
-**outstanding manual step** rather than failing the inspection. The mechanism
-itself is verified by the recipe; the kick is a known Bedrock limitation.
+If the recipe declares a **manual kick step** (an initial player trigger
+required to start a self-cycling redstone clock that did not self-start — see
+the engineer's `reference/setblock-redstone-limits.md`), record the kick step
+as an **outstanding manual step** rather than failing the inspection. On Java
+Edition, `block_set_state` with default update flags issues neighbor updates so
+many clocks self-start; but some loop configurations still need an initial
+trigger to begin ticking — verify the contraption is actually running before
+marking the recipe complete.
 
 ### 5. Adjustments — what needs to change
 

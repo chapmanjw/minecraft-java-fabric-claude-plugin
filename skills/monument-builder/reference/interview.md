@@ -14,7 +14,7 @@ and record answers in `requirements.md`.
    subject triggers `researcher`.
 3. **Scale tier** — small (a few blocks — a yard ornament), medium (10–30 m),
    large (50–100 m), or extra-large (100 m+). Extra-large triggers the
-   Bedrock-envelope conversation (scale down, or split the base off).
+   Java-envelope conversation (Y -64 to 320; scale down, or split the base off).
 4. **Pose / composition** — for a figure or creature: standing, seated,
    coiled, winged, in motion. For a mural: wall-mounted or floor.
 5. **Site & anchor** — anchor coordinates from the surveyor; standalone, on a

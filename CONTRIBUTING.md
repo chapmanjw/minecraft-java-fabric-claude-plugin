@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in improving the Minecraft Bedrock Claude plugin.
+Thanks for your interest in improving the Minecraft Java Claude plugin.
 
 ## What's in this repo
 
@@ -32,14 +32,17 @@ and agent has the required frontmatter, and that skill folder names match the
 - **Descriptions drive invocation.** A skill's or agent's `description` is what
   Claude matches against to decide when to use it. Make it concrete and
   specific about *when* to trigger.
+- **Use the Java MCP tool surface.** Reference tools by their Java names
+  (`level_*`, `block_*`, `entity_*`, `structure_*`, `data_storage_*`, …) under
+  the server name `minecraft-java`. Never use the Bedrock `mc_*` names.
 - One skill per setup phase; keep the four setup skills runnable in order, each
   handing off to the next.
 - Keep instructions interactive — do one step, verify, then proceed — and never
   have a skill tell the user to commit a secret.
 - Kebab-case names. A skill's `name` must match its folder name.
-- Keep the four-component stack in lockstep: the BDS version, behavior pack,
-  MCP server, and the values referenced in these skills (e.g. the behavior
-  pack UUID and version) must stay aligned.
+- Keep the stack in lockstep: the Minecraft version, the Fabric API jar, the
+  MCP mod jar, and the values referenced in these skills must stay aligned —
+  the mod is built per Minecraft version.
 
 ## Releasing
 

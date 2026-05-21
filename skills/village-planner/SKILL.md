@@ -2,12 +2,13 @@
 name: village-planner
 description: >-
   Designs functional, customized villages and settlements in a live Minecraft
-  Bedrock world — hamlets of a few buildings up to standard villages of 5–15 —
-  by reusing standard Minecraft village building types adapted to the biome and
-  the user's request. Runs an adaptive interview, proposes layout options,
-  iterates with the user, and respects Bedrock village mechanics (iron golems,
-  beds, workstations, bells, raids). Use when the user wants a village, hamlet,
-  town, settlement, or trading hub. Part of the minecraft-builder workflow.
+  Java Edition world — hamlets of a few buildings up to standard villages of
+  5–15 — by reusing standard Minecraft village building types adapted to the
+  biome and the user's request. Runs an adaptive interview, proposes layout
+  options, iterates with the user, and respects Java Edition village mechanics
+  (iron golems, beds, workstations, bells, raids). Use when the user wants a
+  village, hamlet, town, settlement, or trading hub. Part of the
+  minecraft-builder workflow.
 model: opus
 effort: high
 ---
@@ -42,7 +43,7 @@ Use for a multi-building **settlement** of up to ~15 buildings. Do not use for:
 
 ## Connection
 
-If an `mc_*` call fails because the MCP server is unreachable, stop and tell
+If a tool call fails because the MCP server is unreachable, stop and tell
 the user to run the `minecraft-mcp-setup` agent.
 
 ## Inputs
@@ -51,7 +52,7 @@ the user to run the `minecraft-mcp-setup` agent.
   player's house position if one exists.
 - **From `researcher`** — references when the user names a specific style.
 - **From the user** — the adaptive interview (`reference/interview.md`).
-- **From the world** — the `mcbuilder:registry` property, for iteration.
+- **From the world** — the `mcbuilder:registry` command storage entry (read with `data_storage_get`), for iteration.
 
 ## Process
 
@@ -81,9 +82,10 @@ the user to run the `minecraft-mcp-setup` agent.
    feedback, revise, and **loop until the user approves** — never plan from an
    unapproved layout.
 9. **Write the plan and hand off.** Write `requirements.md` and `plan.toon`,
-   record the village in `mcbuilder:registry`, and list the building templates
-   and population for the rest of the pipeline. Structure names follow the
-   canonical colon form `mcb:<project>_<element>`.
+   record the village in `mcbuilder:registry` command storage (written with
+   `data_storage_set`, namespace `mcbuilder`, path `registry`), and list the
+   building templates and population for the rest of the pipeline. Structure
+   names follow the canonical colon form `mcb:<project>_<element>`.
 
    **Emit a `quality_contract` block** per the schema in `planner/SKILL.md`.
    For villages the contract must include:
@@ -97,7 +99,8 @@ the user to run the `minecraft-mcp-setup` agent.
    - **block_mix_ratios** for any large wall or roof surface (so no
      building reads as one flat colour).
    - **connectivity** between every building and at least one bell, well,
-     and workstation cluster (Bedrock mechanics need this).
+     and workstation cluster (Java village mechanics require this for
+     profession assignment, golem spawning, and raid behavior).
 
 ## Reference library
 
@@ -105,7 +108,7 @@ Read the file for the step you are on — do not load them all up front:
 
 | File | Covers |
 | ---- | ------ |
-| `reference/mechanics.md` | Bedrock village mechanics — iron golems, beds, workstations, bells, raids, breeding, cats. |
+| `reference/mechanics.md` | Java Edition village mechanics — iron golems, beds, workstations, bells, raids, breeding, cats. |
 | `reference/buildings.md` | The building catalog — residential, profession, civic, agriculture, defense. |
 | `reference/layouts.md` | Layout patterns, path networks, and the hamlet/standard scale tiers. |
 | `reference/styles.md` | Biome palettes and custom architectural styles. |
@@ -129,11 +132,16 @@ village assets:
 3. The `worker` **stamps** each template wherever the layout places that
    building, varying rotation and mirror, and applying small palette tweaks,
    so instances read as a real village — same vocabulary, not identical clones.
-4. Record every template and instance in `mcbuilder:registry` so the village
-   can be extended or repaired later.
+4. Record every template and instance in `mcbuilder:registry` command storage
+   (written with `data_storage_set`, namespace `mcbuilder`, path `registry`)
+   so the village can be extended or repaired later.
 
 Grow any trees in or around the village from saplings — never place or
-duplicate a tree (see the `terraforming` skill). Buildings reuse; trees do not.
+duplicate a tree (see the `terraforming` skill). On Java Edition: place the
+sapling with `block_set_state`, then force growth with `command_execute`
+running `/place feature minecraft:<tree_type>` at the sapling coordinates, or
+bone-meal the sapling via `player_give_item` / `itemstack_drop_at`.
+Buildings reuse; trees do not.
 
 ## Hard rules
 
@@ -144,9 +152,10 @@ duplicate a tree (see the `terraforming` skill). Buildings reuse; trees do not.
 - **Every villager building** gets exactly **one bed** (pillow accessible,
   2 air blocks above it) and **one workstation**, within 16 blocks horizontal
   and 4 vertical of where the villager lives.
-- **Iron-golem-ready villages** need **≥10 villagers and ≥20 beds**, every bed
-  path-reachable, with an unobstructed spawn surface in the 17×13×17 volume
-  around the bell.
+- **Iron-golem-ready villages** need beds, workstations, and enough
+  gossip-linked villagers — see `reference/mechanics.md` for the full Java
+  conditions. Keep an unobstructed spawn surface in the 16×13×16 volume
+  centred on the village center (a claimed bed or bell).
 - **Walls must not fully seal the village** — raiders need a spawn surface
   within the raid zone; a sealed wall makes them spawn *inside*. Leave gaps.
 - **The bell must be claimable** — within 48 blocks of a claimed-bed pillow

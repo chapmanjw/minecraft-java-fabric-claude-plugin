@@ -1,112 +1,122 @@
-# Setblock-placed redstone — what self-starts, what needs a kick
+# block_set_state-placed redstone — what self-starts, what needs a trigger
 
-The agent places blocks via MCP tools (`mc_block_set`, `mc_block_fill`,
-`mc_structure_place`) that all reduce to `setblock`-equivalent operations.
-In Bedrock, **`setblock` does not generate the block-update events that a
-player-placed block does.** That has concrete consequences for redstone.
+The agent places blocks via MCP tools (`block_set_state`, `block_fill_region`,
+`block_clone_region`, `structure_load_to_world`). On Java, **`block_set_state`
+defaults to update flags `3` (notify + sync)** — so a placed block sends
+neighbour updates just like a player-placed block. That means most redstone the
+agent builds receives the block updates it needs and **most clocks self-start**.
 
-This file documents which redstone patterns will self-start when built blind
-and which require a one-time manual kick. The list is grounded in the Cape
-Aurelia Phase 10–12 retrospective: every self-starting pattern attempted
-there failed; every kicked pattern worked.
+This is materially better than a parity-limited edition where setblock-style
+placement suppresses block updates and every closed loop needs a manual kick.
+On Java you usually do not. But three real conditions can still leave a
+contraption dormant — surface them in the inspection report rather than assuming
+everything ran:
 
-## Patterns that self-start when placed via setblock
+1. **Unloaded / non-ticking chunks don't tick.** Redstone, hoppers, and
+   observers in a chunk that isn't loaded and ticking simply pause. A clock
+   built far from any player and outside a force-loaded / ticking area will sit
+   idle until the chunk loads. Build near a player or a ticking chunk, or
+   force-load it.
+2. **Some loops still need an initial trigger.** A genuinely closed,
+   edge-balanced loop (e.g. certain symmetric observer rings, or a circuit whose
+   only state change is the one that would have come from placement order) can
+   settle without ever toggling. These are the exception, not the rule — but
+   when present, the design should name a one-time initial trigger.
+3. **Placement order can matter.** Building a loop block-by-block, the partially
+   complete circuit may reach a stable state before the last block lands, so the
+   finished loop never starts. Placing the whole mechanism as one structure, or
+   ordering placement so the power source goes in last, avoids this.
 
-These work blindly — the inspection recipe samples directly.
+This file documents which redstone patterns reliably self-start when built by
+the agent and which may need a one-time initial trigger or a chunk-load
+guarantee, plus how to surface that in the inspection recipe.
 
-- **Direct power: lever on a block adjacent to receiver.** A lever placed
-  on a stone block adjacent to a piston, lamp, dispenser, or other receiver
-  activates normally. The lever's "on" state set via setblock does propagate
-  power.
-- **Static power: `redstone_block` adjacent to receiver.** A `redstone_block`
-  placed next to a piston/lamp/dispenser sets the receiver active
+## Patterns that self-start when placed via block_set_state
+
+These work without intervention as long as the chunk is loaded and ticking.
+
+- **Direct power: lever on a block adjacent to receiver.** A lever placed with
+  its powered state on, on a block adjacent to a piston, lamp, dispenser, or
+  other receiver, activates normally — the neighbour update propagates power.
+- **Static power: `minecraft:redstone_block` adjacent to receiver.** A redstone
+  block placed next to a piston/lamp/dispenser activates the receiver
   immediately. Reliable.
-- **Button on a wall.** Pressing a button is the player's job; pre-placed
-  buttons sit unpressed and work the moment the player clicks them.
-- **Pressure plate on a stand-on-able block.** Players or mobs trigger
-  it; pre-placed plates work as soon as something walks on them.
-- **Lit redstone torch + adjacent dust.** A `redstone_torch` (lit) next to
-  dust powers the dust. Static state; no clock involved.
+- **Button / pressure plate.** Players or mobs trigger these; pre-placed,
+  unpressed, they work the moment something interacts.
+- **Lit redstone torch + adjacent dust.** A `minecraft:redstone_torch[lit=true]`
+  next to dust powers it. Static state; no clock involved.
 - **Doors, trapdoors, fence gates with a power source.** Open/closed states
-  follow the power source's state at the moment of placement.
-- **Note blocks under a button or lever.** Plays on signal. The signal
-  doesn't need to be cycling; one-shot triggers are fine.
+  follow the power source at placement and update with it.
+- **Note blocks under a button or lever.** Plays on signal; one-shot triggers
+  are fine.
+- **Most clocks — observer clocks, repeater loops, hopper clocks, comparator
+  loops.** On Java these generally start on their own when placed with the
+  default update flags, because the placement neighbour-updates kick the cycle.
+  Verify in the functional test that the clock is actually oscillating; do not
+  assume.
 
-## Patterns that DO NOT self-start — kick required
+## Patterns that may need an initial trigger or a chunk-load guarantee
 
-Anything that needs an internal cycle to begin. Without a player block-update
-event, the cycle stays dormant.
+Treat these as "verify it's ticking, and add an initial trigger if not":
 
-- **2-observer clock** (two observers facing each other). Bedrock's classic
-  signal-loop primitive. Built blind, both observers sit idle. Right-click
-  either observer to kick.
-- **Hopper clock** (two hoppers passing one item, comparators reading
-  count). The hoppers don't run their transfer cooldown until an inventory
-  change pokes them; comparators don't update until the hopper does. Right-
-  click the comparator (or break/replace an item in either hopper) to kick.
-- **Repeater loop** (a closed line of repeaters powering itself). Each
-  repeater sits `unpowered_repeater` after setblock. Right-click any
-  repeater to switch its delay and trigger a block update — the loop
-  starts.
-- **Observer ring** (4-, 5-, or N-observer cyclic loop). Same as the
-  2-observer clock, scaled up. The Cape Aurelia rotating beam tried 4-, 9-,
-  and 16-observer rings with repeaters; all settled into 2-of-N
-  oscillation or never started. Kick any observer or repeater.
-- **Comparator-fed dust loop**. The comparator output drives the input.
-  Comparator output state is stale until something updates it. Right-click
-  the comparator's front block to kick.
-- **Levers whose state is set via setblock as part of a powered chain.**
-  The lever's `open_bit` value is correct but the propagation hop doesn't
-  happen. Break and replace, or right-click, to kick.
-- **Pistons in a sequenced piston door or piston elevator**. The first
-  piston of the sequence may extend; downstream stages won't fire because
-  the observer/repeater that should detect the first piston's update fires
-  on the player's update event, not on the setblock event.
+- **A perfectly symmetric, edge-balanced loop** built block-by-block may settle
+  before completing. If the test shows it static, add an initial-trigger step
+  (set a `minecraft:redstone_block` adjacent for one moment, then remove it) and
+  re-test.
+- **A loop whose last placed block leaves the circuit in a stable, non-cycling
+  state.** Re-order placement (power source last) or place it as one structure.
+- **Any contraption built in a chunk that may not stay loaded.** Not a redstone
+  fault — a ticking fault. Guarantee the chunk loads (near a player / ticking
+  area / force-load) before sampling.
 
-## The kick — what it looks like to the user
+When in doubt, the cheap, reliable nudge on Java is: place a
+`minecraft:redstone_block` (or flip a `minecraft:lever[powered=true]`) adjacent
+to the loop for one game tick, then set it back to `minecraft:air`. That single
+block update reliably starts any stalled loop.
 
-A "kick" is the player walking to a named coordinate and clicking once. It
-must be:
+## The initial trigger / chunk-load requirement — what it looks like
 
-- **Documented in the inspection recipe** as a `manual_kick` block —
-  coordinate + action.
-- **Surfaced in the orchestrator's final report** as an outstanding manual
-  step ("right-click observer at (-39, 143, -42) to start the rotating
-  beam").
-- **Done before the functional test samples** the result. If the user
-  hasn't kicked yet, the test will fail.
+When a contraption is one of the exceptions above, the design surfaces it as an
+optional **initial trigger** (or chunk-load note), not a mandatory manual chore:
 
-A kicked clock runs **forever** afterward — there is no decay. The kick is a
-one-time chore per mechanism per world session.
+- **Recorded in the inspection recipe** as an `initial_trigger` block —
+  coordinate + action (the agent can perform it itself via `command_execute` /
+  `block_set_state`, since these are not player-only interactions on Java).
+- **Surfaced in the orchestrator's final report** only if it remains an
+  outstanding requirement (e.g. "this loop must be force-loaded to keep
+  ticking", or "if the clock is static, trigger once at (x,y,z)").
+- **Applied before the functional test samples** the result.
 
-## What about `mc_structure_place` of a running mechanism?
+Unlike a manual right-click on a parity-limited edition, on Java the agent can
+usually apply the initial trigger itself with a tool call — so this is rarely a
+user chore. Reserve a *player* action for cases that genuinely need one (a
+button the user wants to press).
 
-Theoretical workaround: build the mechanism in a survival session by hand,
-capture it with `mc_structure_create_from_world`, then `mc_structure_place`
-the captured running state. The Cape Aurelia project did not test this end
-to end, but the prevailing evidence is that **placement still de-energises
-the loop** because the structure-place itself is a setblock-equivalent
-operation that doesn't fire block updates on the blocks it places.
+## What about structure-placing a running mechanism?
 
-Until tested and confirmed otherwise, **assume structure-placed clocks need
-the same kick as setblock-placed clocks.** Document the kick step regardless
-of how the mechanism was built.
+`structure_load_to_world` places blocks with neighbour updates by default too,
+so a captured mechanism generally resumes ticking on placement (chunk loaded).
+A closed, edge-balanced loop captured mid-cycle is the one case to verify — if
+it lands static, apply the one-tick redstone-block nudge described above. Build
+the mechanism, place it, then run the functional test to confirm it's actually
+oscillating; don't assume the captured state survived the round trip.
 
 ## Decision tree
 
 When the user asks for a mechanism:
 
-1. **Can it be triggered by a player-operated input** (lever, button, plate,
-   walked-into trigger)? → Build it; no kick needed.
-2. **Does it need to cycle on its own** (a clock, a self-running animation,
-   a self-starting timer)? → Build it AND declare a `manual_kick` step
-   AND tell the user upfront — before they pick the feature — that they
-   will need to click once to start it.
-3. **Is the user willing to live with the one-click kick?** → Build it.
-4. **Is the user not willing to click?** → Redesign as a lever-triggered
-   one-shot instead of a self-cycling animation. Be honest about the
-   tradeoff.
+1. **Player-operated input** (lever, button, plate, walked-into trigger)? →
+   Build it; nothing extra needed.
+2. **Self-cycling** (a clock, a self-running animation, a self-starting timer)?
+   → Build it; it will usually self-start. Add an `initial_trigger` step to the
+   recipe as a safety net, and verify in the functional test that it is
+   oscillating. Note any chunk-load / force-load requirement.
+3. **Built far from a player / in a chunk that may unload?** → Guarantee ticking
+   (near a player, a ticking area, or force-load) and say so in the report.
+4. **The functional test shows it static?** → Apply the one-tick redstone-block
+   nudge, re-test, and only escalate to a player action if a tool nudge can't
+   start it.
 
-The honesty step is non-negotiable. Cape Aurelia shipped windmills and
-rotating beams without flagging the kick; the user had to discover the
-limitation after the build was "done". That cost trust. Flag it first.
+Be honest in the report: if a contraption needs the chunk force-loaded to keep
+running, or needs a one-time trigger, say so up front — don't ship a "working"
+clock that the user later finds standing still.

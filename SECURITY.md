@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please report security issues privately through
-[GitHub Security Advisories](https://github.com/chapmanjw/minecraft-bedrock-claude-plugin/security/advisories/new)
+[GitHub Security Advisories](https://github.com/chapmanjw/minecraft-java-fabric-claude-plugin/security/advisories/new)
 rather than a public issue. You will receive an acknowledgement within a few days.
 
 ## Security model
@@ -13,23 +13,28 @@ of skill and agent instructions (Markdown) plus manifest files (JSON). It does
 not bundle or auto-run an MCP server. The security-relevant surface is the
 guidance the skills give and the credentials handled while following them.
 
-- **Bearer tokens.** Setup produces two secrets — a client token (for Claude)
-  and an agent token (for the behavior pack). The skills instruct that these
-  must never be committed and that `.mcp.json` / `.env` files holding them stay
-  out of version control; [`.gitignore`](.gitignore) enforces this. The client
-  token grants full control of the Minecraft world — treat it as a credential.
+- **The bearer token.** A single-player install on `127.0.0.1` needs no token —
+  the mod binds to loopback only. A dedicated/remote server requires
+  authentication: the mod generates one **bearer token** on first boot and logs
+  it once. The skills instruct that this token must never be committed and that
+  the `.mcp.json` / config files holding it stay out of version control;
+  [`.gitignore`](.gitignore) enforces this. The token grants full control of the
+  Minecraft world — treat it as a credential.
 - **No bundled MCP config.** The plugin does not ship an active `.mcp.json`.
-  [`.mcp.json.example`](.mcp.json.example) is a template only, and it sources
-  the token from an environment variable so the committed file stays
+  [`.mcp.json.example`](.mcp.json.example) is a template only; for remote setups
+  it sources the token from an environment variable so the committed file stays
   secret-free.
-- **Downstream components.** The MCP server and behavior pack this plugin
-  guides you to install have their own security models and policies — see
-  [`minecraft-bedrock-mcp-server`](https://github.com/chapmanjw/minecraft-bedrock-mcp-server/blob/main/SECURITY.md)
-  and
-  [`minecraft-bedrock-mcp-behavior-pack`](https://github.com/chapmanjw/minecraft-bedrock-mcp-behavior-pack/blob/main/SECURITY.md).
+- **Remote exposure.** The mod refuses to bind to a non-loopback address unless
+  the operator explicitly opts in *and* enables authentication, and it warns
+  when running without TLS. The skills follow that posture: localhost by
+  default, auth + (ideally) TLS before any LAN/internet exposure.
+- **Downstream component.** The MCP server is embedded in the
+  [`minecraft-java-fabric-mcp-server`](https://github.com/chapmanjw/minecraft-java-fabric-mcp-server)
+  Fabric mod, which has its own security model and policy — see that
+  repository's `SECURITY.md` and `docs/security.md`.
 
 ## Scope
 
 Report issues in this repository's skill or agent instructions (for example,
 guidance that would lead a user to expose a token) or in its manifests.
-Vulnerabilities in the MCP server or behavior pack belong in those repositories.
+Vulnerabilities in the MCP server / Fabric mod belong in that repository.

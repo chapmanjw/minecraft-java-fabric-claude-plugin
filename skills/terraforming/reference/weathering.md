@@ -8,10 +8,11 @@ effort. Shaped, palettized terrain still looks flat until it is weathered.
 Break up any uniform surface with 5–15% variant noise:
 
 - **Structure-integrity method (best).** Save a single-block module (one
-  `coarse_dirt` block, say). Load it across the target region at
-  `integrity 30` with a unique seed — only ~30% of positions place. Repeat
-  with other blocks and other seeds to layer noise. (Bedrock has no `/random`;
-  integrity is the substitute — see `command-budget.md`.)
+  `minecraft:coarse_dirt` block, say) with `structure_save_from_world`. Load
+  it across the target region with `structure_load_to_world` at `integrity 0.3`
+  with a unique seed — only ~30% of positions place. Repeat with other blocks
+  and other seeds to layer noise. (See `command-budget.md` for the
+  integrity mechanic.)
 - **Replace-fill method.** Chain `replace`-mode fills at descending coverage
   to convert subsets of a base block to variants.
 
@@ -58,7 +59,7 @@ To plant trees:
    `spruce_sapling`, `birch_sapling`, `jungle_sapling`, `acacia_sapling`,
    `dark_oak_sapling`, `cherry_sapling`, `mangrove_propagule`, or `azalea` /
    `flowering_azalea` (which grow into azalea trees).
-2. **Place the sapling** with `mc_block_set` on valid soil (dirt, grass,
+2. **Place the sapling** with `block_set_state` on valid soil (dirt, grass,
    podzol, mud for mangrove), with the light and headroom the species needs.
    For 2×2 species — jungle, dark oak, large spruce — place the full
    four-sapling square.
@@ -66,12 +67,14 @@ To plant trees:
    grid. The 7-block rule applies to tree lines too.
 4. **Grow them.** Two methods:
    - **Tick speed (scriptable).** Temporarily raise `randomTickSpeed` with
-     `mc_run_command` (`/gamerule randomTickSpeed <high, e.g. 300>`), let the
-     saplings grow, then **restore it to the previous value** (Bedrock default
-     is `1`). Raised tick speed also speeds crops, fire spread, and leaf decay
-     in loaded chunks — raise it briefly and restore it promptly.
-   - **Bone meal.** Apply bone meal to each sapling (via a player or a
-     dispenser). Use when the build has something able to do so.
+     `command_execute` (`/gamerule randomTickSpeed 300`), let the saplings grow,
+     then **restore it to the default** (`/gamerule randomTickSpeed 3`). Raised
+     tick speed also speeds crops, fire spread, and leaf decay in loaded chunks
+     — raise it briefly and restore it promptly.
+   - **Bone meal.** Apply bone meal to each sapling via `player_give_item` /
+     `itemstack_drop_at` + use, or a dispenser. Alternatively use
+     `command_execute` with `/place feature minecraft:<tree_type>` to force a
+     tree at a sapling's position.
 5. **Vary** species, age, and spacing across a stand so no two trees match —
    that variation is the whole point of growing rather than placing.
 

@@ -16,8 +16,8 @@ Where a water route meets the land:
 - **Scale up** — a marina is many slips off shared walkways; an industrial
   port adds warehouses (`building-architect`) and cranes (`monument-builder`);
   a naval harbor has large ship berths and a drydock.
-- **Mooring** — Bedrock has no real boat mooring; add fence-post rings as a
-  visual cue and accept that boats drift.
+- **Mooring** — Java has no mechanical boat-mooring block; add fence-post
+  rings as a visual cue and accept that boats drift.
 - A **lighthouse** marking a harbor entrance is a `building-architect` handoff.
 
 ## Airports and airship terminals
@@ -38,12 +38,14 @@ Minecraft has no real powered flight (only elytra), so aircraft are
 
 Where a route changes height sharply:
 
-- **Bubble elevator (up)** — a water column over **soul sand**; carries an
-  entity up at ~8 m/s. The water column (kelp-set source blocks) and the soul
-  sand are yours to design; any **activator** redstone is an `engineer`
-  handoff.
-- **Drop column (down)** — a water column over **magma blocks**, pulling down
-  at ~4.9 m/s.
+- **Bubble elevator (up)** — a water column over **soul sand** generates
+  upward bubble currents; on Java, fill the column with water source blocks
+  (place kelp top-to-bottom and break the bottom kelp to convert flowing water
+  to sources, then remove the kelp). The soul sand and water column are yours
+  to design; any **activator** redstone (e.g. a switch to toggle soul sand vs.
+  magma) is an `engineer` handoff.
+- **Drop column (down)** — a water column over **magma blocks** generates
+  downward bubble currents, pulling entities down.
 - **Stairs and ladders** — a stairwell (about one block up per two across) or
   a ladder shaft, for a simple, no-mechanism climb.
 - **Ice drop / ramp** — a steep packed-ice ramp for a fast boat descent.

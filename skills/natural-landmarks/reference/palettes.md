@@ -1,12 +1,12 @@
 # Landmark palette presets
 
-Named palettes for natural wonders, with Bedrock block IDs and mix ratios.
+Named palettes for natural wonders, with Java block IDs and mix ratios.
 These are landmark-specific rock/mineral palettes — for biome surface palettes
 (forest, desert, taiga) see the `terraforming` skill's `reference/palettes.md`.
 
-Apply a ratio the same way as in terraforming: place the dominant block, then
-convert sub-percentages with `replace`-mode fills or single-block structure
-modules placed at the matching `integrity`.
+Apply a ratio the same way as in terraforming: place the dominant block with
+`block_fill_region`, then convert sub-percentages with `replace`-mode fills
+or single-block structure modules placed at the matching `integrity`.
 
 ## colorado-plateau
 
@@ -95,5 +95,5 @@ Diagonal contour stripes (Vinicunca): `red_terracotta`, `orange_terracotta`,
 - **Concrete vs concrete powder:** powder obeys gravity (use for White Sands
   dunes); solid concrete does not (use for Salar). Mixing them up collapses the
   build on chunk reload.
-- **Version note:** cherry blocks need Bedrock 1.20+; copper oxidation and
-  amethyst need 1.17+. Check the host version with `mc_world_get_info`.
+- **Version note:** cherry blocks need Java **1.20+**; copper oxidation and
+  amethyst need **1.17+**. Check the host version with `server_get_status`.

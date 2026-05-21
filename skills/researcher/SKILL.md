@@ -62,8 +62,8 @@ Write two files under `.minecraft-builder/<project>/`:
     nave_height,33,17
     tower_height,69,35
   materials[2]{element,block}:
-    walls,polished_andesite
-    roof,deepslate_tiles
+    walls,minecraft:polished_andesite
+    roof,minecraft:deepslate_tiles
   ```
 
 Then give the requester a short summary: the recommended scale, the overall

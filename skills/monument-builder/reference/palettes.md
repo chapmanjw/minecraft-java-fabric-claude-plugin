@@ -6,21 +6,29 @@ block mass form and depth.
 
 ## The three palette families
 
-- **Skin / colour** — saturated `concrete` and `wool` for figurative colour
-  (a creature's hide, a painted figure, pixel art). Concrete is the most
-  saturated; wool is softer.
-- **Stone** — `calcite`, `smooth_quartz`, `diorite`, `andesite`, `granite`,
-  `smooth_stone`, `bone_block` — for marble and granite statuary.
-- **Metal** — `copper` (and its oxidation chain), `iron_block`, `gold_block`,
-  `raw_gold_block` — for bronze, steel, and gilded monuments.
+- **Skin / colour** — saturated concrete and wool for figurative colour
+  (a creature's hide, a painted figure, pixel art). Use the explicit Java id:
+  `minecraft:<color>_concrete` (e.g. `minecraft:red_concrete`,
+  `minecraft:white_concrete`) and `minecraft:<color>_wool`. Concrete is the
+  most saturated; wool is softer.
+- **Stone** — `minecraft:calcite`, `minecraft:smooth_quartz`,
+  `minecraft:diorite`, `minecraft:polished_diorite`, `minecraft:andesite`,
+  `minecraft:granite`, `minecraft:smooth_stone`, `minecraft:bone_block` —
+  for marble and granite statuary.
+- **Metal** — `minecraft:copper_block` (and its oxidation chain),
+  `minecraft:iron_block`, `minecraft:gold_block`, `minecraft:raw_gold_block`
+  — for bronze, steel, and gilded monuments.
 
 ## Copper oxidation — the signature gradient
 
 This is the standout technique for any weathered-bronze monument (a
 Liberty-style figure). Copper passes through **four oxidation stages** —
-`copper_block` → `exposed_copper` → `weathered_copper` → `oxidized_copper` —
+`minecraft:copper_block` → `minecraft:exposed_copper` →
+`minecraft:weathered_copper` → `minecraft:oxidized_copper` —
 from fresh orange to green verdigris, and each stage has a **waxed** variant
-that locks it.
+(`minecraft:waxed_copper_block`, `minecraft:waxed_exposed_copper`,
+`minecraft:waxed_weathered_copper`, `minecraft:waxed_oxidized_copper`) that
+locks it.
 
 Use the stages as a gradient across the figure:
 
@@ -35,13 +43,14 @@ keeps oxidizing). For a deliberately *aging* look, leave some unwaxed.
 
 ## Marble and stone gradients
 
-- **Marble** — blend `calcite` (white) + `smooth_quartz` + `bone_block` +
-  `diorite`, mixed so no repeat is obvious; veining with thin `andesite`
-  lines.
-- **Granite statuary** (a Rushmore-style face) — blend `smooth_stone` +
-  `andesite` + `polished_diorite` + `granite` for a grey weathered look.
-- **Sandstone** (a Sphinx) — `sandstone`, `smooth_sandstone`, `cut_sandstone`,
-  with `terracotta` accents for warmth.
+- **Marble** — blend `minecraft:calcite` (white) + `minecraft:smooth_quartz`
+  + `minecraft:bone_block` + `minecraft:diorite`, mixed so no repeat is
+  obvious; veining with thin `minecraft:andesite` lines.
+- **Granite statuary** (a Rushmore-style face) — blend `minecraft:smooth_stone`
+  + `minecraft:andesite` + `minecraft:polished_diorite` + `minecraft:granite`
+  for a grey weathered look.
+- **Sandstone** (a Sphinx) — `minecraft:sandstone`, `minecraft:smooth_sandstone`,
+  `minecraft:cut_sandstone`, with `minecraft:terracotta` accents for warmth.
 
 ## Shading a form
 
@@ -57,9 +66,9 @@ A single-block surface reads flat. Shade it across the form:
 
 ## Decorative tile
 
-`glazed_terracotta` gives 16 colours, each a pattern with 4 rotations — a
-large vocabulary for mosaic backgrounds, ornamental bases, and abstract
-panels.
+`minecraft:<color>_glazed_terracotta` gives 16 colours, each a pattern with
+4 rotations — a large vocabulary for mosaic backgrounds, ornamental bases,
+and abstract panels.
 
 ## Note
 

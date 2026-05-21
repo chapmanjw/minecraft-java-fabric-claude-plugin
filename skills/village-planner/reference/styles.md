@@ -52,4 +52,7 @@ vanilla building roles:
 - Match path material and lighting tone to the palette — soul lanterns suit
   snowy and spooky themes, ordinary lanterns suit the rest.
 - Grow trees and bushes from saplings in any style — never place or duplicate
-  a tree (see the `terraforming` skill). Buildings reuse; trees do not.
+  a tree (see the `terraforming` skill). On Java Edition: place the sapling
+  with `block_set_state`, then force growth with `command_execute` running
+  `/place feature minecraft:<tree_type>`, or bone-meal via
+  `player_give_item` / `itemstack_drop_at`. Buildings reuse; trees do not.

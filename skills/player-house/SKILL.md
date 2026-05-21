@@ -2,7 +2,7 @@
 name: player-house
 description: >-
   Designs and blueprints a player's base of operations in a live Minecraft
-  Bedrock world — a place to live, store, craft, enchant, and display from —
+  Java Edition world — a place to live, store, craft, enchant, and display from —
   not NPC villager housing. Runs an adaptive interview, proposes ASCII /
   Markdown / Mermaid blueprints, iterates with the user until approved, then
   writes the build plan. Use when the user wants a house, base, survival home,
@@ -35,7 +35,7 @@ Do **not** use it for:
 
 ## Connection
 
-If an `mc_*` call fails because the MCP server is unreachable, stop and tell
+If a tool call fails because the MCP server is unreachable, stop and tell
 the user to run the `minecraft-mcp-setup` agent.
 
 ## Inputs
@@ -46,8 +46,8 @@ the user to run the `minecraft-mcp-setup` agent.
 - **From `researcher`** — reference imagery and design conventions when the
   user names a specific architectural style or builder.
 - **From the user** — everything in the adaptive interview.
-- **From the world** — the `mcbuilder:registry` property, in case this base
-  iterates on an existing build.
+- **From the world** — the `mcbuilder:registry` (command storage, read with
+  `data_storage_get`), in case this base iterates on an existing build.
 
 ## Process
 
@@ -87,7 +87,7 @@ the user to run the `minecraft-mcp-setup` agent.
 6. **Write the plan and hand off.** Once approved, write the fully-resolved
    build into `.minecraft-builder/<project>/plan.toon` (the standard schema —
    absolute coordinates, pre-tiled `fill` steps, phases) and record the base
-   and its rooms in the `mcbuilder:registry` world property. Name each room as
+   and its rooms in the `mcbuilder:registry` (written with `data_storage_set`). Name each room as
    a structure module the `blueprinter` will create:
    `mcb:<project>_<room>` (colon namespace — required by the structure
    create tools; underscore-only IDs are rejected).
@@ -118,7 +118,7 @@ Read the file for the step you are on — do not load them all up front:
 | `reference/styles.md` | Architectural styles with block palettes and ratios. |
 | `reference/layouts.md` | Layout topologies and the seven scale tiers. |
 | `reference/environments.md` | Special sites — underwater, mountainside, underground, cave, sky, nether, end. |
-| `reference/utilities.md` | Functional systems and Bedrock-specific mechanics and quirks. |
+| `reference/utilities.md` | Functional systems and Java-Edition mechanics. |
 | `reference/interiors.md` | Storage schemes, furniture, lighting, and decor. |
 | `reference/interview.md` | The adaptive interview script and branching. |
 | `reference/blueprints.md` | The three rendering modes, legends, and examples. |
@@ -141,10 +141,11 @@ areas, follow the **`terraforming` skill's `reference/command-budget.md`**.
 - **At least two exits**, or a panic room with a bed and a food chest.
 - **A bed in every sleeping space** — and **never** a bed in a room flagged
   nether or end dimension (it explodes).
-- **Refuse Java-only redstone.** If the user asks for something documented as
-  broken in Bedrock (AFK iron-door fishing, quasi-connectivity piston doors,
-  observer-on-stem auto-farms), substitute the Bedrock-safe equivalent from
-  `reference/utilities.md` and tell the user why.
+- **Use Java-correct redstone.** Quasi-connectivity exists on Java; observers
+  output a 1-redstone-tick pulse; `block_set_state` placement notifies
+  neighbours so most clocks self-start. See `reference/utilities.md` for
+  Java-verified designs. If a design has unresolved redstone complexity, defer
+  to `engineer`.
 - **Stay within Y=-64 to Y=320.**
 
 ## Hand off

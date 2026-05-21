@@ -3,15 +3,16 @@
 Lakes, rivers, falls, wetlands, and frozen water. All the non-negotiable rules
 apply — irregular outlines, the 7-block rule on every bank and shore.
 
-## Water mechanics in Bedrock
+## Water mechanics in Java Edition
 
 - Water **flows** when placed. For a large still body, either place source
   blocks along the **top edge** of a sealed basin and let them propagate, or
-  fill the whole volume with source blocks.
-- The infinite-source rule works: a `+` of four source blocks regenerates a
-  source in any adjacent flowing tile.
-- To embed water inside a saved module, capture it with the blocks
-  **waterlogged** where the structure tools support it.
+  fill the whole volume with source blocks using `block_fill_region`.
+- The infinite-source rule works: a `+` of two adjacent source blocks in a
+  flat plane regenerates a source in the adjacent position.
+- To embed water inside a saved structure template, capture it with the blocks
+  **waterlogged** — Java encodes waterlogged state as a blockstate property
+  (e.g. `minecraft:stone_bricks[waterlogged=true]`).
 - Water cannot exist in the Nether dimension — it evaporates instantly.
 
 ## Lakes

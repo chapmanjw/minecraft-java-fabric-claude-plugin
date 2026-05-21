@@ -78,8 +78,11 @@ For a "lived-in" or "ruined" build: cracked and mossy block variants, missing
 sections, vines and moss, partial collapse, `sculk` for ancient decay. Apply
 weathering after the clean geometry, never instead of it.
 
-## Bedrock notes
+## Java Edition notes
 
-Compose only with `mc_block_fill`, `mc_block_set`, `mc_block_clone`, and
-`mc_structure_*` — there is no WorldEdit. There is no `/data`. Lean on
-structure modules (`modules.md`) for anything repeated.
+Compose with `block_fill_region`, `block_set_state`, `block_clone_region`, and
+`structure_save_from_world` / `structure_load_to_world` — there is no WorldEdit
+mod in this setup. `/data` commands are available via `command_execute` for NBT
+manipulation on block entities and entities. Lean on structure modules
+(`modules.md`) for anything repeated. Keep each `block_fill_region` within the
+32,768-block vanilla volume limit; split larger fills across calls.

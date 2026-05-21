@@ -47,10 +47,11 @@ circuit), not a freehand wobble and not a geometric pool. The lake basin is a
 `terraforming` job; you give it the **exact designed shoreline curve** and the
 placement of the temples, bridges, and tree clumps around the circuit.
 
-## Bedrock notes
+## Implementation notes
 
 - Still water = source blocks everywhere; the moment a tile is flowing water
-  the surface ripples and the reflection breaks.
+  the surface ripples and the reflection breaks. Use `block_fill_region` with
+  `minecraft:water[level=0]` (source block) throughout the basin.
 - Light the floor (sea lanterns / glowstone beneath) for clear, bright water.
 - Keep a basin within the structure and fill caps like any other element;
   large reflecting pools tile on their symmetry centerline.

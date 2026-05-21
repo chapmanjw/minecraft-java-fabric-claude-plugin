@@ -2,7 +2,7 @@
 name: transit-architect
 description: >-
   Designs and blueprints world-spanning transit and infrastructure networks in
-  a live Minecraft Bedrock world — rail lines, roads and highways, nether-hub
+  a live Minecraft Java Edition world — rail lines, roads and highways, nether-hub
   transit, bridges, tunnels, elevators, docks, and airports — the connective
   network between separate builds. Chooses the network topology and routes the
   links. Use when the user wants to connect two or more sites, build a transit
@@ -34,7 +34,7 @@ hub, a highway, a rail line, a bridge or tunnel between places. Do not use for:
 
 ## Connection
 
-If an `mc_*` call fails because the MCP server is unreachable, stop and tell
+If a tool call fails because the MCP server is unreachable, stop and tell
 the user to run the `minecraft-mcp-setup` agent.
 
 ## Core competency
@@ -45,7 +45,7 @@ Two things are distinctively yours:
    network: a direct line, a mesh, a hub-and-spoke, a ring, a trunk-and-branch,
    or a nether hub. The wrong topology wastes enormous effort. See
    `reference/topology.md`.
-2. **Route-finding under Bedrock constraints** — trace each link across real
+2. **Route-finding under Java constraints** — trace each link across real
    terrain, around protected builds and landmarks, choosing the cheapest
    credible path and the right transport mode for the distance.
 
@@ -54,19 +54,20 @@ the static parts of elevators and docks. Anything that needs **redstone** (a
 boost station, an automated junction switch, a drawbridge mechanism, a
 bubble-elevator activator) is an `engineer` handoff.
 
-## Bedrock realities
+## Java realities
 
 - **The nether is an 8:1 distance multiplier.** 1 block in the Nether = 8 in
   the Overworld. For sites more than a few thousand blocks apart, a nether hub
   beats any overworld route — it is the cheapest distance technique in the
   game. Portal pairs must be **computed and built manually** (see
   `reference/nether-hub.md`).
-- **Rail** runs at 8 m/s straight (≈11.3 diagonal); a powered rail roughly
-  every 38 blocks holds an occupied cart at speed; three in a row launch from
-  rest.
-- **Ice boats** — on Bedrock, packed ice and blue ice run at the **same**
-  speed (unlike Java). Default to **packed ice** — identical performance, far
-  cheaper.
+- **Rail** runs at ~8 m/s straight (≈11.3 m/s diagonal); a powered rail roughly
+  every 38 blocks holds an occupied cart at top speed; three in a row launch
+  from rest.
+- **Ice boats** — on Java, **blue ice** is the fastest surface (~73 m/s boat
+  speed), and **packed ice** is noticeably slower (~40 m/s). Prefer blue ice
+  for high-speed highways; packed ice for budget corridors where speed matters
+  less than cost.
 - **Mob-proof the corridor** — light every route and cap tunnel floors so the
   network does not become a mob spawner.
 
@@ -77,8 +78,8 @@ bubble-elevator activator) is an `engineer` handoff.
 - **From `researcher`** — real-world references when the user names a specific
   bridge, road, or transit style.
 - **From the user** — the adaptive interview (`reference/interview.md`).
-- **From the world** — the `mcbuilder:registry`, for the existing builds and
-  for iteration.
+- **From the world** — the `mcbuilder:registry` (command storage, read with
+  `data_storage_get`), for the existing builds and for iteration.
 
 ## Process
 

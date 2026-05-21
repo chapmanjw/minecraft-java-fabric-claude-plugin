@@ -2,8 +2,8 @@
 name: landscape-architect
 description: >-
   Designs and blueprints intentionally designed outdoor space in a live
-  Minecraft Bedrock world — formal gardens, parks, plazas, courtyards, hedge
-  mazes, fountains, parterres, topiary, cloister gardens, estate grounds.
+  Minecraft Java Edition world — formal gardens, parks, plazas, courtyards,
+  hedge mazes, fountains, parterres, topiary, cloister gardens, estate grounds.
   Covers French formal, Italian, English landscape, Mughal, Japanese, Chinese,
   modernist, and other traditions. Geometric and intentional — the deliberate
   counterpart to the naturalistic terraforming skill. Use when the user wants
@@ -46,7 +46,7 @@ for:
 
 ## Connection
 
-If an `mc_*` call fails because the MCP server is unreachable, stop and tell
+If a tool call fails because the MCP server is unreachable, stop and tell
 the user to run the `minecraft-mcp-setup` agent.
 
 ## Core principles
@@ -59,10 +59,11 @@ the user to run the `minecraft-mcp-setup` agent.
    by intent (the opposite of the grow-from-saplings rule, which governs only
    *naturalistic* planting). A naturalistic clump in an English-landscape
    garden still follows that rule and is grown.
-3. **Keep leaves alive.** Bedrock leaves decay unless near a log. Every hedge,
+3. **Keep leaves alive.** Leaves decay unless near a log. Every hedge,
    topiary, allée, and parterre that uses leaves must be **placed as
-   persistent leaves, or built on a log core** within range — state this in
-   the plan so the `worker` does not place decaying leaves.
+   persistent leaves** (the `persistent=true` blockstate property), **or built
+   on a log core** within range — state this in the plan so the `worker` does
+   not place decaying leaves.
 4. **Reuse the repeating unit.** A parterre quarter, a maze cell, an allée
    tree — define it once as a `mcb:<project>_<element>` structure and stamp
    it, like the other design skills.
@@ -73,7 +74,8 @@ the user to run the `minecraft-mcp-setup` agent.
   and cited dimensions; persist the dossier to the project folder.
 - **From `surveyor`** — the site, or a delegated envelope from `city-planner`.
 - **From the user** — the adaptive interview (`reference/interview.md`).
-- **From the world** — the `mcbuilder:registry`, for iteration.
+- **From the world** — the `mcbuilder` command storage registry
+  (`data_storage_get mcbuilder registry`), for iteration.
 
 ## Process
 

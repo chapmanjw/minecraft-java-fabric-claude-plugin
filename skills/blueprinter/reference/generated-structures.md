@@ -1,97 +1,100 @@
 # Generating a structure from a block grid
 
-`mc_structure_create_from_blocks` turns a **block grid you compute** into a
-saved structure — without building it in the world block by block first. Use
-it for any element easier to describe with a formula or a script than to lay
-by hand: pixel-art murals, voxelized models, anything image-mapped or
-parametric.
+Use this path for any element easier to describe with a formula or a script
+than to lay by hand: pixel-art murals, voxelized models, anything
+image-mapped or parametric. There is **no `mc_structure_create_from_blocks`
+equivalent on Java Edition** — instead, use one of the two methods below.
 
-It is the third blueprint method, alongside capture-from-world and the
-`mc_structure_set_block` loop.
+Both produce a named structure template that `structure_load_to_world` can
+stamp anywhere, `structure_get_info` / `structure_list` can inspect, and
+`structure_delete` can clean up.
 
-## How it works
+---
 
-You hand the tool a structure definition — a block palette plus a
-run-length-encoded grid of palette indices. The behavior pack builds it in the
-world as a **world-saved** structure: it exists immediately, is placeable with
-`mc_structure_place`, shows up in `mc_structure_get` / `mc_structure_list`, and
-persists across reloads. No files, no world reload.
+## Method 1 — Scratch-and-capture (default)
 
-## The definition
+Build the computed grid in-world in a scratch area, then save it as a
+structure. Straightforward; works for any grid size within the tool limits.
 
-`mc_structure_create_from_blocks` takes:
+### Steps
 
-- **`id`** — the structure identifier, e.g. `mcb:lakeside-village_mural`.
-  The colon namespace `mcb:<project>_<element>` is **required** — the
-  create tools reject underscore-only IDs.
-- **`size`** — `{ x, y, z }` extents in blocks.
-- **`palette`** — the distinct block states, indexed from 0. Each entry is a
-  block `name` and optional `states` (e.g. `{ "pillar_axis": "y" }`).
-- **`blocks`** — the grid, run-length encoded (see below).
-- **`save_mode`** — `"world"` (default) or `"memory"`. Leave it at `world` for
-  a reusable blueprint.
+1. **Compute the per-cell block list** in your chosen order (XYZ or ZYX,
+   it doesn't matter as long as you iterate consistently).
+2. **Place the grid** in the scratch area using `block_fill_region` for
+   solid runs and `block_set_state` for individual cells or cells with
+   blockstate properties. Keep each `block_fill_region` within the 32,768-block
+   volume limit; tile larger grids.
+3. **Capture** the bounding box with `structure_save_from_world`:
+   - `name`: `mcb:<project>_<element>` (colon namespace required).
+   - `dimension`: the dimension you built the scratch in.
+   - `box`: `{from, to}` — the exact corners of the placed grid.
+4. **Clear the scratch area** with a `block_fill_region` of `minecraft:air`.
+5. **Verify** with `structure_get_info` that the saved size matches the
+   expected dimensions.
 
-### The block grid — ZYX order, run-length encoded
-
-Conceptually the grid is one palette index per cell, in **ZYX order**: the cell
-`(x, y, z)` sits at flat index
-
-```
-z + size.z * (y + size.y * x)
-```
-
-An index of **`-1`** is a structure void — the existing world block is left
-untouched when the structure is placed. Use it for empty space and the
-transparent parts of a mural.
-
-`blocks` is that flat sequence **run-length encoded** as `[count, index]`
-pairs. A 16×16 mural with a solid background is a handful of runs, not 256
-integers. The run counts must sum to `size.x * size.y * size.z`.
-
-```
-blocks: [[60, 0], [3, 1], [12, 0], ...]   // 60 cells of palette[0], then 3 of palette[1], ...
-```
-
-A region with no repetition degrades to `[1, index]` runs — still valid.
-
-## Generating it
-
-Do not hand-write the runs. Generate them with a short script:
-
-1. Build the per-cell index array in ZYX order (a nested x → y → z loop).
-2. Collapse equal neighbours into `[count, index]` runs.
-3. Call `mc_structure_create_from_blocks` with the palette and the runs.
-
-Example — a 16×1×16 checkerboard floor:
+### Example — 16×1×16 checkerboard floor
 
 ```python
+# Compute cell list
 sx, sy, sz = 16, 1, 16
 cells = []
 for x in range(sx):
-    for y in range(sy):
-        for z in range(sz):
-            cells.append((x + z) % 2)            # palette index 0 or 1
-runs, i = [], 0
-while i < len(cells):
-    j = i
-    while j < len(cells) and cells[j] == cells[i]:
-        j += 1
-    runs.append([j - i, cells[i]])
-    i = j
-# mc_structure_create_from_blocks(
-#   id="mcb:demo_floor",
-#   size={"x": 16, "y": 1, "z": 16},
-#   palette=[{"name": "minecraft:white_concrete"}, {"name": "minecraft:black_concrete"}],
-#   blocks=runs)
+    for z in range(sz):
+        # alternate minecraft:white_concrete / minecraft:black_concrete
+        cells.append("minecraft:white_concrete" if (x + z) % 2 == 0
+                      else "minecraft:black_concrete")
+
+# Group into runs for fill calls
+# (each run of the same block → one block_fill_region along z)
+# Place at scratch origin e.g. 0, 200, 0
+origin_x, origin_y, origin_z = 0, 200, 0
+for x in range(sx):
+    for z in range(sz):
+        block = "minecraft:white_concrete" if (x + z) % 2 == 0 \
+                else "minecraft:black_concrete"
+        # block_set_state(id=block, x=origin_x+x, y=origin_y, z=origin_z+z)
 ```
 
-The whole definition travels in the tool call, so keep it reasonable: a single
-call comfortably handles a few thousand blocks. For anything larger, tile it
-into multiple structures — the same tiling the blueprinter already applies for
-the 64×384×64 structure-size limit.
+After placing all cells, call:
+```
+structure_save_from_world(
+  name="mcb:demo_floor",
+  dimension="minecraft:overworld",
+  box={from: {x: 0, y: 200, z: 0}, to: {x: 15, y: 200, z: 15}})
+```
 
-## Register and verify
+Then clear: `block_fill_region(dimension=..., box={from:..., to:...}, block={id: "minecraft:air"})`.
 
-- Record the structure in `mcbuilder:registry` like any other blueprint.
-- It is a world structure, so `mc_structure_get` / `mc_structure_list` confirm
-  it saved at the expected size, and `mc_structure_place` stamps it.
+For large grids, use `block_fill_region` for homogeneous runs (same block
+along a row) to stay within the `block_set_state` per-step budget. A 64×64
+checkerboard can be placed as 64 alternating fill calls (one per row),
+not 4,096 individual `block_set_state` calls.
+
+---
+
+## Method 2 — Direct NBT write
+
+Generate a structure `.nbt` file programmatically and write it with
+`structure_file_write` (content is base64-encoded NBT). Use this path only
+when a script already produces NBT output — it is heavier than
+scratch-and-capture and requires correct NBT encoding.
+
+Java structure `.nbt` files follow the vanilla structure template format:
+- Top-level compound with keys `size` (list of 3 ints), `entities` (list),
+  `blocks` (list of `{pos:[x,y,z], state:int}` compounds), `palette` (list
+  of `{Name:string, Properties:{…}}` compounds), and `DataVersion` (int).
+- `DataVersion` must match the running server's data version.
+
+After writing, call `structure_list` to confirm the template is visible and
+`structure_get_info` to verify its dimensions.
+
+---
+
+## Register and verify (both methods)
+
+- Record the structure in `mcbuilder:registry` via `data_storage_set`
+  (namespace `mcbuilder`, path `registry`) like any other blueprint.
+- Confirm with `structure_get_info` / `structure_list` that it saved at the
+  expected size.
+- Place it with `structure_load_to_world` to verify it renders correctly
+  before committing it to the plan.

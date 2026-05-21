@@ -8,42 +8,49 @@ iron golem.
 ## The plan's population steps
 
 Population is expressed in `plan.toon` as `spawn` steps (the `worker` runs them
-with `mc_entity_spawn`), interleaved with the `set` steps that place
-workstations. A spawn step carries the entity id, the position, and any tags.
+with `entity_summon`), interleaved with the `set` steps that place
+workstations. A spawn step carries the entity id, the position, and any SNBT
+tags.
 
 ## Spawning villagers — the claim pattern
 
-**Profession is not reliably set when a villager spawns in Bedrock.** Do not
-rely on spawning a "librarian" directly. Use the spawn-then-claim pattern:
+**In Java Edition, profession is assigned when a villager claims its
+workstation — not at spawn time.** Do not try to force a profession via SNBT
+at spawn. Use the spawn-then-claim pattern:
 
 1. The workstation block is already placed (a `set` step) inside the building,
-   within 16 blocks horizontal / 4 vertical of where the villager will be, and
-   ≥2 blocks from any other workstation.
-2. Spawn `minecraft:villager_v2` inside the building (a `spawn` step).
-3. The villager pathfinds to the unclaimed workstation and claims it — shown
-   by green particles. It claims a reachable bed the same way.
+   within the villager's pathfinding range, and ≥2 blocks from any other
+   workstation.
+2. Summon `minecraft:villager` inside the building with `entity_summon`. Pass
+   a `VillagerData` SNBT tag to set the biome skin type:
+   `{VillagerData:{type:"minecraft:plains",profession:"minecraft:none",level:1}}`
+   (swap `plains` for `desert`, `savanna`, `snow`, `swamp`, or `taiga`).
+3. The villager pathfinds to the unclaimed workstation during the next daytime
+   "seek work" tick and claims it — shown by green sparkle particles. It
+   claims a reachable bed the same way.
 4. Allow time — claiming is not instant. The `philosopher` verifies claims
    afterward (see "Verification" below).
 
-Choose the villager's biome skin to match the village biome. Leave spare
-unclaimed villagers (and beds) if the user wants breeding.
+Leave spare unclaimed villagers (and beds) if the user wants breeding.
 
 ## Iron golems
 
 A golem spawns naturally only when the full set of conditions in
 `mechanics.md` is met (≥10 villagers, ≥20 beds, …). That takes in-game time.
-For **day-one defense**, spawn one golem directly: a `spawn` step for
-`minecraft:iron_golem` near the bell, on a clear surface inside the 17×13×17
-volume. Tell the user a *naturally respawning* golem still needs the full
-conditions.
+For **day-one defense**, spawn one golem directly: a `spawn` step
+(`entity_summon`) for `minecraft:iron_golem` near the bell, on a clear surface
+inside the 16×13×16 spawn volume centred on the village's average bed position.
+Tell the user a *naturally respawning* golem still needs the full Java
+conditions (see `mechanics.md`).
 
 ## Cats and animals
 
-- **Cats** arrive on their own once the village has claimed beds (≈1 per 4
-  beds, cap 5). To seed them immediately, spawn `minecraft:cat` near the
-  meeting area.
-- **Farm animals** — spawn cows, pigs, sheep, and chickens inside their
-  fenced, lit pens (`spawn` steps): a small breeding stock per pen.
+- **Cats** arrive on their own once the village has claimed beds (1 per dawn
+  check while bed count exceeds cat count, cap 5 within 48 blocks). To seed
+  them immediately, summon `minecraft:cat` near the meeting area with
+  `entity_summon`.
+- **Farm animals** — summon cows, pigs, sheep, and chickens inside their
+  fenced, lit pens (`entity_summon` steps): a small breeding stock per pen.
 
 ## Verification
 

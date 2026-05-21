@@ -20,7 +20,7 @@ anything — you place what the plan says, where it says, in the order it says.
 
 ## Connection
 
-If an `mc_*` call fails because the MCP server is unreachable, stop and report
+If a tool call fails because the MCP server is unreachable, stop and report
 that the world is not connected.
 
 ## Read the plan
@@ -30,13 +30,13 @@ table, and `acceptance` checks. Each step row is one operation:
 
 | `op` | Tool | Meaning |
 | ---- | ---- | ------- |
-| `fill` | `mc_block_fill` | Fill the region from `a` to `b` with `block`. |
-| `set` | `mc_block_set` | Place `block` at `a`. |
-| `replace` | `mc_block_replace` | In region `a`–`b`, replace one block type with `block`. |
-| `clone` | `mc_block_clone` | Clone region `a`–`b` to the destination in `note`. |
-| `place-structure` | `mc_structure_place` | Stamp structure `block` at `a`. |
-| `spawn` | `mc_entity_spawn` | Spawn entity `block` at `a` (`note` carries any tags). |
-| `run` | `mc_run_command` | Run the raw command in `note`. Last resort. |
+| `fill` | `block_fill_region` | Fill the region from `a` to `b` with `block`. |
+| `set` | `block_set_state` | Place `block` at `a`. |
+| `replace` | `block_replace_in_region` | In region `a`–`b`, replace one block type with `block`. |
+| `clone` | `block_clone_region` | Clone region `a`–`b` to the destination in `note`. |
+| `place-structure` | `structure_load_to_world` | Stamp structure `block` at `a`. |
+| `spawn` | `entity_summon` | Spawn entity `block` at `a` (`note` carries any SNBT tags). |
+| `run` | `command_execute` | Run the raw command in `note`. Last resort. |
 
 Coordinates are absolute `x y z` strings — use them literally. Do no arithmetic.
 
@@ -56,7 +56,7 @@ terrain rebuild.
 Before executing any phase, sample the first few `fill` and `set` steps:
 
 - For a `fill` step with a planned **`b` (before-state)** value, sample the
-  cell at `a` with `mc_block_get`. If the actual block does not match the
+  cell at `a` with `block_get_state`. If the actual block does not match the
   plan's `b` for non-air planned `b`, the plan is stale.
 - For phases that depend on a previous phase's output (interior into shell,
   furniture into rooms), sample a representative coordinate of the prior
@@ -67,7 +67,7 @@ Before executing any phase, sample the first few `fill` and `set` steps:
 and where; the orchestrator routes back to the planner-class skill that
 owns the build to re-resolve coordinates against current world state.
 
-This adds one extra `mc_block_get` per phase. It is cheap; the alternative
+This adds one extra `block_get_state` per phase. It is cheap; the alternative
 (building 16 houses into nothing) is not.
 
 ## Execute
@@ -77,31 +77,34 @@ This adds one extra `mc_block_get` per phase. It is cheap; the alternative
 - If a step **fails or is ambiguous** — a bad block ID, a malformed
   coordinate, a missing structure, a tool error — **stop immediately**. Do not
   guess a fix, do not skip ahead. Report which step failed and the error.
-- Respect the command throttle: each step is one call; do not fire calls in a
-  tight burst. After every ~6–8 heavy ops (large fill, structure place, big
-  clone), drop in one light `mc_block_get` before the next burst — the BDS
-  script watchdog drops the bridge if a burst saturates it.
+- Prefer few large ops (`block_fill_region`, `block_clone_region`,
+  `structure_load_to_world`) over many `block_set_state` calls. As good
+  practice, after every ~6–8 heavy ops (large fill, structure place, big
+  clone), drop in one light `block_get_state` before continuing — avoid
+  chasing a write burst with another write burst.
 - Execute each `fill` step exactly as sized in the plan. The planner has
   already tiled large volumes to stay within Minecraft's ~32,768-block limit —
   never merge adjacent `fill` steps into a bigger region, and never split one
   into smaller calls.
-- **Watch for `blocks_changed: 0`.** `mc_block_*` ops in unloaded chunks
-  return success with zero blocks changed. If a fill that should change
-  thousands reports zero, the chunk wasn't loaded — stop and tell the
-  orchestrator to add a ticking area over the work zone before retrying.
+- **Watch for `blocks_changed: 0`.** Block ops in unloaded chunks return
+  success with zero blocks changed. If a fill that should change thousands
+  reports zero, the chunk wasn't loaded — stop and tell the orchestrator to
+  ensure the work zone is loaded (via `/forceload`, or by having a player
+  present) before retrying.
 
 ## Verify
 
 After each phase, run the plan's `acceptance` checks for that phase with
-`mc_block_get` — confirm the expected block is at the expected coordinate. If a
-check fails, stop and report it.
+`block_get_state` — confirm the expected block is at the expected coordinate.
+If a check fails, stop and report it.
 
 ## Update state
 
-After completing a phase, update the **`mcbuilder:registry`** world dynamic
-property: read it with `mc_property_get`, set the relevant build's `status`
-(`in-progress` → `built`) and its real anchor coordinates, and write it back
-with `mc_property_set`. The world record must reflect what actually got built.
+After completing a phase, update the **`mcbuilder:registry`** in command
+storage: read it with `data_storage_get` (namespace `mcbuilder`, path
+`registry`), set the relevant build's `status` (`in-progress` → `built`) and
+its real anchor coordinates, and write it back with `data_storage_set`. The
+world record must reflect what actually got built.
 
 ## Report
 

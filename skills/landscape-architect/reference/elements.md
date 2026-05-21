@@ -5,9 +5,10 @@ it once as a `mcb:<project>_<element>` structure and stamp it.
 
 ## The leaf-persistence rule
 
-Bedrock leaves **decay** unless near a log. Every hedge, topiary, parterre
+Leaves **decay** unless near a log. Every hedge, topiary, parterre
 hedge, and clipped allée built from leaf blocks must be placed as **persistent
-leaves** or built on a **log core** within range. State this explicitly in the
+leaves** (blockstate `persistent=true`, set via `block_set_state` properties)
+or built on a **log core** within range. State this explicitly in the
 plan — a garden whose hedges decay overnight is a failure. This applies to
 every element below that uses leaves.
 
@@ -33,8 +34,7 @@ the design, not randomized.
   dead-end branches and a goal at the center (a gazebo, a fountain, a raised
   viewing platform). Path width 2–3 blocks (one person) or 3–4 (comfortable).
   Verify every fork resolves — a maze with unintended loops or no solution is
-  a failure. Do not generate it randomly (no `/random` on Bedrock anyway);
-  bake the layout into the design.
+  a failure. Do not generate it randomly; bake the layout into the design.
 
 ## Topiary
 

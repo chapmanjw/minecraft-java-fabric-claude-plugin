@@ -35,23 +35,26 @@ The recipe:
      meets natural terrain. The pad is buildable; the shoulder hides the
      transition.
 
-2. **Bake to RLE tiles.** Walk `(x, z)` in tile-sized chunks (≤30×30 with a
-   tile depth fitting under 64×384×64 and ~1500 RLE runs — see
-   `command-budget.md`). For each column write a vertical run: stone /
-   substrate / surface block / air (or water above sea level). Encode as
-   compact RLE for `mc_structure_create_from_blocks`.
+2. **Build tiles into a scratch area.** Walk `(x, z)` in tile-sized chunks
+   (≤30×30, tile depth fitting under 64×384×64 — see `command-budget.md`).
+   For each tile, use `block_fill_region` / `block_set_state` to write the
+   computed column heights (stone / substrate / surface block / air or water)
+   into a reserved scratch region. Then call `structure_save_from_world` over
+   that scratch box to save it as `mcb:<project>_terrain_<tile_id>`. Clear
+   the scratch area before the next tile.
 
-3. **Place tiles.** One `mc_structure_create_from_blocks` per tile, one
-   `mc_structure_place` per spot. Pace the placements (≤6–8 in a row, then a
-   light verify read) to avoid bridge drops.
+3. **Place tiles.** One `structure_load_to_world` per spot. Interleave reads
+   and writes — place a batch, verify one spot with `block_get_state` or
+   `block_get_top_y`, then continue.
 
 4. **Tiles reach the seabed.** For coastal tiles, extend the column down to
    the seabed (or at least 10 blocks below the lowest expected water column)
    so water sits on real ground, not in a void-over-rock shelf.
 
 This is fast, repeatable, and produces organic terrain by construction. Once
-the heightmap is right, re-placing it is one tool call per tile. Stacked
-rectangular fills produced the v1 ziggurat — do not return to that method.
+the heightmap is right, re-placing a tile is one `structure_load_to_world`
+call. Stacked rectangular fills produced the v1 ziggurat — do not return to
+that method.
 
 ## Naturalising an existing rectangular mass — the talus-skirt rescue
 
@@ -139,8 +142,8 @@ bands is the sweet spot for a cliff face.
 
 - **Arches:** lay a horizontal plank of stone 1–3 blocks thick, then carve a
   parabolic profile out of the underside.
-- **Overhangs:** `clone` the top 2 strata of a cliff and translate them
-  outward 3–8 blocks (use `masked` mode).
+- **Overhangs:** `block_clone_region` the top 2 strata of a cliff and
+  translate them outward 3–8 blocks (use `masked` mode).
 - **Sea stacks:** isolated stratified columns standing in water, 5–15 across,
   12–40 tall, capped with grass and a sparse tree.
 - **Cave shells:** `fill ... hollow` to carve a chamber, then break the

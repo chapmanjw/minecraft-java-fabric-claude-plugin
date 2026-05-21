@@ -13,7 +13,7 @@ worked examples across the categories.
    Liberty is quoted at several "heights" depending on what is included) —
    record the figure *and* its source.
 2. **Fill the entry schema** (below).
-3. **Resolve scale** against the Bedrock envelope (SKILL.md).
+3. **Resolve scale** against the Java envelope (SKILL.md — Y -64 to 320).
 4. **Pick the technique** — pixel-art, organic-curve, voxelization — and the
    palette.
 5. **Name the sibling seams** — cliff, pedestal, plinth.

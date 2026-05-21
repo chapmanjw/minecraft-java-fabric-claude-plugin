@@ -1,17 +1,17 @@
 {
-  "name": "minecraft-bedrock",
-  "version": "0.6.0",
-  "description": "Agent skills and agents for driving a live Minecraft Bedrock world through the minecraft-bedrock MCP server. Includes a guided, step-by-step setup of the whole stack and an in-world builder agent.",
+  "name": "minecraft-java",
+  "version": "0.1.0",
+  "description": "Agent skills and an agent for driving a live Minecraft Java Edition world through the minecraft-java Fabric MCP mod. Includes a guided, step-by-step setup of the whole stack and an in-world builder agent.",
   "author": {
     "name": "chapmanjw"
   },
-  "homepage": "https://github.com/chapmanjw/minecraft-bedrock-claude-plugin",
-  "repository": "https://github.com/chapmanjw/minecraft-bedrock-claude-plugin",
+  "homepage": "https://github.com/chapmanjw/minecraft-java-fabric-claude-plugin",
+  "repository": "https://github.com/chapmanjw/minecraft-java-fabric-claude-plugin",
   "license": "MIT",
   "keywords": [
     "minecraft",
-    "minecraft-bedrock",
-    "bedrock-dedicated-server",
+    "minecraft-java",
+    "fabric",
     "mcp",
     "game-server",
     "agent-skills"

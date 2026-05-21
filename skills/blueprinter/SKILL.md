@@ -18,7 +18,7 @@ later with no memory outside the world.
 
 ## Connection
 
-If an `mc_*` call fails because the MCP server is unreachable, stop and tell
+If a tool call fails because the MCP server is unreachable, stop and tell
 the user to run the `minecraft-mcp-setup` agent.
 
 ## Inputs
@@ -26,40 +26,47 @@ the user to run the `minecraft-mcp-setup` agent.
 - `.minecraft-builder/<project>/plan.toon` — its `blueprints` list names every
   reusable element you must define.
 - `research.toon` — dimensions and materials, if a real reference is involved.
-- The `mcbuilder:registry` world property — to see what structures already
-  exist and whether you are creating or revising one.
+- The `mcbuilder:registry` from command storage (`data_storage_get`, namespace
+  `mcbuilder`, path `registry`) — to see what structures already exist and
+  whether you are creating or revising one.
 
 ## Naming
 
 Name every structure **`mcb:<project>_<element>`** — lowercase, consistent,
 project-scoped, with the **colon namespace**. This is the canonical form
 across the whole plugin: in `plan.toon`, in `mcbuilder:registry`, and in
-every `mc_structure_*` call.
+every `structure_*` call.
 
-The colon is required, not optional. `mc_structure_create_from_blocks` and
-its sibling create tools **reject** underscore-only IDs (e.g.
-`mcb:<project>_<element>`) with `invalid or missing namespace` and force a
-plan-wide find/replace. Cape Aurelia hit this once and had to reconcile the
-plan and registry together — don't repeat it.
+Always use the `mcb:` namespace. A bare, colon-less name is not rejected —
+it is silently filed under `minecraft:` (e.g. `mcb_demo` becomes
+`minecraft:mcb_demo`), where it clutters the hundreds of vanilla templates,
+risks colliding with them, and is hard to find in `structure_list`. The `mcb:`
+namespace keeps the build's templates isolated and listable. Treat the colon
+as required, and keep the form identical in `plan.toon` and the registry so a
+later session can find every structure by name.
 
 ## Create each blueprint
 
 For every element in the plan's `blueprints` list:
 
 1. **Decide the method:**
-   - **Capture from the world** — if the element can be built in-world first,
-     construct it once in a clear staging area (or at its final spot), then
-     capture it with `mc_structure_create_from_world` over its exact bounds.
-   - **Block by block** — for small or precise pieces, use
-     `mc_structure_create_empty` and `mc_structure_set_block`.
-   - **Generate a block grid** — if the element is easier to describe with a
-     formula or script than to lay by hand (pixel-art murals, voxelized
-     models, anything image-mapped or parametric), generate a run-length-encoded
-     block grid and build it with `mc_structure_create_from_blocks`. See
+   - **Scratch-and-capture** (default) — build the element in-world in a clear
+     staging area using `block_fill_region` and `block_set_state`, then capture
+     it with `structure_save_from_world` over its exact bounds. Clear the
+     staging area afterward. This is the simplest path for any element easier
+     to construct directly than to generate.
+   - **Capture from final spot** — if the element is being built at its final
+     position anyway, capture with `structure_save_from_world` immediately after
+     the worker finishes placing it.
+   - **Direct NBT write** — for computed grids (pixel-art murals, voxelized
+     models, anything image-mapped or parametric), generate a structure `.nbt`
+     and write it with `structure_file_write` (content is base64). Heavier —
+     only use when a script already produces NBT. See
      `reference/generated-structures.md`.
 2. Build it from the plan's exact materials and dimensions.
-3. Save it under the `mcb:<project>_<element>` name.
-4. Verify with `mc_structure_get` / `mc_structure_list` that it saved with the
+3. Save it under the `mcb:<project>_<element>` name. Java structure templates
+   are saved as `.nbt` files under `<world>/generated/<namespace>/structures/`.
+4. Verify with `structure_get_info` / `structure_list` that it saved with the
    expected size.
 
 If you build prototypes in a staging area, clean them up afterward so the only
@@ -67,17 +74,18 @@ trace is the saved structure file.
 
 ## Iteration
 
-To revise an existing blueprint: `mc_structure_place` it into a staging area,
-edit the blocks, capture it again under the **same name** (bumping its
-revision in the registry). Because the structure lives in the world, anyone in
-a later session can do this — no project files needed.
+To revise an existing blueprint: `structure_load_to_world` it into a staging
+area, edit the blocks, capture it again under the **same name** with
+`structure_save_from_world` (bumping its revision in the registry). Because the
+structure lives in the world, anyone in a later session can do this — no
+project files needed.
 
 ## Register
 
-Record every blueprint in the **`mcbuilder:registry`** world dynamic property
+Record every blueprint in the **`mcbuilder:registry`** command storage record
 (TOON — see <https://toonformat.dev/>). Read the current value with
-`mc_property_get`, add or update the structure's row, and write it back with
-`mc_property_set`:
+`data_storage_get` (namespace `mcbuilder`, path `registry`), add or update the
+structure's row, and write it back with `data_storage_set`:
 
 ```toon
 builds[1]{project,element,structure,x,y,z,status,revision}:
@@ -91,4 +99,5 @@ Use `status: blueprint` for a defined-but-not-yet-placed structure; the
 
 Report the structure names you created or revised and their sizes. The plan is
 now ready for the `worker` to execute — every `place-structure` step in
-`plan.toon` references a structure you have now defined.
+`plan.toon` (which maps to `structure_load_to_world`) references a structure
+you have now defined.

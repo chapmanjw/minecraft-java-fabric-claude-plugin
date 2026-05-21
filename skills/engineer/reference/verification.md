@@ -9,14 +9,17 @@ fails, you diagnose and correct. This file is how.
 Write the recipe to `.minecraft-builder/<project>/inspection-recipe.toon`. A
 test is a sequence of **trigger → wait → sample**:
 
-- **trigger** — apply an input. The `inspector` does this with `mc_run_command`
-  — e.g. place a `redstone_block` at a button position then set it back to
-  `air`, or `replaceitem` a stack into an input container.
-- **wait** — hold for the design's **timing budget** plus slack (the
-  worst-case path from `design-patterns.md`, padded for observer drift).
-- **sample** — read the result: `mc_block_get` for a block state (a door
-  block now `air`, a piston `extended`, a comparator powered),
-  `mc_block_get_volume` for a region, `mc_entity_get` for collected drops.
+- **trigger** — apply an input. The `inspector` does this with `command_execute`
+  / `block_set_state` — e.g. place a `minecraft:redstone_block` at a button
+  position then set it back to `minecraft:air` — or `inventory_set_slot` /
+  `player_give_item` to load a stack into an input container.
+- **wait** — hold for the design's **timing budget** plus slack (the worst-case
+  deterministic path from `design-patterns.md`).
+- **sample** — read the result: `block_get_state` for a block state (a door
+  block now `minecraft:air`, a piston `[extended=true]`, a comparator powered),
+  `block_scan_region` for a region, `inventory_get` / `inventory_count_items`
+  for container contents, `entity_get` / `entity_query` for collected drops.
+  Use `scoreboard_*` to count events over time (e.g. items processed).
 - **expect** — the value a working contraption produces.
 
 ```toon
@@ -29,13 +32,14 @@ steps[4]{action,target,detail}:
 ```
 
 Give every contraption a test — even a "trivial" one. The whole point of the
-inspector loop is to catch the long tail of Bedrock quirks.
+inspector loop is to confirm the machine actually runs: that a clock is
+oscillating, a chunk is ticking, and timing landed where the budget said.
 
 ## Per-type test contracts
 
 | Contraption | Trigger | Sample after wait | Pass criterion |
 | ----------- | ------- | ----------------- | -------------- |
-| Door | power the button position | door-block coords | all become `air`; self-closes |
+| Door | power the button position | door-block coords | all become `minecraft:air`; self-closes |
 | Sorter | put a stack of the target item in the input | output and overflow chests | target item only in its row; others empty |
 | Mob farm | spawn the mob in the spawn box, or wait a cycle | collection chest | drops arrive within the expected rate |
 | Clock | apply the enable signal | a target coord, sampled repeatedly | oscillation period within ±1 tick of plan |
@@ -50,14 +54,15 @@ corrected steps:
 
 | Symptom | Diagnosis | Fix |
 | ------- | --------- | --- |
-| Piston never extends, though redstone next to it is powered | A Java quasi-connectivity design — Bedrock has no QC | Move the power to a face *directly* adjacent to the piston; re-design off any "block above" pattern |
-| Sorter leaks the target item, or sorts into the wrong row | 21 filler items, or filter rows interfering | Use exactly **20** filler items; add a 1-block isolation gap between rows |
+| Clock / loop is static at the first sample | Edge-balanced loop never toggled, placement order, or the chunk isn't ticking | Apply the one-tick nudge (place `minecraft:redstone_block` adjacent, then set `minecraft:air`); confirm the chunk is loaded/force-loaded; re-sample |
+| Piston never extends, though redstone next to it is powered | The circuit assumed a QC power position the build didn't actually create, or the power face is wrong | Verify the QC/direct-power face matches the design; move power to the intended block and re-test |
+| Sorter leaks the target item, or sorts into the wrong row | Wrong filler-item count for the sorter variant, or filter rows interfering | Set the filler count exactly per the cited Java sorter design (typically 18 in the filter slot); add a 1-block isolation gap between rows |
 | Hopper not pulling | The hopper is powered (locked) by a stray signal | Find and insulate the stray redstone — often a torch on an adjacent block |
 | Filter hopper skips matching items | A non-matching item is in its collection range | Re-route the item stream so matching items arrive alone |
-| Observer chain fires late or intermittently | MCPE-15793 / MCPE-73342 timing drift | Add a 2-tick repeater between the affected observer pairs |
-| Mob farm: zero spawns | Spawn surface too bright, or outside the spawn shell | Re-check light level (0–7 for hostiles) and the 24–44-block shell at the world's simulation distance |
-| Powered rail does not propel the cart | The rail is not actually powered | Power it from an adjacent block/repeater facing it, and respect the ~1-per-38 spacing |
-| Door corner does not move | A stuck piston, or one observer drifted | Free the piston / clear obstruction; add retiming for the drifted observer |
+| Timing path lands a tick early/late | Repeater delays not summed to the design budget | Re-check the deterministic timing budget; adjust repeater delays so paths align |
+| Mob farm: zero spawns | Spawn surface too bright, or outside the spawn shell | Re-check light level (block-light 0 for hostiles on modern Java) and the ~24–128-block shell at the world's simulation distance |
+| Powered rail does not propel the cart | The rail is not actually powered | Power it from an adjacent block/repeater facing it, and respect the ~1-per-30–38 spacing |
+| Door corner does not move | A stuck piston, or a missed power/timing connection | Free the piston / clear obstruction; verify the corner's power and timing against the design |
 | Iron-golem / villager farm rate low | A village-mechanics problem, not engineering | Hand the village half back to `village-planner` |
 
 After a fix, the `worker` applies the corrected steps and the `inspector`

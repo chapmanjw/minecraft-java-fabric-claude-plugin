@@ -2,7 +2,7 @@
 name: city-planner
 description: >-
   Designs and blueprints whole cities and city districts in a live Minecraft
-  Bedrock world — real-world replicas (modern and historical), pop-culture
+  Java Edition world — real-world replicas (modern and historical), pop-culture
   replicas, and original cities. Plans the urban fabric — district zoning,
   street hierarchy, transit, walls, and reused vernacular building modules —
   and defers every named landmark to the building-architect skill. Runs an
@@ -38,7 +38,7 @@ Use for a **city or city district** (≈16+ buildings). Do not use for:
 
 ## Connection
 
-If an `mc_*` call fails because the MCP server is unreachable, stop and tell
+If a tool call fails because the MCP server is unreachable, stop and tell
 the user to run the `minecraft-mcp-setup` agent.
 
 ## Core principles
@@ -66,11 +66,11 @@ the user to run the `minecraft-mcp-setup` agent.
   dossier: signature silhouette, urban pattern, dimensions, palette, era.
   Always invoke `researcher` for these; cite sources.
 - **From the user** — the adaptive interview (`reference/interview.md`).
-- **From the world** — the `mcbuilder:registry` property, for iteration.
+- **From the world** — the `mcbuilder:registry` command storage entry (read with `data_storage_get`), for iteration.
 
 ## Scale and districting
 
-Bedrock limits force a districted design. Pick one of three scales:
+Java Edition's limits force a districted design. Pick one of three scales:
 
 - **1:1 district** — one walkable quarter at full scale (Midtown Manhattan,
   the Île de la Cité, a Pompeii forum quarter). Up to ~512×512 blocks.
@@ -82,14 +82,15 @@ Bedrock limits force a districted design. Pick one of three scales:
 Then:
 
 - **Decompose the city into districts of ≤256×256 blocks** — each a unit the
-  `blueprinter` slices into structure files (`mcb:<project>_<district>_<element>`).
+  `blueprinter` slices into structure templates (`mcb:<project>_<district>_<element>`).
 - **Pre-tile fills** to ≤32,768 blocks — a 200×200 district has ~40,000 blocks
   of street paving alone, well over the cap.
 - **Y-budget rule** — the world spans Y -64 to 320 (~384 blocks). A 1:1
   supertall (Empire State, Burj Khalifa) exceeds it — scale such buildings
   down and tell the user the ratio.
 
-For the full limit detail, follow the `terraforming` skill's
+For the full limit detail (including `command_timeout_ms`, `rate_limit_rpm`,
+and chunk-loading constraints), follow the `terraforming` skill's
 `reference/command-budget.md`.
 
 ## Process
@@ -114,8 +115,9 @@ For the full limit detail, follow the `terraforming` skill's
 9. **Render district layouts** — produce blueprints (`reference/blueprints.md`),
    show the user, iterate, and **loop until they approve**.
 10. **Write the plan and hand off** — write `requirements.md` and `plan.toon`,
-    record the city and its districts in `mcbuilder:registry`. Structure
-    names follow the canonical colon form `mcb:<project>_<element>`.
+    record the city and its districts in `mcbuilder:registry` command storage
+    (written with `data_storage_set`, namespace `mcbuilder`, path `registry`).
+    Structure names follow the canonical colon form `mcb:<project>_<element>`.
 
     **Emit a `quality_contract` block** per the schema in `planner/SKILL.md`.
     Cities scale up the same failure modes as villages, so include:

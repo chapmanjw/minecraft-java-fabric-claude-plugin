@@ -44,8 +44,9 @@ settled by the request or the surveyor, and record answers in
 
 - Iron-golem-ready chosen but the roster is short → propose spare-bed houses
   to reach ≥10 villagers / ≥20 beds, and confirm the larger size.
-- Site near a **pillager outpost** → warn the user that Bedrock outposts can
-  sit inside village range and cause frequent raids; offer to relocate.
+- Site near a **pillager outpost** → warn the user that a pillager outpost
+  within ~80 blocks can cause frequent Raid Captain spawns, making Bad Omen
+  and raids more common; offer to relocate the village or the outpost.
 - Mountainside or uneven site → note a `terraforming` pre-build step.
 - Coastal → ask about a dock and a fisherman.
 - A specific style or real reference named → hand off to `researcher` for

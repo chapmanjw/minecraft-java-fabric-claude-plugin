@@ -16,8 +16,8 @@ Minecart rail is the workhorse of medium-distance overworld transit.
   a few blocks apart) for two-way traffic without a head-on.
 - **Climbing** — a cart loses speed uphill; on a sustained climb, increase the
   powered-rail density. Prefer to keep grades gentle.
-- **Curves** — Bedrock rail corners are simple single-block curves; lay them
-  explicitly. A 4-way crossing's auto-orientation is unreliable — design
+- **Curves** — Java rail corners auto-orient when placed; lay them explicitly
+  to be certain. A 4-way crossing's auto-orientation is unreliable — design
   junctions as explicit curves and stubs, and hand any *switched* junction to
   `engineer`.
 - **Stations** — a platform a block above the rail, a waiting area, a 3-rail
@@ -44,11 +44,11 @@ Minecart rail is the workhorse of medium-distance overworld transit.
 
 A fast, cheap water-or-ice express:
 
-- Build a channel of **packed ice** — on Bedrock, packed ice and blue ice run
-  at the *same* boat speed, so packed ice is the right choice (blue ice costs
-  far more for no gain).
-- A 2-block-wide channel, with a **slab or block guard** along both sides so a
-  boat does not derail on the diagonals.
+- **Blue ice** (~73 m/s) is the fastest surface on Java — prefer it for
+  high-speed highways. **Packed ice** (~40 m/s) is significantly slower but
+  far cheaper; use it for budget or medium-distance corridors.
+- Build a 2-block-wide channel, with a **slab or block guard** along both
+  sides so a boat does not derail on the diagonals.
 - Light it (buttons or other non-spawnable surface, or lamps) so it does not
   spawn mobs.
 

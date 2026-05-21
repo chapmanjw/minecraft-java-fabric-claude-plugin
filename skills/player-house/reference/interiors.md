@@ -60,7 +60,10 @@ reading as an empty shell.
   craftsmanship; perfect repetition reads as a template.
 - **Grounds and gardens** — for any trees and bushes around the base, **grow
   them from saplings; never place or duplicate a tree.** Plant
-  biome-appropriate saplings with spacing and light, then grow them with bone
-  meal or a temporary `randomTickSpeed` boost (see the `terraforming` skill's
-  `reference/weathering.md`). Mix flower types and planters; keep paths and
-  bushes irregular.
+  biome-appropriate saplings with spacing and light, then force growth with
+  bone meal (`player_give_item` / `itemstack_drop_at` + use), or via
+  `command_execute` with `/place feature minecraft:<tree_type>`, or place a
+  sapling with `block_set_state` and apply bone meal via a command. Prefer the
+  sapling + bone-meal path for organic, varied results. Mix flower types and
+  planters; keep paths and bushes irregular (see also the `terraforming`
+  skill's `reference/weathering.md`).

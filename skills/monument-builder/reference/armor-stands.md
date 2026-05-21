@@ -4,45 +4,67 @@ Armor stands add **fine detail** a block grid cannot — held items, posed
 accent figures, floating decorative elements. They are placed as a **late
 decoration phase**, after the monument's blockwork is built.
 
-## Bedrock armor-stand facts
+## Java armor-stand facts
 
-- Bedrock armor stands **have arms** by default and can hold items.
-- They cycle through **13 built-in poses** (not free NBT rotation as on Java):
-  Default, Solemn, Athletic, Brandish, Honor, Entertain, Salute, Riposte,
-  Cancan A, Cancan B, Hero, Riding, Walking.
-- A pose is set by cycling (interaction) or driven by a redstone signal —
-  e.g. a powered armor stand holds the Honor pose. Rotations beyond the 13
-  presets need behaviour-pack scripting and are out of scope here.
-- An armor stand can wear armour in all four slots and hold an item; a mob
-  head in the helmet slot is a common detailing trick.
+- Java armor stands **do not show arms by default**; pass `ShowArms:1b` in
+  the SNBT to enable them when the stand needs to hold items visibly.
+- Java armor stands support **fully free NBT pose rotation** via the `Pose`
+  compound — each limb rotation is a list of three floats (X/Y/Z Euler
+  angles in degrees). There are no preset named poses; compose any pose you
+  need with the fields below.
+- Key SNBT fields:
+  - `ShowArms:1b` — show arms (required to display held items visually).
+  - `NoBasePlate:1b` — remove the base plate (cleaner for decorative stands).
+  - `Invisible:1b` — hide the stand itself; the held/worn items float.
+  - `Small:1b` — use the small-stand variant (about half scale).
+  - `NoGravity:1b` — prevents the stand from falling.
+  - `Pose:{…}` — per-limb rotation; available keys: `Head`, `Body`,
+    `LeftArm`, `RightArm`, `LeftLeg`, `RightLeg`; each is a list of three
+    floats, e.g. `Head:[0f,-20f,0f]`.
+  - `HandItems:[{…},{…}]` — items in the main-hand and off-hand slots.
+  - `ArmorItems:[feet,legs,chest,head]` — equipment in armour slots (order
+    is feet → head).
+  - `Tags:["mcb_deco"]` — a tag so stands can be found and adjusted later.
+- A mob head in the helmet slot is a common detailing trick.
 
 ## In the plan
 
-- Spawn armor stands with the **`spawn` plan op** (`mc_entity_spawn`,
-  `minecraft:armor_stand`) at the decoration phase.
-- Equip and pose them with `run`-op commands.
-- Tag them so they can be found and adjusted later.
+- Spawn armor stands with the **`entity_summon`** tool
+  (`entity_type: "minecraft:armor_stand"`) at the decoration phase, passing
+  all SNBT in the `nbt` argument.
+- Tag them (`Tags:["mcb_deco"]`) so they can be located with `entity_query`
+  and adjusted.
+- Use `entity_set_nbt` if a spawned stand's pose or equipment needs changing
+  after the fact.
+
+## Useful pose recipes
+
+| Role | Head | RightArm | LeftArm | Body |
+|------|------|----------|---------|------|
+| Attention / guard | `[0f,0f,0f]` | `[-10f,0f,0f]` | `[-10f,0f,0f]` | `[0f,0f,0f]` |
+| Salute | `[0f,0f,0f]` | `[-90f,-20f,0f]` | `[-10f,0f,0f]` | `[0f,0f,0f]` |
+| Brandish (weapon raised) | `[0f,0f,0f]` | `[-120f,0f,-20f]` | `[-10f,0f,0f]` | `[0f,0f,0f]` |
+| Walking | `[0f,0f,0f]` | `[-30f,0f,0f]` | `[30f,0f,0f]` | `[0f,0f,0f]` |
+| Seated | `[0f,0f,0f]` | `[-10f,0f,0f]` | `[-10f,0f,0f]` | `[0f,0f,0f]` (position the stand at seat height) |
+| Floating item | use `Invisible:1b`, `NoBasePlate:1b`, pose as needed | | | |
+
+Angles are suggestions — adjust to taste for the specific design.
 
 ## Detailing patterns
 
-- **Held detail** — an armor stand holding a banner, a tool, a weapon, or an
-  item frame supplies a crisp small element (a flagpole banner, a statue's
-  staff or sword) at a scale the block grid cannot.
-- **Accent figures** — a ring of posed stands around a monument: an honor
-  guard (Salute / Honor), warriors (Brandish), figures in motion (Walking) —
-  small human-scale figures that give a giant monument scale and context.
-- **Equestrian accents** — the Riding pose for a mounted figure.
-- **Floating elements** — an invisible, baseplate-less stand holds an item in
-  mid-air (jewels on a treasure pile, a held orb, hovering runes).
+- **Held detail** — an armor stand (`ShowArms:1b`) holding a banner, a tool,
+  a weapon, or an item supplies a crisp small element (a flagpole banner, a
+  statue's staff or sword) at a scale the block grid cannot.
+- **Accent figures** — a ring of posed stands around a monument: guards,
+  warriors, figures in motion — small human-scale figures that give a giant
+  monument scale and context.
+- **Equestrian accents** — use a raised `RightArm` / `LeftArm` and
+  appropriate item; true mount-and-rider needs two entities positioned
+  carefully.
+- **Floating elements** — an `Invisible:1b`, `NoBasePlate:1b` stand holds an
+  item in mid-air (jewels on a treasure pile, a held orb, hovering runes).
 - **Mob heads** — player or mob heads on stands or as standalone blocks add
   faces and character.
-
-## Choosing the pose
-
-Match the pose to the role: **Honor / Solemn** for memorial guards, **Salute**
-for an honor guard, **Brandish / Hero** for warriors, **Riding** for cavalry,
-**Walking / Athletic** for figures in motion, **Entertain / Cancan** for
-lively or festival scenes.
 
 ## Rules
 

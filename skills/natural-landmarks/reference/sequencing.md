@@ -42,13 +42,13 @@ Integrity-based weathering happens **after main geometry, before decoration**:
 
 1. Build the form clean and smooth.
 2. Capture a weathering-pattern region as a structure with
-   `mc_structure_create_from_world`.
-3. Re-place it with `integrity` 30–70 and a **deterministic seed string** (from
-   project + primitive + index) so a rebuild is reproducible.
+   `structure_save_from_world`.
+3. Re-place it with `integrity` 0.30–0.70 and a **deterministic seed string**
+   (from project + primitive + index) so a rebuild is reproducible.
 
-Bedrock `integrity` is a **0–100 integer**, not a 0–1 float — do not reuse
-Java integrity values. `integrity 60` removes ~40% of the structure's blocks.
-See `terraforming/reference/command-budget.md` for the full mechanic.
+Java `integrity` is a **0.0–1.0 float** — `integrity 0.6` keeps ~60% of the
+structure's blocks (removes ~40%). See
+`terraforming/reference/command-budget.md` for the full mechanic.
 
 Exception: **do not weather ordered formations** — a Bryce hoodoo field reads
 as carved and orderly, not eroded.
@@ -57,7 +57,8 @@ as carved and orderly, not eroded.
 
 Pointed dripstone, vines, glow lichen, moss carpet, flowering azalea, and
 saplings go on **after** everything else. Suppress vegetation spread during
-construction (`mobGriefing false`, or remove ticking areas) so grass does not
+construction (`command_execute` with `/gamerule mobGriefing false`, or remove
+ticking areas) so grass does not
 creep over bare-rock landmarks. Use `coarse_dirt` / `rooted_dirt` as the
 substrate next to rock to block grass spread.
 

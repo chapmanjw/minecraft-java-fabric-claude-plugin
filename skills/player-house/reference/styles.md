@@ -3,7 +3,7 @@
 Each style is a **palette** (block ratios), **forms** (roof, windows, massing),
 and **detail signatures**. Apply ratios as in the terrain skills: a dominant
 block plus accents. Match the style to the biome where possible; let the user
-override. Block IDs are Bedrock 1.21+.
+override. Block IDs are Java Edition `minecraft:` namespace (1.21.x).
 
 ## Standard / vernacular
 
@@ -26,9 +26,9 @@ half-timber look.
 
 ## Japanese
 
-`smooth_stone` base, `dark_oak` / `spruce` framing, `blue`-stained terracotta
-or weathered-copper roofs with upturned eaves, paper screens simulated with
-`white` wool + glass panes. Lantern-and-chain eaves; an engawa veranda on
+`minecraft:smooth_stone` base, `minecraft:dark_oak_planks` / `minecraft:spruce_planks` framing,
+`minecraft:blue_terracotta` or weathered-copper roofs with upturned eaves,
+paper screens simulated with `minecraft:white_wool` + glass panes. Lantern-and-chain eaves; an engawa veranda on
 slabs wrapping sunward rooms.
 
 ## Nordic / Viking

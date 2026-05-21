@@ -1,192 +1,161 @@
 ---
 name: setup-mcp-server
 description: >-
-  Step 3 of 4 of the Minecraft Bedrock MCP setup. Install the
-  minecraft-bedrock-mcp-server, generate its bearer tokens, write its .env,
-  configure the behavior pack's permissions/variables/secrets files, start BDS
-  and the MCP server, and verify the bridge handshake. Use when the user has a
-  Bedrock server and a world with the behavior pack installed and needs the MCP
-  server running.
+  Step 3 of 4 of the Minecraft Java MCP setup. Configure the MCP mod's
+  config.json (host, port, auth, tool categories), launch Minecraft or the
+  dedicated server, verify the embedded MCP server is listening on /healthz,
+  and capture the bearer token for remote setups. Use when the user has the MCP
+  mod and Fabric API installed and needs the MCP server configured and running.
 ---
 
-# Install and run the MCP server (Step 3 of 4)
+# Configure and run the MCP server (Step 3 of 4)
 
-This is **Phase 3** of the four-phase Minecraft Bedrock MCP setup. It assumes
-Phase 2 (`setup-minecraft-world`) is done. You should have, written down:
+This is **Phase 3** of the four-phase Minecraft Java MCP setup. It assumes
+Phase 2 (`install-mcp-mod`) is done: the MCP mod jar and Fabric API jar are in
+`mods/`. The MCP server is embedded in the mod, so "running the MCP server"
+means launching Minecraft (single-player) or the dedicated server.
 
-- the **world path**, e.g. `/opt/bedrock-server/worlds/mcp-world`
-- the **behavior-pack path**, e.g. `<world>/behavior_packs/bedrock-bridge`
+Work interactively. Branch on the choice from Phase 1: **single-player** is
+mostly defaults; **dedicated/remote** needs a config file and a token.
 
-If either is missing, get it before continuing. The MCP server runs on the
-**same host as BDS** and needs **Node.js 20+** there — verify with `node -v`.
+## Where config lives
 
-## How the pieces talk
+The mod reads `config/minecraft_fabric_mcp/config.json` under the game
+directory:
 
-The MCP server exposes two authenticated surfaces:
+- **Single-player:** `<.minecraft>/config/minecraft_fabric_mcp/config.json`.
+- **Dedicated server:** `<server>/config/minecraft_fabric_mcp/config.json`.
 
-- `/mcp` — what Claude connects to (Phase 4), guarded by `BRIDGE_CLIENT_TOKEN`.
-- `/bridge` — what the behavior pack long-polls, guarded by `BRIDGE_AGENT_TOKEN`.
+The file is **optional** — it's only needed to override defaults. Any field can
+also be overridden by an environment variable named `MCP_<FIELD>` (e.g.
+`MCP_PORT`, `MCP_AUTH_REQUIRED`).
 
-So there are **two separate tokens**. Keep them straight: the client token is
-for Claude, the agent token is for the behavior pack inside the world.
+The defaults are deliberately safe: bind `127.0.0.1`, port `8765`, **no auth**,
+reject all cross-origin browser requests.
 
-## Step 1 — Install the MCP server
+---
 
-On the BDS host:
+## Single-player branch — defaults are enough
+
+For Claude running on the **same machine** as Minecraft, you do **not** need a
+config file. The mod listens on `http://127.0.0.1:8765/mcp` with no token.
+
+### Step 1 — Launch
+
+Have the user start the Fabric profile in the Minecraft Launcher and load any
+world. (At least one loaded world is needed — many tools act on the world or
+relative to a player.)
+
+### Step 2 — Verify it's listening
+
+Check the game log for:
+
+```
+[minecraft_fabric_mcp] MCP server listening at http://127.0.0.1:8765 (host=127.0.0.1, port=8765, auth=false, tls=false)
+```
+
+Then the liveness probe (no auth required for `/healthz`):
 
 ```sh
-npm install -g minecraft-bedrock-mcp-server
+curl http://localhost:8765/healthz
+# → {"status":"ok"}
 ```
 
-Alternatives, if the user prefers: `npx minecraft-bedrock-mcp-server` (no
-install), or the Docker image
-`ghcr.io/chapmanjw/minecraft-bedrock-mcp-server:latest` (`docker run --env-file
-.env -p 8765:8765 ...`). Pin to a version tag for reproducibility, and keep it
-aligned with the BDS and behavior-pack versions.
+If `/healthz` answers, Phase 3 is done — skip to **Wrap up**. There is no token
+for this path.
 
-## Step 2 — Generate the two tokens
+---
 
-Generate two long random secrets:
+## Dedicated / remote branch — config + token
 
-```sh
-openssl rand -hex 32   # -> BRIDGE_CLIENT_TOKEN
-openssl rand -hex 32   # -> BRIDGE_AGENT_TOKEN
-```
+Use this when Claude connects from another machine, or you want LAN/internet
+access. (If Claude runs on the *same host* as the dedicated server, you can use
+the single-player defaults above and skip the config file.)
 
-On Windows without `openssl`:
+### Step 1 — Write `config.json`
 
-```powershell
--join ((1..32) | ForEach-Object { '{0:x2}' -f (Get-Random -Max 256) })
-```
-
-Have the user keep both values somewhere safe. They are needed again in this
-phase and in Phase 4.
-
-## Step 3 — Write the MCP server `.env`
-
-Create a `.env` file for the MCP server (this plugin ships `.mcp.json.example`
-in its repo root as a reference, but the server's own `.env` is what matters
-here):
-
-```sh
-BRIDGE_CLIENT_TOKEN=<first secret>
-BRIDGE_AGENT_TOKEN=<second secret>
-BRIDGE_WORLD_PATH=<the world path from Phase 2>
-BRIDGE_BEHAVIOR_PACK_PATH=<the behavior-pack path from Phase 2>
-BRIDGE_HOST=0.0.0.0
-BRIDGE_PORT=8765
-```
-
-Other variables (`BRIDGE_TLS_CERT`/`BRIDGE_TLS_KEY`, `BRIDGE_TRUST_PROXY`,
-rate limits, etc.) have defaults; leave them unless the user has a reason. The
-full reference is in the
-[MCP server README](https://github.com/chapmanjw/minecraft-bedrock-mcp-server#configuration-reference).
-
-> **TLS:** the bridge carries bearer tokens and world data. On anything beyond
-> a fully trusted LAN, set `BRIDGE_TLS_CERT`/`BRIDGE_TLS_KEY` or terminate TLS
-> at a reverse proxy. For a first local setup, plain HTTP is acceptable — note
-> the server logs a warning when running without TLS.
-
-## Step 4 — Configure the behavior pack
-
-The pack reads config from the BDS scripting config directory:
-`<bds>/config/default/`. Create that folder and add **three files**. The
-behavior pack repo ships copy-ready versions under its `config/default/`.
-
-**`permissions.json`** — lets the pack load its Script API modules:
+Create `<server>/config/minecraft_fabric_mcp/config.json`:
 
 ```json
 {
-  "allowed_modules": ["@minecraft/server", "@minecraft/server-net", "@minecraft/server-admin"]
+  "host": "0.0.0.0",
+  "port": 8765,
+  "allow_remote": true,
+  "auth_required": true,
+  "rate_limit_rpm": 120
 }
 ```
 
-**`variables.json`** — where the bridge listens. This is the MCP server's
-`/bridge` surface. If the pack and server are on the same host, `localhost` is
-right:
+Leave `bearer_token` unset — the mod generates a 256-bit token on first boot
+and logs it once.
 
-```json
-{ "bridge_url": "http://localhost:8765" }
-```
+> **The mod refuses unsafe bindings.** Binding to a non-loopback host
+> (`0.0.0.0` or a LAN IP) requires **both** `allow_remote: true` **and**
+> `auth_required: true`. If either is missing, the mod errors at startup rather
+> than exposing an unauthenticated world to the network. This is intentional —
+> don't work around it.
 
-**`secrets.json`** — the bridge token. The value is the **full `Authorization`
-header**: the literal word `Bearer`, a space, then the `BRIDGE_AGENT_TOKEN`
-(the *second* secret):
+Optional fields the user may want:
 
-```json
-{ "bridge_agent_token": "Bearer <the BRIDGE_AGENT_TOKEN second secret>" }
-```
+- `tls_cert_path` / `tls_key_path` — PEM cert + PKCS8 key for TLS at the mod
+  (set **both** or neither). For internet-facing servers, use TLS here or
+  terminate it at a reverse proxy. See the mod's `docs/security.md`.
+- `included_categories` / `excluded_categories` — restrict the tool set by
+  domain (`world`, `actors`, `gameplay`, `registries`, `server`).
+- `exclude_write_tools: true` — read-only mode (drops every mutating tool).
+- `command_timeout_ms` (default 15000) and `rate_limit_rpm` (default 60).
 
-> The `Bearer ` prefix **must** be inside the stored secret. The pack receives
-> an opaque secret handle it cannot read or concatenate, so the scheme prefix
-> has to travel as part of the secret value itself. This is the single most
-> common setup mistake — double-check it.
+### Step 2 — Launch and capture the token
 
-Never commit `secrets.json` anywhere.
-
-## Step 5 — Start everything
-
-Start the **MCP server first**, so the bridge is listening when the world
-loads, then BDS.
-
-### Option A — foreground (quick test)
+Start the server:
 
 ```sh
-# Terminal 1 — MCP server (reads .env from the working directory)
-minecraft-bedrock-mcp-server
-
-# Terminal 2 — Bedrock Dedicated Server
-cd /opt/bedrock-server && LD_LIBRARY_PATH=. ./bedrock_server
+java -Xmx4G -jar fabric-server-launch.jar nogui
 ```
 
-On Windows: run `minecraft-bedrock-mcp-server` in one terminal (with `.env` in
-the working directory) and `bedrock_server.exe` in another.
+In the log, find the generated token (shown **once**):
 
-### Option B — long-lived service (recommended)
+```
+[minecraft_fabric_mcp] Generated bearer token for MCP server. Save this value — it is shown only once:
+[minecraft_fabric_mcp]   Authorization: Bearer 9c1f9a…
+```
 
-For a deployment that survives logout and restarts, install both as services.
-On **Linux**, use `systemd` — the
-[MCP server README, Step 7](https://github.com/chapmanjw/minecraft-bedrock-mcp-server#step-7--start-everything)
-has ready-to-paste `bedrock-server.service` and `mc-mcp-server.service` units,
-a dedicated `minecraft` user, and a locked-down `EnvironmentFile`. On
-**Windows**, wrap each executable as a service with NSSM or a Task Scheduler
-"at startup" task. In all cases, start the MCP server before BDS.
+Have the user copy the token somewhere safe — Phase 4 needs it. To rotate it
+later, delete `bearer_token` from `config.json` and restart. **Never commit the
+token or the config file that contains it.**
 
-Walk the user through whichever they choose; don't paste the full systemd
-units unless they pick Option B on Linux — then reproduce them from the README.
+### Step 3 — Run as a service (optional, recommended for 24/7)
 
-## Step 6 — Verify the handshake
+For a deployment that survives logout and reboots, wrap the server as a
+service: **systemd** on Linux, **NSSM** or Task Scheduler on Windows. The mod's
+[`docs/setup-dedicated-server.md`](https://github.com/chapmanjw/minecraft-java-fabric-mcp-server/blob/main/docs/setup-dedicated-server.md)
+has ready-to-paste `fabric-mcp.service` and NSSM commands plus a locked-down
+`minecraft` user. Walk the user through it only if they want it now.
 
-When the world loads, the behavior pack handshakes with the bridge. Check:
+### Step 4 — Verify it's listening
 
-1. **Liveness:** `curl http://localhost:8765/healthz` returns OK.
-2. **MCP server log:** shows a successful bridge handshake.
-3. **BDS log:** shows the `bedrock-bridge` pack's script starting.
+```sh
+curl http://<host>:8765/healthz
+# → {"status":"ok"}
+```
 
-If the handshake fails, the usual causes, in order of likelihood:
+Use `localhost` if testing on the server itself, otherwise the host's LAN
+IP/hostname. `/healthz` needs no auth even when `auth_required` is on, so a
+plain `curl` confirms reachability independent of the token.
 
-- **Token mismatch** — `bridge_agent_token` in `secrets.json` ≠ `Bearer ` +
-  `BRIDGE_AGENT_TOKEN` in `.env`. Check the `Bearer ` prefix and for stray
-  whitespace.
-- **Wrong `bridge_url`** in `variables.json`, or the MCP server isn't running
-  / isn't reachable on that host:port.
-- **Behavior pack not active** — `world_behavior_packs.json` missing or wrong
-  UUID, or the world wasn't created with **Beta APIs**.
-- **`config/default/` in the wrong place** — it must be under the BDS root,
-  not the world folder.
+---
 
 ## Wrap up
 
-Confirm with the user:
+Confirm with the user (the relevant set):
 
-- [ ] MCP server installed and its `.env` written with both tokens and both
-      paths.
-- [ ] `permissions.json`, `variables.json`, `secrets.json` in
-      `<bds>/config/default/`.
-- [ ] MCP server and BDS both running (foreground or as services).
-- [ ] `/healthz` is OK and the handshake succeeded in the logs.
+- [ ] **Single-player:** Minecraft launched with a world loaded; `/healthz` is
+      OK on `http://localhost:8765`. No token.
+- [ ] **Dedicated/remote:** `config.json` written with `allow_remote` +
+      `auth_required`; server launched; bearer token captured; `/healthz` is OK
+      on the host.
 
-Hand off: Phase 3 is done — the world is now reachable over MCP. The last step
-is connecting Claude to it. Offer to continue with the **`connect-claude`**
-skill now. The user will need the **`BRIDGE_CLIENT_TOKEN`** (the *first*
-secret) and the server's host:port for that step.
+Hand off: Phase 3 is done — the world is reachable over MCP. The last step is
+connecting Claude to it. Offer to continue with the **`connect-claude`** skill
+now. For that step the user needs the **`/mcp` URL**
+(`http://<host>:8765/mcp`) and, for a remote setup, the **bearer token**.

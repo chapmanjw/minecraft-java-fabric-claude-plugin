@@ -29,13 +29,17 @@ clear, and record answers in `requirements.md`.
 
 - Mob / iron / villager farm → confirm the simulation distance and, for
   iron/villager farms, hand the village half to `village-planner`.
-- The request names a Java tutorial or creator → check
-  `community-sources.md`; warn that it likely needs Bedrock translation, and
-  ask `researcher` for a Bedrock-edition source.
-- The request is AFK fishing → explain it is broken on Bedrock and offer
-  villager trading or a pufferfish/sea-pickle farm instead.
+- The request names a tutorial or creator → check `community-sources.md`;
+  Java designs apply directly, but confirm the design's game version against
+  the running world (`server_get_status`) and ask `researcher` for a recent
+  source if there's any version-drift doubt.
+- The request needs a patched-out (0-tick) or exploit (TNT/item duping)
+  mechanic → explain it is not reliable on modern Java and offer the
+  vanilla-redstone equivalent instead.
+- The request is AFK fishing → note it works on Java but many servers patch or
+  discourage AFK farms; confirm the server permits it.
 - A timing-critical build (music, fast door, clock) → confirm the tempo or
-  speed in redstone ticks.
+  speed in redstone ticks (Java timing is deterministic, so it will be exact).
 - A large farm → ask whether overflow protection (a trash can / overflow
   chest) is wanted.
 

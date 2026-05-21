@@ -1,9 +1,9 @@
 ---
 name: planner
 description: >-
-  Captures build requirements for a Minecraft Bedrock world, interviews the
-  user to resolve ambiguity, and produces a detailed, fully-resolved build plan
-  that a small model can execute mechanically. Use when starting a new
+  Captures build requirements for a Minecraft Java Edition world, interviews
+  the user to resolve ambiguity, and produces a detailed, fully-resolved build
+  plan that a small model can execute mechanically. Use when starting a new
   Minecraft build or feature, or when a build request must be turned into a
   concrete plan before any blocks are placed. Part of the minecraft-builder
   workflow.
@@ -42,7 +42,8 @@ Before planning, gather what exists:
   terrain, ground level, buildable area, obstructions.
 - `.minecraft-builder/<project>/research.md` and `research.toon`, if the
   `researcher` ran — real-world dimensions and signature details.
-- The `mcbuilder:registry` world property — existing builds, in case this is
+- The `mcbuilder:registry` from command storage (read with `data_storage_get`,
+  namespace `mcbuilder`, path `registry`) — existing builds, in case this is
   an iteration on one.
 
 ## Interview the user
@@ -68,7 +69,7 @@ Write `.minecraft-builder/<project>/plan.toon` in **TOON**
 
 - **Absolute coordinates only.** Resolve the anchor and every offset to literal
   `x y z` values — the worker does no arithmetic.
-- **Concrete block IDs.** No "stone-like"; name the exact Bedrock block.
+- **Concrete block IDs.** No "stone-like"; name the exact Java block ID (with `minecraft:` namespace).
 - **Ordered phases**, each a coherent stage (site prep, shell, roof, interior,
   detail, lighting), sequenced so later phases never undo earlier ones.
 - **Uniform step table** so a small model can read it row by row. Each step is
@@ -103,7 +104,7 @@ Write `.minecraft-builder/<project>/plan.toon` in **TOON**
   `spawn`, `run` (raw command, last resort). `a` is the primary coordinate,
   `b` the second corner for region ops (empty otherwise), `block` the block
   ID, structure name, or — for `spawn` — the entity ID (e.g.
-  `minecraft:villager_v2`), `note` a short human hint or any entity tags.
+  `minecraft:villager`), `note` a short human hint or any entity tags.
 
 - **Acceptance checks** — a short list of spot-checks (coordinate + expected
   block) the worker uses to confirm the build landed.
@@ -146,7 +147,7 @@ quality_contract:
 
 Row types — pick the ones that apply to your build:
 
-- **walkability[]{from,to,note}** — sample a straight line of `mc_block_get`
+- **walkability[]{from,to,note}** — sample a straight line of `block_get_state`
   between `from` and `to` at floor and floor+1; fail if non-traversable
   blocks block the route or there is no stand-on-able floor.
 - **doors[]{at,facing,clearance_blocks}** — sample the cells in front of
@@ -156,9 +157,9 @@ Row types — pick the ones that apply to your build:
   in the region, require at least `min_clear` air blocks above the highest
   solid block (over stairs, corridors, doorways).
 - **block_mix_ratios[]{region_a,region_b,palette,max_single_ratio}** —
-  count blocks in the region; fail if any single block exceeds
-  `max_single_ratio` of the total, or if listed palette members are missing
-  entirely.
+  count blocks in the region (using `block_scan_region`, paged at 65,536
+  blocks per call); fail if any single block exceeds `max_single_ratio` of
+  the total, or if listed palette members are missing entirely.
 - **silhouette[]{region_a,region_b,sample_count,min_y_variance}** — sample
   N surface points; fail if Y variance < spec (for naturalistic terrain,
   no flat plateaus).

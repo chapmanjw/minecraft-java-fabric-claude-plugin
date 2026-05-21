@@ -57,6 +57,11 @@ fire escapes and rooftop water tanks (NYC), washing lines, carts, crates,
 scaffolding. Scatter them with the same anti-uniformity discipline as the
 buildings — clustered and irregular, not evenly spaced.
 
+Street trees must be grown from saplings, never placed or duplicated. On Java
+Edition: place the sapling with `block_set_state`, then force growth with
+`command_execute` running `/place feature minecraft:<tree_type>`, or bone-meal
+via `player_give_item` / `itemstack_drop_at`.
+
 ## Sewers and the underside
 
 For depth, a city can have an underside — Roman cloaca with street grates,

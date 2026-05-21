@@ -25,8 +25,9 @@ Review, for the just-finished job:
 - The `worker`'s execution report — what actually happened.
 - `.minecraft-builder/<project>/inspections.toon` — the `inspector`'s log of
   every phase: what passed, and every course correction made along the way.
-- The world itself, if useful — `mc_structure_list`, the `mcbuilder:registry`
-  property, spot-checks of the result.
+- The world itself, if useful — `structure_list`, the `mcbuilder:registry`
+  from command storage (`data_storage_get`, namespace `mcbuilder`, path
+  `registry`), spot-checks of the result.
 
 ## Assess
 
@@ -50,10 +51,11 @@ Ask, honestly:
 There are two stores, and mixing them up defeats the purpose:
 
 - **Build data → the world.** Coordinates, structure names, build status,
-  revisions belong in the `mcbuilder:registry` world property and the
+  revisions belong in the `mcbuilder:registry` command storage record and the
   structure files — not in memory. Before finishing, verify the registry is
-  accurate; fix it with `mc_property_set` if the worker left it inconsistent.
-  Do **not** copy build data into project memory.
+  accurate; fix it with `data_storage_set` (namespace `mcbuilder`, path
+  `registry`) if the worker left it inconsistent. Do **not** copy build data
+  into project memory.
 - **Process lessons → Claude project memory.** Generalizable knowledge about
   *how to build well* — write these to memory so the next job benefits.
 
@@ -72,13 +74,14 @@ Some builds leave **one-time manual actions** the user has to perform for the
 build to actually function. Most commonly:
 
 - A self-cycling redstone clock (rotating beam, windmill animation, observer
-  ring) built via `setblock` will not self-start in Bedrock — the user must
-  right-click one component once to kick the loop. See
+  ring) placed via `block_set_state` may need an initial trigger to start
+  ticking if the contraption did not self-start. Java Edition's neighbor-update
+  flags mean many clocks self-start, but verify — see
   `engineer/reference/setblock-redstone-limits.md`.
 - Pressure-plate triggers wired to a hidden mechanism may need the player to
   walk over them once for the inspector's functional test to pass.
-- Boats, minecarts, and item frames placed via spawn or setblock sometimes
-  need a player-click to "register" properly.
+- Boats, minecarts, and item frames placed via entity_summon or block_set_state
+  sometimes need a player-click to "register" properly.
 
 Aggregate every such item from the project's `inspection-recipe.toon` files
 (every recipe's `manual_kick` block) and the inspector's reports. Surface

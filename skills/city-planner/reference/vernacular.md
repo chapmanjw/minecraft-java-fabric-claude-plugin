@@ -16,7 +16,8 @@ city and its street blocks.
    for, using rotation and mirror for corners and opposite sides.
 4. **Vary every copy** — see "Parametric variation" — so a row reads as
    individual buildings.
-5. Record the types and instances in `mcbuilder:registry`.
+5. Record the types and instances in `mcbuilder:registry` command storage
+   (written with `data_storage_set`, namespace `mcbuilder`, path `registry`).
 
 ## Vernacular module types
 

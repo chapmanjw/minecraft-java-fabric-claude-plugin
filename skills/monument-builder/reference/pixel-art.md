@@ -20,12 +20,14 @@ grid. The technique is **quantize, grid, lay**.
    better with dithering (alternating two near blocks to suggest an
    in-between tone). Say which you used.
 5. **Lay it as a grid.** A quantized image *is* a block grid — the most direct
-   way to build it is to have the `blueprinter` generate a run-length-encoded
-   block grid and build it with `mc_structure_create_from_blocks` (see the
-   blueprinter's `reference/generated-structures.md`): one palette, one index
-   per pixel. The plan then places it with a single `place-structure` step.
-   Fall back to `fill` / `set` rows in `plan.toon` only for a small or simple
-   grid. A flat mural is one block deep.
+   way to build it is to have the `blueprinter` place the grid into a scratch
+   area using `block_fill_region` and `block_set_state`, capture the region
+   with `structure_save_from_world` into a named template
+   (`mcb:<project>_<element>`), clear the scratch, then place the template
+   wherever needed with a single `structure_load_to_world` call. (Alternatively,
+   if a script produces the `.nbt` bytes directly, write them with
+   `structure_file_write` as base64.) Use `fill` / `set` rows in `plan.toon`
+   directly only for a small or simple grid. A flat mural is one block deep.
 
 ## Flat vs. relief
 

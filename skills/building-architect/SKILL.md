@@ -2,7 +2,7 @@
 name: building-architect
 description: >-
   Designs and blueprints specific named buildings and building complexes in a
-  live Minecraft Bedrock world — real-world replicas (historical and modern),
+  live Minecraft Java Edition world — real-world replicas (historical and modern),
   pop-culture replicas (Hogwarts, Minas Tirith), user-described originals, and
   generative-style fictional buildings — with deep research, advanced building
   technique, and heavy reuse of defined structure modules. Use when the user
@@ -37,7 +37,7 @@ Use for a **specific building or building complex**. Do not use for:
 
 ## Connection
 
-If an `mc_*` call fails because the MCP server is unreachable, stop and tell
+If a tool call fails because the MCP server is unreachable, stop and tell
 the user to run the `minecraft-mcp-setup` agent.
 
 ## The three defining choices — ask these first
@@ -63,13 +63,13 @@ A detailed building is overwhelming as a single mass. It is tractable as a
 30 times, one window-bay module stamped 20 times, two tower modules, one
 spire. Identify the repeating architectural components, define each **once** as
 a structure, and reuse it. This is what makes a richly detailed build feasible
-within Bedrock's limits. See `reference/modules.md`.
+within Java's limits. See `reference/modules.md`.
 
 ## Research — be true to the source
 
 For a **real-world** replica, **always invoke the `researcher` skill** and cite
 at least **two reputable sources**. Capture verified dimensions, signature
-features, materials, and era. Record the citations in the `mcbuilder:registry`
+features, materials, and era. Record the citations in the `mcbuilder` data storage registry
 entry so the `philosopher` can verify the finished build against them. Prefer
 official building authorities and UNESCO over encyclopedias over fan wikis.
 

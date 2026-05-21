@@ -6,278 +6,45 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
-## [0.6.0] - 2026-05-19
+## [0.1.0] - 2026-05-20
 
-Quality gates from the Cape Aurelia retrospective. The builder pipeline now
-catches the failure modes that turned a single-pass terrain build into three
-iterations: stacked-rectangle "ziggurat" terrain, rectangular underwater
-foundations, doors facing cliffs, sunken houses, single-colour walls, stale
-plans against rebuilt terrain, and self-cycling redstone that ships static.
-Skill-level changes only — no new MCP tools; still pairs with
-[`minecraft-bedrock-mcp-server`](https://github.com/chapmanjw/minecraft-bedrock-mcp-server)
-and
-[`minecraft-bedrock-mcp-behavior-pack`](https://github.com/chapmanjw/minecraft-bedrock-mcp-behavior-pack)
-v0.3.0.
+Initial release of the **Minecraft Java** Claude plugin. Pairs with the
+[`minecraft-java-fabric-mcp-server`](https://github.com/chapmanjw/minecraft-java-fabric-mcp-server)
+Fabric mod (v0.1.0) — the MCP server is embedded in the mod and runs inside Minecraft.
 
-### Added
-
-- **`quality_contract` schema** in `plan.toon` — a machine-checkable list of
-  the properties the finished build must satisfy: walkability between named
-  rooms, door clearance and facing, headroom over stairs, block-mix ratios
-  for wall surfaces, silhouette variance for naturalistic terrain, edge
-  irregularity for coastlines and ridges, foundation naturalisation for
-  underwater masses, water-column continuity for coasts, and site
-  connectivity for transit networks. The `planner` owns the canonical
-  schema; every planner-class skill emits the rows relevant to its domain.
-- `inspector` parses the contract and runs the sampling algorithms — new
-  `reference/contract-checks.md` documents each row's algorithm, threshold,
-  and root-cause-routing behaviour on failure. Inspection now samples
-  **below sea level** too, so an underwater rectangular foundation cannot
-  pass.
-- `terraforming/reference/non-negotiable-enforcement.md` — the
-  non-negotiable rules (7-block, asymmetry, no monoculture, double-layer)
-  expressed as `quality_contract` rows the inspector checks automatically.
-- `engineer/reference/setblock-redstone-limits.md` — documents which
-  redstone patterns self-start when placed via `setblock` and which need a
-  one-time player right-click to kick. The `inspection-recipe.toon` schema
-  gains a `manual_kick` block; the `philosopher`'s report and the
-  `minecraft-builder` agent's final summary surface every outstanding kick
-  step prominently.
-- `minecraft-builder` agent gains an **honesty contract** (Step 0b.5) —
-  before classifying a request it must flag blind-build limits up-front:
-  no visual judgement from sampling, auto-cycling redstone needs a manual
-  kick, naturalistic terrain needs a prototype-first checkpoint, and never
-  silently downgrade scope.
-
-### Changed
-
-- `terraforming/SKILL.md` adds two **hard rules** above the non-negotiables:
-  heightmap-or-live-sculpt for any landform over ~30 blocks of extent
-  (stacked rectangular fills are refused — they produce the ziggurat
-  artifact), and foundations-are-terrain including underwater faces (no
-  rectangular corestone megablocks). Plus a mandatory **prototype-first
-  checkpoint** — build a ~20×20 patch and ask the user to glance before
-  scaling up.
-- `terraforming/reference/landforms.md` documents the **heightmap method**
-  (multi-octave value noise + radial falloff + organic-blob coves + blended
-  build pads, baked to RLE structure tiles) and the **talus-skirt rescue**
-  for naturalising an existing rectangular mass.
-- `terraforming/reference/command-budget.md` adds bridge-pacing rules
-  (≤6–8 heavy ops then a verify read; never chase a placement burst with a
-  read burst), the 1500-RLE-runs-per-tile cap, the chunk-loading-trap
-  guidance (ticking areas keep work-zone chunks loaded), and the
-  canonical colon-namespace `mcb:<project>_<element>` rule.
-- `worker/SKILL.md` adds **stale-plan detection** — sample the planned `b`
-  (before-state) of the first few steps and HALT if the world doesn't match,
-  rather than overwriting onto stale coordinates.
-- `blueprinter`, `planner`, `surveyor`, and all planner-class skills now
-  use **`mcb:<project>_<element>`** (colon namespace) as the canonical
-  structure name — the create tools reject underscore-only IDs.
-- `engineer/SKILL.md` puts the setblock-redstone limit at the top: prefer
-  lever/button/plate-triggered designs over self-starting clocks; declare a
-  `manual_kick` step for any clock that needs one; never silently ship a
-  static structure where a moving one was promised.
-- Every planner-class skill (`player-house`, `village-planner`,
-  `city-planner`, `building-architect`, `landscape-architect`,
-  `monument-builder`, `transit-architect`, `natural-landmarks`) now emits
-  a `quality_contract` block tailored to its domain (walkability and door
-  clearance for houses, connectivity for cities and transit, silhouette
-  and edge-irregularity for natural wonders, etc.).
-- `philosopher` aggregates every `manual_kick` from the project's
-  `inspection-recipe.toon` files and surfaces them as an **Outstanding
-  manual steps** section in the final retrospective.
-- `minecraft-builder` agent's build loop now routes corrections by failure
-  type (silhouette/edge to terraforming; walkability/doors/headroom to the
-  planner-class skill) rather than always to the worker, since
-  half-measures cost more iterations than fixing root causes.
-
-## [0.5.0] - 2026-05-18
-
-Replaces the 0.4.0 structure-upload path, which did not work on a dedicated
-server. Needs
-[`minecraft-bedrock-mcp-server`](https://github.com/chapmanjw/minecraft-bedrock-mcp-server)
-and
-[`minecraft-bedrock-mcp-behavior-pack`](https://github.com/chapmanjw/minecraft-bedrock-mcp-behavior-pack)
-v0.3.0.
-
-### Changed
-
-- The `blueprinter`'s third blueprint method now builds a structure with
-  `mc_structure_create_from_blocks` — it sends a run-length-encoded block grid
-  to the behavior pack, which builds a world-saved structure directly,
-  immediately placeable. This replaces the 0.4.0 `mc_structure_upload` path,
-  which wrote a `.mcstructure` file and relied on a world reload that does not
-  re-index structure files on a dedicated server, and on a host-side file path
-  unreachable from a remote client. The `reference/structure-upload.md` guide
-  is rewritten as `reference/generated-structures.md`.
-- `monument-builder` routes pixel-art grids and voxelized forms through
-  `mc_structure_create_from_blocks`.
-
-## [0.4.0] - 2026-05-18
-
-Structure uploads. Build elements that are easier to compute than to lay by
-hand — pixel-art murals, voxelized forms — can now be generated and uploaded
-as `.mcstructure` files instead of placed block by block. Needs
-[`minecraft-bedrock-mcp-server`](https://github.com/chapmanjw/minecraft-bedrock-mcp-server)
-and
-[`minecraft-bedrock-mcp-behavior-pack`](https://github.com/chapmanjw/minecraft-bedrock-mcp-behavior-pack)
-v0.2.0 for the `mc_structure_upload` and `mc_server_reload_world` tools.
-
-### Added
-
-- `blueprinter` gains a third blueprint method — generating a block-grid
-  structure definition and uploading it with `mc_structure_upload`, alongside
-  capture-from-world and the block-by-block loop. A new
-  `reference/structure-upload.md` covers the definition format, ZYX index
-  ordering, generating the grid with a script, and the world-reload
-  requirement (`/reload all` needs an online player).
-
-### Changed
-
-- `monument-builder` routes a quantized pixel-art grid or a voxelized form
-  through the `blueprinter`'s upload path rather than emitting it as thousands
-  of `fill` / `set` rows in the plan.
-
-## [0.3.0] - 2026-05-18
-
-The build pipeline. Adds the `minecraft-builder` agent and a suite of
-model-tuned builder skills that survey, research, plan, shape, blueprint,
-build, inspect, and reflect — turning a request into a verified build in a
-live world.
-
-### Added
-
-- `terraforming` skill — designs natural terrain and environments (mountains,
-  valleys, rivers, lakes, coastlines, caves, biomes, weathering) using vetted
-  landscaping technique, and writes the terrain phases into the build plan.
-- `natural-landmarks` skill — composes recognizable real-world natural wonders
-  (Grand Canyon, Niagara, Uluru, Halong Bay, Giant's Causeway, …) from a
-  library of reusable formation primitives, enforcing signature features and
-  minimum recognition scale.
-- `player-house` skill — designs a player's base of operations through an
-  adaptive interview, proposes ASCII / Markdown-table / Mermaid blueprints,
-  iterates with the user until approved, then writes the build plan. Covers
-  rooms, architectural styles, layouts, special-site environments (underwater,
-  mountainside, cave, sky, nether, end), functional systems, storage, and
-  interiors.
-- `village-planner` skill — designs functional villages and settlements
-  (hamlets to standard villages), reusing standard Minecraft building types
-  adapted to the biome and the request. Proposes layout options, iterates with
-  the user, and respects Bedrock village mechanics (iron golems, beds,
-  workstations, bells, raids, breeding, cats).
-- `building-architect` skill — designs specific named buildings: real-world
-  replicas (historical and modern), pop-culture replicas, user-described
-  originals, and generative-style fictional buildings. Uses deep research with
-  citations for real-world targets, resolves the book/film/game adaptation
-  conflict for fictional ones, applies advanced building technique, and leans
-  on a reusable structure-module library so detailed builds stay tractable.
-- `city-planner` skill — designs whole cities and city districts: real-world
-  replicas (modern and historical), pop-culture replicas, and originals. Plans
-  the urban fabric — district zoning, street hierarchy, transit, walls,
-  reused vernacular building modules — defers every named landmark to
-  `building-architect` via a handoff contract, can delegate functional
-  quarters to `village-planner`, and works at district / whole-city /
-  silhouette scales within Bedrock's limits.
-- `engineer` skill — designs and verifies complex redstone and mechanical
-  contraptions: item sorters, piston and hidden doors, automatic farms,
-  mob-spawner collectors, minecart networks and roller coasters, elevators,
-  note-block music, traps. Bedrock-correct — it refuses Java-only mechanics
-  (quasi-connectivity, 0-tick pulses, BUD switches, TNT duping) — and ships
-  every design with a functional in-world test recipe and a symptom →
-  diagnosis → fix correction catalog.
-- The `inspector` now runs the `engineer`'s functional test recipes
-  (`inspection-recipe.toon`) in addition to its plan-fidelity and world-fit
-  checks — a contraption that does not work fails inspection.
-- `monument-builder` skill — designs monuments and build-art: giant statues,
-  organic creatures, abstract sculpture, pixel art and murals, large 3D text
-  and logos. Produces solid or shell-only figurative forms (no habitable
-  interiors) using pixel-grid image mapping, organic-curve construction,
-  voxelization, palette-gradient mapping (including the copper-oxidation
-  chain), and armor-stand detailing. Coordinates with `natural-landmarks`
-  (cliffs), `building-architect` (pedestals), and `terraforming` (plinths).
-- `landscape-architect` skill — designs intentionally designed outdoor space:
-  formal gardens, parks, plazas, courtyards, hedge mazes, fountains, parterres,
-  topiary. Covers French formal, Italian, English landscape, Mughal, Japanese,
-  Chinese, modernist, and other traditions. It is the geometric, intentional
-  counterpart to the naturalistic `terraforming`, and coordinates heavily with
-  `terraforming` (grading), `building-architect` (roofed structures),
-  `monument-builder` (statuary), `engineer` (animated water), and
-  `city-planner` (delegated plaza and park envelopes).
-- `transit-architect` skill — designs the world-spanning connective network
-  between builds: rail lines, roads and highways, nether-hub transit, bridges,
-  tunnels, elevators, docks, and airports. Chooses the network topology
-  (hub-and-spoke, mesh, ring, trunk-and-branch, nether hub) and routes the
-  links, applying the nether 8:1 ratio and Bedrock rail and ice-boat
-  mechanics. Owns static infrastructure only — redstone goes to `engineer`,
-  station buildings to `building-architect`, grading to `terraforming`;
-  `city-planner` covers streets within a city, `transit-architect` connects
-  cities.
-- A `spawn` plan operation (`mc_entity_spawn`) so plans can place villagers,
-  animals, and other entities; the `worker` executes it.
-- `inspector` skill — verifies a build in-world after each phase: checks the
-  plan was carried out, that the result fits the world cleanly (no dangling
-  edges, blocked paths, or unintended overrides), and proposes course
-  corrections. Runs after every major phase as the build's self-correction
-  checkpoint; its corrections are logged for the `philosopher`.
-- A `reference/` library inside the `terraforming`, `natural-landmarks`, and
-  `player-house` skills — command-budget, landforms, water, palettes,
-  weathering, formation primitives, wonder recipes, rooms, styles, layouts,
-  environments, utilities, interiors, interview scripts, and blueprint
-  rendering — loaded on demand so detail does not bloat context until needed.
-
-### Changed
-
-- The `minecraft-builder` agent now coordinates seventeen skills: it gained a
-  `shape` step routing terrain work to `terraforming` (generic) or
-  `natural-landmarks` (named wonders), routes the `plan` step to
-  `player-house` for player bases, `village-planner` for settlements,
-  `city-planner` for cities and districts, `building-architect` for specific
-  named buildings and replicas, `engineer` for redstone and mechanical
-  contraptions, `monument-builder` for statues and build-art,
-  `landscape-architect` for designed outdoor space, or `transit-architect` for
-  networks connecting sites, and runs the `build` step as a phase-by-phase
-  build-and-inspect loop with the `inspector` for self-correction.
-- The `planner` defers terrain phases to the terrain specialists and keeps
-  `fill` steps within the ~32,768-block volume limit; the `worker` executes
-  pre-tiled fills without merging or splitting them.
-- The `philosopher` checks natural-wonder builds against the
-  `natural-landmarks` signature-feature anti-pattern checklist.
-
-## [0.2.0] - 2026-05-16
-
-### Added
-
-- `minecraft-builder` agent — coordinates a build pipeline in a live world:
-  health-checks the MCP connection, recovers project state from the world, and
-  runs survey → research → plan → blueprint → build → reflect.
-- Six builder skills, each tuned to a model suited to its job: `surveyor` and
-  `researcher` (Sonnet, forked), `planner` (Opus), `blueprinter` (Sonnet),
-  `worker` (Haiku, forked), and `philosopher` (Sonnet).
-- World-anchored state model: blueprints saved as named structure files and a
-  `mcbuilder:registry` world dynamic property (TOON) recording every build, so
-  projects can be iterated later with no external state. Local
-  `.minecraft-builder/` files are treated as ephemeral scratch (Markdown +
-  TOON).
-
-## [0.1.0] - 2026-05-16
-
-Initial release. Pairs with
-[`minecraft-bedrock-mcp-server`](https://github.com/chapmanjw/minecraft-bedrock-mcp-server)
-v0.1.0 and
-[`minecraft-bedrock-mcp-behavior-pack`](https://github.com/chapmanjw/minecraft-bedrock-mcp-behavior-pack)
-v0.1.0 — install all three together.
+This plugin was forked from the Minecraft Bedrock Claude plugin and rewritten top to bottom
+for Java Edition: the Bedrock `mc_*` tool surface is replaced by the Fabric mod's tool surface
+(`level_*`, `block_*`, `entity_*`, `structure_*`, …), the four-phase setup is rebuilt around
+Fabric and the mod jar (no dedicated server binary, no behavior pack, no Beta-APIs experiment),
+and the builder's world-anchored state model now uses structure templates plus a command-storage
+registry.
 
 ### Added
 
 - Plugin manifest (`.claude-plugin/plugin.json`) and marketplace manifest
-  (`.claude-plugin/marketplace.json`) — the repo is installable directly as a
-  Claude Code plugin marketplace.
-- Four guided setup skills, run in order, that walk a user through standing up
-  the whole stack: `setup-bedrock-server`, `setup-minecraft-world`,
-  `setup-mcp-server`, and `connect-claude`.
-- `minecraft-mcp-setup` agent — orchestrates all four setup phases end to end
-  in one continuous session, with the setup skills preloaded as per-phase
-  procedures.
-- `.mcp.json.example` — a secret-free reference template for registering the
-  `minecraft-bedrock` MCP server with Claude.
+  (`.claude-plugin/marketplace.json`) — the repo is installable directly as a Claude Code
+  plugin marketplace under the name `minecraft-java`.
+- Four guided setup skills, run in order, that walk a user through standing up the stack on
+  Java Edition: `setup-fabric` (Minecraft Java + Fabric loader, single-player or dedicated
+  server), `install-mcp-mod` (the MCP mod jar + matching Fabric API jar), `setup-mcp-server`
+  (the mod's `config.json`, launch, and `/healthz` verification, with bearer-token capture for
+  remote setups), and `connect-claude` (register the server with Claude and verify with a live
+  call). Single-player localhost is the default path; a dedicated Fabric server with auth is the
+  advanced branch.
+- `minecraft-mcp-setup` agent — orchestrates all four setup phases end to end in one continuous
+  session, with the setup skills preloaded as per-phase procedures.
+- `minecraft-builder` agent and seventeen model-tuned builder skills (`surveyor`, `researcher`,
+  `planner`, `player-house`, `village-planner`, `city-planner`, `building-architect`, `engineer`,
+  `monument-builder`, `landscape-architect`, `transit-architect`, `terraforming`,
+  `natural-landmarks`, `blueprinter`, `worker`, `inspector`, `philosopher`) that survey, research,
+  plan, shape, blueprint, build, inspect, and reflect — turning a request into a verified build
+  in a live world.
+- World-anchored state model: blueprints saved as named **structure templates**
+  (`mcb:<project>_<element>`) and a registry stored in vanilla **command storage**
+  (`mcbuilder:registry`, a TOON document) recording every build, so projects can be iterated
+  later with no external state. Local `.minecraft-builder/` files are treated as ephemeral
+  scratch (Markdown + TOON).
+- `.mcp.json.example` — a secret-free reference template for registering the `minecraft-java`
+  MCP server with Claude (no token for localhost single-player; bearer token via environment
+  variable for remote/authenticated servers).
 - CI workflow that validates the plugin, marketplace, skill, and agent files.

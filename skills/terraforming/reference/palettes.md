@@ -1,13 +1,13 @@
 # Biome palettes
 
-Block palettes with Bedrock IDs and mix ratios. Ratios are **starting
+Block palettes with Java IDs and mix ratios. Ratios are **starting
 defaults** — let the user override. Never use one block at 100%; mix 4–8
 variants. Blend neighbouring biomes over a 10–30 block transition zone.
 
-How to apply a ratio: over the surface region, place the dominant block, then
-convert sub-percentages to other variants — either with `replace`-mode fills
-over sub-regions, or by stamping a single-block structure module at the
-matching `integrity` (see `command-budget.md`).
+How to apply a ratio: over the surface region, place the dominant block with
+`block_fill_region`, then convert sub-percentages to other variants — either
+with `replace`-mode fills over sub-regions, or by stamping a single-block
+structure module at the matching `integrity` (see `command-budget.md`).
 
 ## Alpine / mountainous
 
@@ -100,6 +100,6 @@ matching `integrity` (see `command-budget.md`).
 
 ## Version note
 
-Cherry blossom, mangrove, deep dark, and pink petals need Bedrock **1.20+**;
+Cherry blossom, mangrove, deep dark, and pink petals need Java **1.20+**;
 basalt and blackstone need **1.16+**. Check the host version with
-`mc_world_get_info` before relying on newer blocks.
+`server_get_status` before relying on newer blocks.

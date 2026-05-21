@@ -3,7 +3,7 @@ name: natural-landmarks
 description: >-
   Composes recognizable real-world natural wonders and landmarks — canyons,
   mesas, monoliths, volcanoes, waterfalls, karst towers, glaciers, sea stacks,
-  salt flats — in a live Minecraft Bedrock world from a library of reusable
+  salt flats — in a live Minecraft Java Edition world from a library of reusable
   formation primitives. Use when a build recreates a named natural wonder
   (Grand Canyon, Niagara, Uluru, Halong Bay, Giant's Causeway, …) or a
   recognizable landmark type. Part of the minecraft-builder workflow.
@@ -14,7 +14,7 @@ effort: high
 # Natural Landmarks
 
 You recreate **recognizable natural wonders** — the Grand Canyon, Niagara,
-Uluru, Halong Bay — in a live Minecraft Bedrock world. You are a *composer*:
+Uluru, Halong Bay — in a live Minecraft Java Edition world. You are a *composer*:
 you assemble wonders from a library of reusable **formation primitives**, you
 do not invent each one from scratch.
 
@@ -25,7 +25,7 @@ the composition layer on top of it).
 
 ## Connection
 
-If an `mc_*` call fails because the MCP server is unreachable, stop and tell
+If a tool call fails because the MCP server is unreachable, stop and tell
 the user to run the `minecraft-mcp-setup` agent.
 
 ## The core principle
@@ -77,7 +77,7 @@ Read the file for the step you are on — do not load them all up front:
 | ---- | ------ |
 | `reference/primitives.md` | The formation-primitive library — dimensions, build method, and approach for each. |
 | `reference/wonders.md` | Named real-wonder recipes: signature features, minimum recognition footprint, palette, and primitive composition. |
-| `reference/palettes.md` | Named palette presets with Bedrock block IDs and mix ratios. |
+| `reference/palettes.md` | Named palette presets with Java block IDs and mix ratios. |
 | `reference/sequencing.md` | Carve-first vs build-up-first rules, water-last, integrity weathering passes, lighting tricks. |
 | `reference/anti-patterns.md` | The signature-and-proportion failure checklist the `philosopher` reviews against. |
 
@@ -116,12 +116,13 @@ primitives[4]{seq,primitive,x,y,z,method,params}:
   whose footprint exceeds ~30 blocks, follow terraforming's heightmap method
   (`terraforming/reference/landforms.md § The heightmap method`) — stacked
   rectangular fills produce the ziggurat artifact, every time.
-- **Modules** — save reusable primitive instances as named structures
-  **`mcb:<project>_<primitive>_<index>`** (colon namespace — required by
-  `mc_structure_create_from_blocks`) via `mc_structure_*`, like the
-  `blueprinter`. Reuse them with rotation, mirror, and `integrity` for
-  weathered variation. A landmark at minimum recognition size can span
-  several structure files (max 64×384×64 each) — tile them.
+- **Modules** — save reusable primitive instances as named structure templates
+  **`mcb:<project>_<primitive>_<index>`** (colon namespace — required; an
+  underscore-only ID is rejected) via `structure_save_from_world` /
+  `structure_load_to_world`, like the `blueprinter`. Reuse them with rotation,
+  mirror, and `integrity` for weathered variation. A landmark at minimum
+  recognition size can span several structure templates (max 64×384×64 each) —
+  tile them.
 - **Quality contract** — emit a `quality_contract` block per
   `planner/SKILL.md`, with terrain rows from
   `terraforming/reference/non-negotiable-enforcement.md`:
@@ -130,8 +131,9 @@ primitives[4]{seq,primitive,x,y,z,method,params}:
   - **block_mix_ratios** for every banded or weathered surface.
   - **asymmetry** to confirm the build isn't a mirror-perfect cone.
   - **foundation_naturalised** if the wonder rises from a sea or basin.
-- **Registry** — record the landmark and its modules in the
-  `mcbuilder:registry` world dynamic property.
+- **Registry** — record the landmark and its modules in `mcbuilder:registry`
+  command storage (namespace `mcbuilder`, path `registry`, via `data_storage_set`
+  / `data_storage_get`).
 
 ## Quality gate
 

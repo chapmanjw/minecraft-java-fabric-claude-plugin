@@ -5,7 +5,7 @@ size range, a **build method** (`carve` = build solid then cut; `build-up` =
 additive — see `sequencing.md`), and an approach. Every primitive lives within
 the limits in `terraforming/reference/command-budget.md`.
 
-Naming: save primitive instances as structures `mcb:<project>_<primitive>_<index>` (colon namespace — the underscore-only form is rejected by the create tools).
+Naming: save primitive instances as structure templates `mcb:<project>_<primitive>_<index>` (colon namespace — the underscore-only form is rejected by the structure tools).
 
 ## V1 primitives — implement these first
 
@@ -14,8 +14,9 @@ These 18 cover the top ~30 most-requested wonders.
 ### canyon-strata-stack — *build-up*
 Vertical sequence of horizontal sedimentary bands; the substrate everything
 else is carved from. 16–60 tall × any horizontal extent. Loop bands top to
-bottom, one tiled `fill` per band. **≥5 distinct bands of 5–7 blocks each** —
-fewer reads as a solid cliff. Substrate for canyons, mesas, hoodoos.
+bottom, one tiled `block_fill_region` per band. **≥5 distinct bands of 5–7
+blocks each** — fewer reads as a solid cliff. Substrate for canyons, mesas,
+hoodoos.
 
 ### slot-canyon-segment — *carve*
 Narrow sinuous slot cut into a sandstone mass. 30–60 deep × 2–6 wide × any

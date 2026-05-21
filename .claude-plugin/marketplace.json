@@ -1,20 +1,21 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
-  "name": "minecraft-bedrock-claude",
-  "description": "Claude plugins for Minecraft Bedrock — guided setup and AI control of a live Bedrock world over MCP.",
+  "name": "minecraft-java-claude",
+  "description": "Claude plugins for Minecraft Java Edition — guided setup and AI control of a live Fabric world over MCP.",
   "owner": {
     "name": "chapmanjw"
   },
   "plugins": [
     {
-      "name": "minecraft-bedrock",
+      "name": "minecraft-java",
       "source": "./",
-      "version": "0.6.0",
-      "description": "Guided, step-by-step setup of the Minecraft Bedrock MCP stack (dedicated server, world, behavior pack, MCP server, Claude connection) plus an in-world builder agent.",
+      "version": "0.1.0",
+      "description": "Guided, step-by-step setup of the Minecraft Java Fabric MCP stack (Fabric loader, the MCP mod, configuration, and the Claude connection) plus an in-world builder agent.",
       "category": "games",
       "keywords": [
         "minecraft",
-        "minecraft-bedrock",
+        "minecraft-java",
+        "fabric",
         "mcp",
         "game-server"
       ]

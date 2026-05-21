@@ -1,76 +1,80 @@
-# Minecraft Bedrock — Claude Plugin
+# Minecraft Java — Claude Plugin
 
 A [Claude Code](https://code.claude.com) plugin that gives Claude **agent
-skills** and an **agent** for driving a live Minecraft Bedrock world through
-the [`minecraft-bedrock-mcp-server`](https://github.com/chapmanjw/minecraft-bedrock-mcp-server).
+skills** and an **agent** for driving a live Minecraft Java Edition world
+through the [`minecraft-java-fabric-mcp-server`](https://github.com/chapmanjw/minecraft-java-fabric-mcp-server)
+— a Fabric mod that embeds an MCP server inside Minecraft.
 
 It does two things:
 
 1. **Guided setup** — skills and an agent that walk you, step by step, through
-   standing up the whole stack: a Bedrock Dedicated Server, a compatible world,
-   the bridge behavior pack, the MCP server, and the connection to Claude.
+   standing up the whole stack: Minecraft Java with the Fabric loader, the MCP
+   mod and its Fabric API dependency, the mod's configuration, and the
+   connection to Claude.
 2. **Building in the world** — a `minecraft-builder` agent that surveys,
    researches, plans, blueprints, builds, and reflects, coordinating a set of
    model-tuned skills to design and construct elements in a live world.
 
 ## The stack
 
-This plugin is the Claude-facing piece of a three-repository system:
+This plugin is the Claude-facing piece of a two-repository system. The MCP
+server is **embedded in the Fabric mod** and runs inside Minecraft itself —
+there is no separate server process and no behavior pack.
 
 | Repository | Role |
 | ---------- | ---- |
-| [`minecraft-bedrock-mcp-server`](https://github.com/chapmanjw/minecraft-bedrock-mcp-server) | The MCP server. Bridges MCP clients to the world. |
-| [`minecraft-bedrock-mcp-behavior-pack`](https://github.com/chapmanjw/minecraft-bedrock-mcp-behavior-pack) | The BDS behavior pack. Runs inside the world and executes commands. |
-| **`minecraft-bedrock-claude-plugin`** (this repo) | The Claude plugin — skills and agents that use the MCP tools. |
+| [`minecraft-java-fabric-mcp-server`](https://github.com/chapmanjw/minecraft-java-fabric-mcp-server) | The Fabric mod. Embeds the MCP HTTP server and executes tool calls against the world on the server main thread. |
+| **`minecraft-java-fabric-claude-plugin`** (this repo) | The Claude plugin — skills and agents that use the MCP tools. |
 
 ```
 Claude (Code / Desktop)
-   |  MCP over Streamable HTTP
-minecraft-bedrock-mcp-server
-   |  HTTP long-poll
-bedrock-bridge behavior pack
-   |  @minecraft/server Script API
+   │  MCP over Streamable HTTP  (http://127.0.0.1:8765/mcp)
+minecraft-java-fabric-mcp-server   ← Fabric mod; embeds the MCP server
+   │  Minecraft server API + Fabric API  (on the main thread)
 the Minecraft world
 ```
 
-## ⚠️ Built on an experimental API
+## ⚠️ Pin your versions
 
-The underlying stack depends on Mojang's Bedrock **Script API**, including the
-*beta* modules `@minecraft/server-net` and `@minecraft/server-admin`. A Bedrock
-update can change or remove these. Pin your Bedrock Dedicated Server to a
-known-good version and keep the server, behavior pack, and MCP server upgraded
-together. Treat the whole stack as experimental.
+The mod ships a separate jar for each supported Minecraft version, built against
+that version's Fabric API. A Minecraft or Fabric update can change the modding
+surface the mod depends on. Pin your Minecraft version, your Fabric API jar, and
+the mod jar to a matched, known-good set and upgrade them together. The mod's
+release notes list the supported Minecraft versions (v0.1.0 supports **1.21.11,
+26.1.1, and 26.1.2**). Treat the whole stack as experimental.
 
 ## Install
 
 Add this repo as a plugin marketplace and install the plugin:
 
 ```
-/plugin marketplace add chapmanjw/minecraft-bedrock-claude-plugin
-/plugin install minecraft-bedrock@minecraft-bedrock-claude
+/plugin marketplace add chapmanjw/minecraft-java-fabric-claude-plugin
+/plugin install minecraft-java@minecraft-java-claude
 ```
 
-Then restart Claude Code. The skills appear under `/minecraft-bedrock:*` and
-the `minecraft-mcp-setup` and `minecraft-builder` agents become available for
+Then restart Claude Code. The skills appear under `/minecraft-java:*` and the
+`minecraft-mcp-setup` and `minecraft-builder` agents become available for
 delegation.
 
 ## Setup skills
 
 The four setup skills are meant to be run **in order**. Each one ends by
-handing off to the next.
+handing off to the next. The default path is a **single-player** install on
+localhost (no token, no firewall changes); each skill also covers the
+**dedicated Fabric server** branch (LAN/remote, bearer-token auth).
 
 | Skill | Phase | What it covers |
 | ----- | ----- | -------------- |
-| `setup-bedrock-server` | 1 | Download, install, and configure a Bedrock Dedicated Server. |
-| `setup-minecraft-world` | 2 | Create a Beta-APIs world, transfer it to the server, install the behavior pack. |
-| `setup-mcp-server` | 3 | Install and configure the MCP server, configure the behavior pack, start everything, verify the handshake. |
+| `setup-fabric` | 1 | Install Minecraft Java Edition and the Fabric loader — a single-player client or a headless dedicated server. |
+| `install-mcp-mod` | 2 | Download the MCP mod jar and the matching Fabric API jar and install both into the `mods/` folder. |
+| `setup-mcp-server` | 3 | Configure the mod's `config.json`, launch, and verify the embedded MCP server is listening (`/healthz`); capture the bearer token for remote setups. |
 | `connect-claude` | 4 | Register the MCP server with Claude and verify with a live tool call. |
 
-To start a fresh setup, just ask Claude to set up a Minecraft Bedrock server
-for MCP — the first skill triggers automatically — or invoke it explicitly:
+To start a fresh setup, just ask Claude to set up Minecraft Java for MCP — the
+first skill triggers automatically — or invoke it explicitly:
 
 ```
-/minecraft-bedrock:setup-bedrock-server
+/minecraft-java:setup-fabric
 ```
 
 ## Builder skills
@@ -89,13 +93,13 @@ invoke any one directly.
 | `village-planner` | Designs functional villages and settlements, reusing standard building types. | Opus |
 | `city-planner` | Designs whole cities and districts — urban fabric, zoning, streets, transit, vernacular reuse. | Opus |
 | `building-architect` | Designs specific named buildings — real-world and fictional replicas, originals. | Opus |
-| `engineer` | Designs and verifies complex redstone and mechanical contraptions — Bedrock-correct, with functional tests. | Opus |
+| `engineer` | Designs and verifies complex redstone and mechanical contraptions — Java-correct, with functional tests. | Opus |
 | `monument-builder` | Designs monuments and build-art — statues, creatures, abstract sculpture, pixel art, logos. | Opus |
 | `landscape-architect` | Designs intentionally designed outdoor space — formal gardens, parks, plazas, courtyards, hedge mazes. | Opus |
 | `transit-architect` | Designs the connective network between builds — rail, roads, nether hubs, bridges, tunnels, docks. | Opus |
 | `terraforming` | Designs natural terrain and environments — mountains, water, biomes — using vetted landscaping technique. | Inherit |
 | `natural-landmarks` | Composes recognizable real-world natural wonders from a library of formation primitives. | Sonnet |
-| `blueprinter` | Turns the plan into named, reusable structure files in the world. | Sonnet |
+| `blueprinter` | Turns the plan into named, reusable structure templates in the world. | Sonnet |
 | `worker` | Executes the plan step by step — mechanical, no redesign. | Haiku |
 | `inspector` | Verifies each build phase in-world and proposes course corrections. | Sonnet |
 | `philosopher` | Reviews the finished job and records process lessons in project memory. | Sonnet |
@@ -115,7 +119,8 @@ detail never bloats context until it is needed.
 **`minecraft-mcp-setup`** — orchestrates the complete setup end to end. It runs
 all four phases in one continuous session: checks prerequisites up front, works
 each phase interactively, verifies every phase's checklist before advancing,
-and carries forward the values later phases depend on (paths, tokens, host).
+and carries forward the values later phases depend on (paths, ports, token,
+host).
 
 **`minecraft-builder`** — designs and constructs elements in a live world. It
 health-checks the MCP connection (and points you at `minecraft-mcp-setup` if
@@ -124,7 +129,7 @@ then coordinates the seventeen builder skills: survey → research → plan → 
 blueprint → build → inspect → reflect. Delegate to it for anything beyond a trivial block change —
 e.g. *"Build a lakeside village near the nearest player."*
 
-Use the individual `/minecraft-bedrock:*` skills directly if you'd rather drive
+Use the individual `/minecraft-java:*` skills directly if you'd rather drive
 one step yourself.
 
 ## State model
@@ -133,12 +138,14 @@ The builder keeps **persistent state in the Minecraft world**, not in your
 workspace — a project folder is useful only while you're working in it, but the
 world travels everywhere:
 
-- **Blueprints** are saved as named structure files (`mcb:<project>_<element>`),
-  so build elements can be placed, copied, and iterated later.
-- A **registry** — a world dynamic property `mcbuilder:registry` holding a
-  [TOON](https://toonformat.dev/) document — records every project and build
-  (element, structure, coordinates, status, revision). Any future session reads
-  it back and can pick up where the last left off.
+- **Blueprints** are saved as named structure templates (`mcb:<project>_<element>`)
+  via the `structure_*` tools, so build elements can be placed, copied, and
+  iterated later.
+- A **registry** — vanilla command storage at `mcbuilder:registry`, holding a
+  [TOON](https://toonformat.dev/) document (read/written with the
+  `data_storage_*` tools) — records every project and build (element, structure,
+  coordinates, dimension, status, revision). Any future session reads it back
+  and can pick up where the last left off.
 
 Local files under `.minecraft-builder/<project>/` (requirements, survey, plan)
 are treated as throwaway scratch — Markdown for prose, TOON for structured
@@ -147,11 +154,16 @@ build data.
 
 ## MCP connection
 
-This plugin does **not** auto-register an MCP server, because the server is
-remote and per-user (your own host and bearer token). The `connect-claude`
-skill registers it for you. [`.mcp.json.example`](.mcp.json.example) in this
-repo is a reference template showing the recommended secret-free pattern
-(token via an environment variable).
+This plugin does **not** auto-register an MCP server, because the endpoint and
+posture are per-user (your own host, port, and — for remote setups — a bearer
+token). The `connect-claude` skill registers it for you.
+
+For a **single-player** install the mod listens on `http://127.0.0.1:8765/mcp`
+with no authentication — just the URL is needed. For a **dedicated/remote**
+server the mod generates a bearer token on first boot; pass it via an
+environment variable so it stays out of version control.
+[`.mcp.json.example`](.mcp.json.example) in this repo is a reference template
+showing both the no-auth localhost form and the token-via-env pattern.
 
 ## Contributing
 

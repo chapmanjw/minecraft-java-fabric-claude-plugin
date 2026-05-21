@@ -18,23 +18,24 @@ profession, one workstation within 16h/4v.
 
 ## Profession buildings & workstations
 
-One villager per workstation. Bedrock workstation blocks:
+One villager per workstation. Java Edition workstation blocks (use the full
+`minecraft:` id when placing with `block_set_state`):
 
-| Profession | Workstation | Building note |
-| ---------- | ----------- | ------------- |
-| Farmer | `composter` | Cottage beside a crop plot. |
-| Librarian | `lectern` | Library — bookshelves (decorative). |
-| Toolsmith | `smithing_table` | Forge with a furnace and chimney. |
-| Weaponsmith | `grindstone` | Forge; often shares a building with the toolsmith. |
-| Armorer | `blast_furnace` | Smith's house. |
-| Cleric | `brewing_stand` | Temple / shrine. |
-| Cartographer | `cartography_table` | Map house. |
-| Fisherman | `barrel` | Cottage near water; pairs with a dock. |
-| Fletcher | `fletching_table` | Bowyer's house. |
-| Shepherd | `loom` | House near the animal pens. |
-| Leatherworker | `cauldron` | Tannery. |
-| Mason | `stonecutter` | Mason's house. |
-| Butcher | `smoker` | Butcher shop near the animal pens. |
+| Profession | Workstation | Java block id | Building note |
+| ---------- | ----------- | ------------- | ------------- |
+| Farmer | Composter | `minecraft:composter` | Cottage beside a crop plot. |
+| Librarian | Lectern | `minecraft:lectern` | Library — bookshelves (decorative). |
+| Toolsmith | Smithing Table | `minecraft:smithing_table` | Forge with a furnace and chimney. |
+| Weaponsmith | Grindstone | `minecraft:grindstone` | Forge; often shares a building with the toolsmith. |
+| Armorer | Blast Furnace | `minecraft:blast_furnace` | Smith's house. |
+| Cleric | Brewing Stand | `minecraft:brewing_stand` | Temple / shrine. |
+| Cartographer | Cartography Table | `minecraft:cartography_table` | Map house. |
+| Fisherman | Barrel | `minecraft:barrel` | Cottage near water; pairs with a dock. |
+| Fletcher | Fletching Table | `minecraft:fletching_table` | Bowyer's house. |
+| Shepherd | Loom | `minecraft:loom` | House near the animal pens. |
+| Leatherworker | Cauldron | `minecraft:cauldron` | Tannery. |
+| Mason | Stonecutter | `minecraft:stonecutter` | Mason's house. |
+| Butcher | Smoker | `minecraft:smoker` | Butcher shop near the animal pens. |
 
 A villager with no workstation stays unemployed (use spares for breeding).
 

@@ -1,8 +1,9 @@
 # Redstone design patterns
 
 The logic primitives to compose a contraption from when no catalog entry fits.
-All are Bedrock-correct — they avoid quasi-connectivity and account for the
-fixed 2-tick piston delay and observer drift.
+All are Java-correct — they use deterministic redstone-tick timing and clean
+1-redstone-tick observer pulses, and may use quasi-connectivity where it
+simplifies the circuit (document where they do).
 
 ## Logic gates
 
@@ -22,8 +23,8 @@ lamp); build it deliberately, not by guesswork.
 - **RS-latch** — two cross-coupled NOR gates (torches); set and reset inputs,
   holds a bit. The basic memory cell.
 - **T flip-flop** — toggles state on each input pulse; the standard "press the
-  button to flip the door" element. A piston-and-observer T flip-flop is the
-  reliable Bedrock build.
+  button to flip the door" element. A piston-and-observer T flip-flop is a
+  compact, reliable Java build.
 - **D-latch** — captures an input on a clock edge.
 - **Counters** — chained T flip-flops count pulses in binary.
 
@@ -45,20 +46,24 @@ lamp); build it deliberately, not by guesswork.
 - **Comparator (subtraction) clock** — a comparator loop for longer, tunable
   periods.
 - **Hopper clock** — items cycling between two hoppers via comparators; the
-  standard *long*-period clock (seconds to minutes), the most reliable on
-  Bedrock.
-- **Observer clock** — two observers facing each other; fast but subject to
-  MCPE-15793 drift — avoid where timing matters.
+  standard *long*-period clock (seconds to minutes), tunable by item count.
+- **Observer clock** — two observers facing each other; fast and stable on Java
+  (clean 1-redstone-tick pulses, no drift bug). Good where a short, precise
+  period is wanted.
 
 Pick the clock by the period needed; do not run a fast observer clock for a
-slow job.
+slow job. Java timing is deterministic, so a clock's period is reproducible —
+state it in redstone ticks.
 
-## Randomness — no `/random` on Bedrock
+## Randomness
 
-- **Scoreboard random** — a scoreboard random objective produces a number;
-  gate outputs on its value.
-- **Dropper randomness** — a dropper with several items ejects one at random;
-  a hopper/comparator reads which slot emptied. The vanilla-redstone RNG.
+- **Dropper randomness** — a dropper with several items ejects one at random; a
+  hopper/comparator reads which slot emptied. The vanilla-redstone RNG, and the
+  right choice for a self-contained in-world machine.
+- **Scoreboard / loot-table random** — for command-driven setup or verification,
+  a scoreboard random objective or `loot_table_generate` produces a number; gate
+  outputs on its value. Keep this out of the contraption's running logic — the
+  machine itself should run on the dropper RNG so it works without commands.
 
 ## Signal transmission
 
@@ -72,8 +77,9 @@ slow job.
 
 ## Composing
 
-When you compose a contraption from these: write the **timing budget** — every
-piston is 2 ticks to start plus 2 to move; every observer may drift 2–3 ticks;
-sum the worst-case path. Pad with repeaters so the slowest path still
-completes inside the cycle. State the budget in the design so the inspection
-recipe can wait the right number of ticks.
+When you compose a contraption from these: write the **timing budget** — sum the
+deterministic delays along the worst-case path (each repeater 1–4 redstone
+ticks, each observer a clean 1-redstone-tick pulse, piston movement ~1.5 game
+ticks). Java timing is reproducible, so the sum is exact — pad with repeaters
+only to align paths, not to absorb a drift bug. State the budget in the design
+so the inspection recipe can wait the right number of ticks.

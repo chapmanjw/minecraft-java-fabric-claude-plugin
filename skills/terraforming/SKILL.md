@@ -2,7 +2,7 @@
 name: terraforming
 description: >-
   Designs and builds natural-looking terrain and environments in a live
-  Minecraft Bedrock world — mountains, valleys, rivers, lakes, coastlines,
+  Minecraft Java Edition world — mountains, valleys, rivers, lakes, coastlines,
   caves, biomes, and weathering — using vetted landscaping techniques. Use
   whenever a build involves shaping land, water, or natural scenery, rather
   than (or alongside) buildings and structures. Part of the minecraft-builder
@@ -14,7 +14,7 @@ effort: high
 # Terraforming
 
 You shape **natural environments** — terrain, water, and scenery — in a live
-Minecraft Bedrock world. Natural-looking terrain is not "random"; it follows
+Minecraft Java Edition world. Natural-looking terrain is not "random"; it follows
 rules. Apply them deliberately. The single biggest difference between amateur
 and expert terrain is discipline about the rules below, not effort.
 
@@ -28,7 +28,7 @@ skill handles generic, natural-looking terrain and scenery.
 
 ## Connection
 
-If an `mc_*` call fails because the MCP server is unreachable, stop and tell
+If a tool call fails because the MCP server is unreachable, stop and tell
 the user to run the `minecraft-mcp-setup` agent.
 
 ## Hard rules — read first
@@ -40,18 +40,19 @@ rectangular underwater foundation had to be naturalised in a third pass. Three
 iterations. The target is one.
 
 1. **Heightmap-or-live-sculpt for anything over ~30 blocks of extent.**
-   Stacked or nested rectangular `mc_block_fill` calls — even when "stepped by
-   elevation" — produce terraces, flat tops, and rectangular outlines by
+   Stacked or nested rectangular `block_fill_region` calls — even when "stepped
+   by elevation" — produce terraces, flat tops, and rectangular outlines by
    construction. They cannot satisfy the non-negotiables below. For any
    landform larger than ~30 blocks in either horizontal axis, use one of two
    methods only:
 
    - **Per-column heightmap** — multi-octave value noise + radial mass falloff
      + organic blob lakes/coves + blended build pads, generated offline, baked
-     to RLE arrays, placed as `mc_structure_*` tiles. This is the default for
-     non-trivial terrain. See `reference/landforms.md` § The heightmap method.
-   - **Live sculpt** — alternate `mc_block_fill` / `mc_block_set` /
-     `mc_block_get_top` in a feedback loop with the user, never a static plan
+     into scratch-area blocks and captured as structure templates. This is the
+     default for non-trivial terrain. See `reference/landforms.md` § The
+     heightmap method.
+   - **Live sculpt** — alternate `block_fill_region` / `block_set_state` /
+     `block_get_top_y` in a feedback loop with the user, never a static plan
      handed to the `worker`. Use for terrain that has to respond to the user's
      eye in real time, or to naturalise an existing mass.
 
@@ -117,7 +118,8 @@ read as "kindergarten":
 7. **Grow trees, never place them.** Never build a tree block by block or
    stamp the same tree twice — duplicated trees are an instant tell. Plant
    biome-appropriate saplings with proper spacing and light, then grow them
-   with bone meal or a temporary `randomTickSpeed` boost. See
+   with bone meal (`player_give_item` / `itemstack_drop_at` + use) or a
+   temporary `randomTickSpeed` boost via `command_execute`. See
    `reference/weathering.md`.
 
 ## The five-pass workflow
@@ -148,10 +150,10 @@ Read the file for the pass you are on — do not load them all up front:
 
 | File | Covers |
 | ---- | ------ |
-| `reference/command-budget.md` | Bedrock/MCP limits, tiled fills, `mc_structure_*` modules, ticking areas, randomness without `/random`, pacing rules to keep the bridge alive. **Read this before executing any large terrain job.** |
+| `reference/command-budget.md` | Java/MCP limits, tiled fills, structure template modules, chunk loading, randomness, pacing rules. **Read this before executing any large terrain job.** |
 | `reference/landforms.md` | Mountains, slopes, valleys, plateaus/mesas/badlands, caves, arches, coastlines, underwater terrain. Includes the heightmap method and the talus-skirt rescue for an existing rectangular mass. |
 | `reference/water.md` | Lakes, rivers, waterfalls, wetlands, frozen features, water mechanics. |
-| `reference/palettes.md` | Per-biome block palettes with Bedrock IDs and mix ratios. |
+| `reference/palettes.md` | Per-biome block palettes with Java IDs and mix ratios. |
 | `reference/weathering.md` | Speckling, the detail-block library, vegetation distribution, and composition principles. |
 | `reference/non-negotiable-enforcement.md` | The machine-checkable form of every non-negotiable rule above — what the `inspector` runs, and the `quality_contract` rows the plan must include for terrain. |
 
@@ -166,16 +168,17 @@ of the `minecraft-builder` workflow already uses:
   safe volume (see `reference/command-budget.md`) — the `worker` runs Haiku
   and does no arithmetic. Resolve all coordinates to absolutes. For any
   landform over ~30 blocks of extent, the plan body must reference the
-  **heightmap method** (one structure-place per tile, generated offline) —
+  **heightmap method** (scratch-and-capture: build into a scratch area, save
+  with `structure_save_from_world`, place with `structure_load_to_world`) —
   not a static stack of rectangular fills.
 - **Modules** — save reusable terrain pieces (a hill core, a scree skirt, a
-  cliff-strata block, a tree, a rock cluster) as named structures
-  **`mcb:<project>_terrain_<element>`** (colon namespace — required by
-  `mc_structure_create_from_blocks`; an underscore-only ID is rejected) via
-  `mc_structure_*`, exactly as the `blueprinter` does. Reuse one module many
-  times with different rotation, mirror, and `integrity` to get variety from
-  one definition — this is the main force-multiplier for medium and large
-  terrain.
+  cliff-strata block, a tree, a rock cluster) as named structure templates
+  **`mcb:<project>_terrain_<element>`** (colon namespace — required; an
+  underscore-only ID is rejected) via `structure_save_from_world` /
+  `structure_load_to_world`, exactly as the `blueprinter` does. Reuse one
+  module many times with different rotation, mirror, and `integrity` to get
+  variety from one definition — this is the main force-multiplier for medium
+  and large terrain.
 - **Quality contract** — every terrain phase emits the silhouette / edge /
   mix-ratio rows from `reference/non-negotiable-enforcement.md` into the
   plan's `quality_contract` block, so the `inspector` checks the
@@ -183,8 +186,9 @@ of the `minecraft-builder` workflow already uses:
   to call it out. Terrain inspection must also sample **below sea level** —
   pad walls, foundation faces, and the seabed profile, not just the
   above-water silhouette.
-- **Registry** — record terrain builds and modules in the `mcbuilder:registry`
-  world dynamic property like any other build.
+- **Registry** — record terrain builds and modules in `mcbuilder:registry`
+  command storage (namespace `mcbuilder`, path `registry`, via `data_storage_set`
+  / `data_storage_get`) like any other build.
 
 ## Scale tiers
 
@@ -202,7 +206,7 @@ Match effort to size (full detail in `reference/command-budget.md`):
 
 | Anti-pattern | Fix |
 | ------------ | --- |
-| Stacked/nested rectangular fills (the "ziggurat") | Heightmap method or live sculpt — never stacked rectangles for organic terrain |
+| Stacked/nested rectangular fills (the "ziggurat") | Heightmap method (scratch-and-capture) or live sculpt — never stacked rectangles for organic terrain |
 | Rectangular underwater foundation ("corestone") | Talus skirt + corner knolls + side mounds, or bury beneath naturalistic terrain |
 | Void-over-rock dry shelf at the waterline | Extend every coastal tile down to the seabed so water columns are continuous |
 | Single-block staircase slopes | 7-block rule + lateral jitter + occasional 2-block jumps |
