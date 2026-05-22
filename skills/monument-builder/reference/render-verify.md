@@ -71,14 +71,31 @@ summary = write_fills_json(m, "/abs/scratch/r1s_fills.json", origin=(206, 64, 70
 
 `write_fills_json` greedily covers the model with maximal boxes, splits each to
 ≤ 32,000 blocks, and writes a list of
-`{"from":[x,y,z], "to":[x,y,z], "block":"…"}` in **world** coordinates. Place
-the whole list in one **`block_fill_batch`** call (the batch tool collapses
-hundreds of fills into a single request and sidesteps the per-call rate limit).
-If `block_fill_batch` isn't available on the connected server, feed the same
-list to a sequence of `block_fill_region` calls — the boxes are already capped,
-so they place safely either way. The script + the model `.npy` are the
-**reusable artifact** for a large parametric form (it can't be one structure
-template — templates cap at ~64×384×64); record them in the registry.
+`{"from":[x,y,z], "to":[x,y,z], "block":"…"}` in **world** coordinates.
+
+**Place it with the bundled client, not by hand.** A real voxelized form is
+1,000–7,200 fills — far too many to hand-transcribe into a `block_fill_batch`
+tool call reliably (the #1 friction of a long figurative session). Pipe the JSON
+straight to the local server instead:
+
+```sh
+python ${CLAUDE_PLUGIN_ROOT}/tools/voxel/mcp_place.py place /abs/scratch/r1s_fills.json replace
+# --dimension minecraft:the_nether to target another dimension (default overworld)
+```
+
+`mcp_place.py` is a stdlib-only JSON-RPC client: it reads the server URL/auth
+from `~/.claude.json` (`mcpServers["minecraft-java"]`, no auth on single-player),
+does the MCP handshake, and POSTs the fills as `block_fill_batch` calls. **`block_fill_batch`
+is capped at 8192 entries per call** — the client pages a longer list into
+successive calls automatically, so you don't have to. Run `mcp_place.py test`
+first to confirm the handshake.
+
+Only fall back to enumerating the fills as individual `block_fill_region` calls
+for a **tiny** model (a few dozen boxes), or if the connected server lacks
+`block_fill_batch` — the boxes are already capped, so they place safely either
+way, just slower. The script + the model `.npy` are the **reusable artifact**
+for a large parametric form (it can't be one structure template — templates cap
+at ~64×384×64); record them in the registry.
 
 ## Verify the built result — scan-render
 
@@ -105,7 +122,10 @@ dependency into a grid), **render its silhouette and check it against the
 references before building anything on it.** Render-checking on day one is
 cheap; detailing a wrong body for days is not. Hand-authoring a parametric
 model usually wins for a specific named subject because you control the
-silhouette directly.
+silhouette directly — **but when the user hands you a model file (or a faithful
+one exists for the named subject), voxelizing it wins** (it nailed an organic
+character on the first try where hand-authoring took ~6 rebuilds). See
+`reference/mesh-import.md` for the full import pipeline and the `.3mf` gotchas.
 
 ## Scene scale
 

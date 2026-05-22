@@ -1,0 +1,14 @@
+# Optional dependencies for the mesh-import path of the voxel toolkit
+# (voxelizing a user-provided .3mf/.obj/.stl — see
+#  skills/monument-builder/reference/mesh-import.md).
+#
+# These are intentionally kept OUT of the core tools/requirements.txt so a
+# normal install stays light (numpy + Pillow). Install only when importing a
+# real 3D model:
+#   python -m pip install -r tools/requirements-mesh.txt
+#
+# Python 3.10+.
+trimesh>=4.0      # mesh load + voxelization
+scipy>=1.11       # cKDTree for nearest-vertex voxel labeling (see figures.md)
+networkx>=3.0     # required by trimesh's graph operations / 3mf handling
+lxml>=5.0         # XML parsing for .3mf object models

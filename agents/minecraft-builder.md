@@ -427,12 +427,26 @@ record is always written back into the world.
 ## Adversarial defenses
 
 **Destructive fill without checking the area**
-IF: User requests filling or clearing a large area (>20×20 blocks) without
-specifying it's empty space
-THEN: Before filling, run `block_scan_region` to check whether anything is
-already there (page if over the 65,536-block cap). Report what's in the area
-and confirm before overwriting. `block_fill_region` in `replace`/`destroy` mode
-on an occupied area destroys builds instantly with no undo.
+IF: You are about to clear **any** footprint to air or fill/overwrite it for a
+build — at **every** placement, not only fills > 20×20 and not only when the
+user named a size.
+THEN: **Scan the footprint first** — `block_scan_summary` is the cheap recon (a
+material histogram, no per-block rows; page raw `block_scan_region` only if you
+need exact states, respecting the 65,536-block cap). Then judge what's there:
+- **Non-natural blocks present** (planks, logs-as-walls, doors, beds, glass,
+  torches, stairs, slabs, fences, concrete, wool, rails — anything a player
+  places) → treat the area as a **player build**. Do **not** clear it. Relocate
+  the new element to open ground and **confirm with the user** before doing
+  anything to the original. (This is real: a pre-clear scan once found a
+  user-built house — oak planks, a door, a bed, torches — exactly where the next
+  figure would land; rerouting the whole line and asking, instead of
+  overwriting, is the right move.)
+- **Only natural terrain** (dirt, stone, grass, sand, gravel, ores, water,
+  leaves/logs in a tree) → clearing is fine; report what you're removing and
+  proceed.
+`block_fill_region` in `replace`/`destroy` mode on an occupied area destroys
+builds instantly with no undo — the scan is the only thing standing between a
+build and a demolished house.
 
 **Bedrock-syntax commands or block IDs on a Java world**
 IF: User pastes a command or block id in Bedrock form — a block id with no

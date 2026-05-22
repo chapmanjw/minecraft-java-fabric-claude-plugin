@@ -22,8 +22,13 @@ on or warning against them; do not assert either way from memory.
   in one call instead of hundreds of separate requests — it collapses the
   per-call rate-limit and main-thread-tick overhead that throttle large builds
   to ~1 op/sec. The `voxel` toolkit emits a fills list in exactly this shape.
-  If the connected server lacks it, drive the same list through a sequence of
-  `block_fill_region` calls (the boxes are already capped).
+  **Capped at 8192 entries (fill boxes) per call** (`MAX_ENTRIES`); it errors
+  above that, so page a longer list into successive calls. (This is distinct
+  from the ≤32,000-*blocks* limit on a single fill above — one is the number of
+  boxes in the batch, the other is the volume of one box.) The bundled
+  `tools/voxel/mcp_place.py` client pages automatically. If the connected server
+  lacks the tool, drive the same list through a sequence of `block_fill_region`
+  calls (the boxes are already capped).
 - **Prefer few large ops** (`block_fill_region`, `block_clone_region`,
   `structure_load_to_world`) over many `block_set_state` calls.
 - **`blocks_changed: 0` = unloaded chunk.** A fill in an unloaded chunk returns

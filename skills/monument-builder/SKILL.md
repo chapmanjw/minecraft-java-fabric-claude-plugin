@@ -183,6 +183,12 @@ Pass siblings a shared anchor coordinate through the `mcbuilder:registry`.
    alongside the usual blueprints (`reference/blueprints.md`). For non-voxel
    pieces, produce blueprints directly. Either way, revise and **loop until the
    user approves**.
+   - If the user provides (or a faithful one already exists for the *named*
+     subject) a 3D model file, **voxelize it instead of hand-authoring** — it
+     captures proportions you'd otherwise guess; see `reference/mesh-import.md`.
+   - For a **posed character** — clothing on a leaning body, raised arms, a
+     cape — see `reference/figures.md` (body/limb labeling, vertex posing, arc
+     garments).
 9. **Hand off** — write the plan and register the monument.
 
 ## Reference library
@@ -191,7 +197,9 @@ Read the file for the step you are on — do not load them all up front:
 
 | File | Covers |
 | ---- | ------ |
-| `reference/render-verify.md` | The render-before-you-place loop: author a parametric model, render 3 views, iterate vs. references, decompose → `block_fill_batch`, scan-render to verify. Toolkit API + the imported-mesh guardrail. |
+| `reference/render-verify.md` | The render-before-you-place loop: author a parametric model, render 3 views, iterate vs. references, decompose → `block_fill_batch` (place via `mcp_place.py`), scan-render to verify. Toolkit API + the imported-mesh guardrail. |
+| `reference/mesh-import.md` | Voxelizing a user-provided/real 3D model (`.3mf`/`.obj`/`.stl`) when one exists for the named subject — the pipeline, `.3mf` slicer gotchas, optional deps, and the render-it-first guardrail. |
+| `reference/figures.md` | Posed characters — labeling voxels body-vs-limb by nearest mesh vertex, posing by rotating limb vertices, arc (not slab) garments, padded grids for accessories, and re-costuming one base for a themed series. |
 | `reference/catalog.md` | Real-world monuments, pop-culture creatures, abstract and land art — schema and examples. |
 | `reference/pixel-art.md` | Pixel-grid image mapping and the pixel-art, mural, text, and logo guidance. |
 | `reference/sculpting.md` | Organic-curve construction and voxelization technique. |

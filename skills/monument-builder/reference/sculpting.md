@@ -55,13 +55,25 @@ decomposes the verified model into world fills for one `block_fill_batch`. This
 is the primary path for spheres, creatures, vehicles, characters, abstract
 curves — anything computed.
 
-For a form best derived from an **existing 3D model** (`.obj`, `.glb`), voxelize
-it into a grid (e.g. with the optional `trimesh` dependency, or an external tool
-like MagicaVoxel) — but a downloaded mesh is **not authoritative** for a *named*
-subject: render its silhouette against the references and confirm it *before*
-building anything on it. Hand-authoring a parametric model usually wins for a
-specific named subject because you control the silhouette directly. Either way,
-the rule is the same: **render-verify before you place.**
+For a form best derived from an **existing 3D model** (`.obj`, `.glb`, `.3mf`,
+`.stl`), voxelize it into a grid — see `reference/mesh-import.md` for the full
+pipeline, the optional `trimesh`/`scipy` deps, and the `.3mf` slicer gotchas.
+A downloaded mesh is **not authoritative** for a *named* subject: render its
+silhouette against the references and confirm it *before* building anything on
+it. Hand-authoring a parametric model usually wins for a specific named subject
+because you control the silhouette directly — but when the user provides a model
+file (or a faithful one exists), voxelizing it wins. Either way, the rule is the
+same: **render-verify before you place.**
+
+## Posed characters — clothing, limbs, accessories
+
+A posed figure (raised arms, a leaning body, a draping cape) needs more than the
+primitives above. `reference/figures.md` covers the techniques that make it
+read: labeling each voxel **body vs. limb by nearest mesh vertex** (so clothing
+wraps the whole torso without bleeding onto the arms), **posing by rotating limb
+vertices** then re-voxelizing, building **garments as arcs not flat slabs**, and
+padding the grid for hats/capes/hair. Reach for it whenever the subject is a
+character rather than a creature or abstract mass.
 
 ## Java-exclusive: display entities for detail and angles voxels can't reach
 
