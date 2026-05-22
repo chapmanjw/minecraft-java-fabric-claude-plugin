@@ -15,6 +15,11 @@ through the [`minecraft-java-fabric-mcp-server`](https://github.com/chapmanjw/mi
 render-checked against the design before placing, stamped into the world in a
 single batch, then verified in-world — block-for-block.*
 
+![Ghasticlawd, a voxel Ghast-and-Claude mascot, built in a live world](docs/images/ghasticlawd.png)
+
+*And **Ghasticlawd** — the project's Ghast × Claude mascot — built the same way:
+voxelized, render-verified against the design, then placed and confirmed in-world.*
+
 It does two things:
 
 1. **Guided setup** — skills and an agent that walk you, step by step, through
