@@ -5,10 +5,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```sh
-node scripts/validate-plugin.mjs   # validate manifests, frontmatter, and skill/folder name alignment (Node 20+)
+node scripts/validate-plugin.mjs       # validate manifests, frontmatter, and skill/folder name alignment (Node 20+)
+python -m pip install -r tools/requirements.txt   # one-time: deps for the voxel toolkit (numpy, Pillow)
+python tools/examples/example_bean.py  # smoke-test the voxel toolkit (renders 3 PNGs + a fills JSON)
 ```
 
-No build step — all files are plain markdown. Changes take effect in the next Claude Code session after the plugin is reloaded.
+No build step for the markdown content — skills and agents are plain markdown
+and take effect in the next Claude Code session after the plugin is reloaded.
+The `tools/` directory adds a small **Python helper layer** (the `voxel`
+toolkit) that the builder skills run locally; it is stdlib + numpy + Pillow only
+and is referenced from skills via `${CLAUDE_PLUGIN_ROOT}/tools/…`. These helpers
+run in **Claude Code** (CLI or desktop app), where the agent has local Bash and
+can read the PNGs they produce.
 
 ## Architecture
 
@@ -32,6 +40,9 @@ The plugin adds two things:
 agents/                         ← agent steering files (.md with YAML frontmatter)
 skills/<name>/SKILL.md          ← skill playbooks (.md with YAML frontmatter)
 skills/<name>/reference/        ← reference libraries loaded on demand (not always present)
+reference/engine-limits.md      ← cross-skill tool limits & verified behaviour (cited by all block-placing skills)
+tools/voxel/                    ← Python voxel toolkit: author → render → decompose (numpy + Pillow)
+tools/requirements.txt          ← Python deps for tools/
 .claude-plugin/plugin.json      ← plugin manifest
 .claude-plugin/marketplace.json ← marketplace manifest
 .mcp.json.example               ← reference MCP config template
@@ -51,6 +62,7 @@ scripts/validate-plugin.mjs     ← CI validation script
 - A skill's `description` determines when Claude invokes it — make it concrete and specific.
 - The four setup skills must stay runnable in order, each handing off to the next.
 - Tool references use the Java MCP surface (`level_*`, `block_*`, `entity_*`, `structure_*`, `data_storage_*`, …) under the server name **`minecraft-java`** — never the Bedrock `mc_*` names.
+- Bundled helper scripts live under `tools/` and are referenced from skills via `${CLAUDE_PLUGIN_ROOT}/tools/…`. Keep them **stdlib + numpy + Pillow only** (the agreed dependency posture); document any dependency in `tools/requirements.txt` and have a script degrade with a clear "run `pip install …`" message rather than failing opaquely. Hard tool limits are documented once in `reference/engine-limits.md` — cite it rather than restating limits per skill.
 - Keep the Minecraft version, Fabric API jar, the MCP mod jar, and the values referenced in these skills in lockstep — the mod is built per Minecraft version.
 
 ## Releasing

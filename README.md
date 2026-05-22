@@ -1,9 +1,19 @@
+<p align="center">
+  <img src="docs/images/logo.png" width="200" alt="Minecraft Java Fabric MCP — Claude plugin logo">
+</p>
+
 # Minecraft Java — Claude Plugin
 
 A [Claude Code](https://code.claude.com) plugin that gives Claude **agent
 skills** and an **agent** for driving a live Minecraft Java Edition world
 through the [`minecraft-java-fabric-mcp-server`](https://github.com/chapmanjw/minecraft-java-fabric-mcp-server)
 — a Fabric mod that embeds an MCP server inside Minecraft.
+
+![A voxel mascot standing on a superflat world, built by the minecraft-builder agent](docs/images/bean.png)
+
+*Built by the `minecraft-builder` agent: authored as a parametric voxel model,
+render-checked against the design before placing, stamped into the world in a
+single batch, then verified in-world — block-for-block.*
 
 It does two things:
 
@@ -113,6 +123,16 @@ modules, architectural techniques, redstone contraptions, sculpting and
 pixel-art technique, garden traditions, network topology and transit
 engineering, interview scripts, blueprint rendering — loaded on demand so the
 detail never bloats context until it is needed.
+
+For representational and parametric builds (vehicles, creatures, statues),
+`monument-builder` runs a **render-verify loop** backed by a bundled Python
+voxel toolkit (`tools/voxel/`, stdlib + numpy + Pillow): author the form as a
+parametric model, render three orthogonal views to PNG and check the silhouette
+*before* placing a block, stamp the whole thing into the world in one
+`block_fill_batch`, then confirm with an in-world `block_render_region`. See
+[`tools/README.md`](tools/README.md). The agent can't see the world, and a
+wrong silhouette can't be detailed away — so the cheap iteration happens on a
+render first. (The bean above was built exactly this way.)
 
 ## Agents
 

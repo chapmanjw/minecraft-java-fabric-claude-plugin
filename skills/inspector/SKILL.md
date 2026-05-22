@@ -39,8 +39,12 @@ that the world is not connected.
   build, so you can tell what the build was supposed to leave untouched.
 - The `worker`'s execution report for the phase.
 - The world itself, read with `block_get_state`, `block_get_top_y`,
-  `block_scan_region` (capped 65,536 blocks/call, page large scans),
-  `structure_list`, `entity_query`.
+  `block_scan_region` (capped 65,536 blocks/call — page it, and never dump a raw
+  full-volume scan into context), `block_scan_summary` (histogram + non-air
+  bounds digest), `structure_list`, `entity_query`, and `block_render_region`
+  (a PNG of a region — your fastest path to *seeing* a representational build).
+- For voxel/parametric builds, the monument-builder's approved design-time
+  render and model `.npy` (in the project scratch dir), to compare against.
 
 ## Reference library
 
@@ -168,6 +172,32 @@ Apply this to:
 A block entity with the wrong content is a plan-fidelity failure even if the
 block ID and state are correct. Emit the discrepancy as a correction step
 (a `block-nbt` op) for the worker.
+
+### Java-exclusive: scan-render for representational / voxel builds
+
+Block-sampling confirms "block X is at coord Y." It cannot confirm a statue,
+vehicle, creature, or other figurative form actually **reads as its subject** —
+the property that matters most for those builds, and the one you are blind to.
+For any representational or voxelized build, verify it **visually**:
+
+1. **Render the placed result.** Preferred: call **`block_render_region`** on
+   the build's bounding box — the mod renders the actual blocks (real map
+   colours) to a PNG you `Read`. One call; no raw block data enters your
+   context. Fallback if that tool is absent: scan the region **paged**
+   `block_scan_region` (never a raw full-volume scan — a single underground slab
+   of per-block YAML can blow the context limit), rebuild a grid, and render it
+   with the `voxel` toolkit (`${CLAUDE_PLUGIN_ROOT}/tools/voxel`,
+   `render_views`).
+2. **Compare** the render to the reference images and to the design-time render
+   the monument-builder approved. Judge silhouette, proportion, palette.
+3. A matching **solid-voxel count** between the approved model and the scanned
+   build is strong block-for-block evidence; a matching **picture** is the
+   proof it reads. A featureless or wrong-shaped result is a failure however
+   cleanly each individual block was placed.
+
+Render from multiple angles — a silhouette error invisible in one view is
+obvious in another. Route a "doesn't read" failure back to `monument-builder`
+to fix the model and re-place, not to the worker.
 
 ### 5. Adjustments — what needs to change
 

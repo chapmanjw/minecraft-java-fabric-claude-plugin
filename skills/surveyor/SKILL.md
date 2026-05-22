@@ -91,7 +91,32 @@ Record the biome result in `survey.toon` under `biome:` and include the full
 return object so the planner and terraforming skill can consume it directly.
 
 Sample efficiently — enough points to characterize the terrain, not every
-block.
+block. **Never dump a raw full-volume `block_scan_region` into your context** —
+a single large slab of per-block YAML can blow the token limit. Use
+**`block_scan_summary`** (a server-side material histogram + non-air bounding
+box over a box up to 1,048,576), or page and aggregate, so what reaches you is a
+digest, not thousands of block rows.
+
+## Archaeology: finding lost builds when the registry is gone
+
+When the `mcbuilder:registry` is empty or stale, the world may still hold builds
+from past sessions — and you must locate them before planning, or risk building
+on top of forgotten work. Treat "I built X last session" with suspicion until a
+scan confirms it; **verify presence before promising to keep or modify it.**
+
+- **Do not** sweep a fine `block_get_top_y` point grid to find structures — the
+  per-call latency times thousands of points is far too slow (a ~1,100-point
+  sweep had to be abandoned mid-survey).
+- **Do** scan a **high Y-layer** (e.g. y ≈ 90 / 100) in a few large tiles with
+  **`block_scan_summary`**: only *tall* things have blocks up high, so its
+  material histogram at altitude pinpoints every standing structure in a handful
+  of fast scans, and its non-air bounds locate them. Cluster the hits by region
+  + material to separate distinct builds.
+- **Identify** a candidate by **rendering it** — `block_render_region` over its
+  bounding box — not by guessing from a block histogram. That is how a "finished
+  statue" was revealed to be a collapsed blob rather than a standing figure.
+- Record what you find in `survey.toon` so the orchestrator can reconcile it
+  with (or rebuild) the registry.
 
 ## Output
 

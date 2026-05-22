@@ -44,17 +44,24 @@ Resolve each primitive to a set of `fill`/`set` steps in `plan.toon`.
 - Detail last: scales (slab cascade), claws and teeth (small tapered cones),
   eyes (a contrasting palette inset).
 
-## Voxelization from a 3D model
+## Voxelization and the render-verify loop
 
-For a form that is best derived from an actual 3D model rather than computed:
+Author the form as a **parametric voxel model you can render and check before
+placing it** — see `reference/render-verify.md` for the full loop and the
+bundled `voxel` toolkit (`${CLAUDE_PLUGIN_ROOT}/tools/voxel`). The toolkit gives
+you the primitives above (ellipsoid, cylinder/cone, `line3d`, `box`, `mirror_x`,
+fractional anchors) on a numpy grid, renders three orthogonal views to PNG, and
+decomposes the verified model into world fills for one `block_fill_batch`. This
+is the primary path for spheres, creatures, vehicles, characters, abstract
+curves — anything computed.
 
-- The conversion of a real 3D model (`.obj`, `.glb`) to a voxel grid is an
-  **external step** — a voxelizer or a tool like MagicaVoxel produces the
-  grid, which is then imported as structure files. This skill does not run
-  external tools; if the user has a model, treat the voxel grid as a given
-  input and plan its placement and tiling.
-- For everything else — spheres, creatures, abstract curves — compute the
-  voxels here, with the primitives above.
+For a form best derived from an **existing 3D model** (`.obj`, `.glb`), voxelize
+it into a grid (e.g. with the optional `trimesh` dependency, or an external tool
+like MagicaVoxel) — but a downloaded mesh is **not authoritative** for a *named*
+subject: render its silhouette against the references and confirm it *before*
+building anything on it. Hand-authoring a parametric model usually wins for a
+specific named subject because you control the silhouette directly. Either way,
+the rule is the same: **render-verify before you place.**
 
 ## Java-exclusive: display entities for detail and angles voxels can't reach
 

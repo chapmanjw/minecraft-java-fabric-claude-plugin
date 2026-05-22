@@ -379,17 +379,36 @@ record is always written back into the world.
 
 - This is a **live world** — changes are real and persistent. Work
   deliberately and verify with `block_get_state` / `structure_list`.
-- Respect the mod's limits: each tool call is bounded by `command_timeout_ms`
-  (default 15s) and the per-client `rate_limit_rpm`. Prefer **few large
-  operations** (`block_fill_region`, `block_clone_region`, `structure_load_to_world`)
-  over many tiny `block_set_state` calls. `block_scan_region` is capped at
-  65,536 blocks per call — page large scans.
+- Respect the mod's limits — the canonical list is
+  `${CLAUDE_PLUGIN_ROOT}/reference/engine-limits.md`; read it before any bulk
+  block work. In short: each tool call is bounded by `command_timeout_ms`
+  (default 15s) and the per-client `rate_limit_rpm`; prefer **few large
+  operations** (`block_fill_region`, `block_clone_region`,
+  `structure_load_to_world`) over many tiny `block_set_state` calls; keep each
+  fill ≤ 32,000 blocks (vanilla `/fill` silently no-ops above 32,768);
+  `block_scan_region` is capped at 65,536 blocks per call — page it, prefer its
+  summary/surface modes, and never dump a raw full-volume scan into context.
+- **Drive bulk and generated builds efficiently.** For a large generated form
+  (a voxelized vehicle, creature, statue), the path is: author + render-verify
+  a parametric model with the `voxel` toolkit
+  (`${CLAUDE_PLUGIN_ROOT}/tools/voxel`; see `monument-builder/reference/render-verify.md`),
+  decompose it to a fills list, and place the whole list in one
+  **`block_fill_batch`** call rather than hundreds of separate fills. The
+  authoring **script + model `.npy` are the reusable artifact** for a form too
+  large to be one structure template — record their location in the registry.
 - Report honestly. If the worker hit a failure, terrain forced a deviation, or
   a phase is incomplete, say so plainly with coordinates — never paper over it.
-- **Verify capabilities; don't assume them.** The mod exposes tools it may not
-  fully execute. In particular, **datapack functions can be inert**: the mod
-  has been observed to accept the call but refuse to run it (`/function` →
-  "This function should not run", `/reload` → `successCount 0`). Before planning
+- **Verify capabilities; don't assume them.** The mod exposes tools it does not
+  fully execute — confirmed live (26.1.2), see
+  `${CLAUDE_PLUGIN_ROOT}/reference/engine-limits.md`. In particular: **datapack
+  functions are inert** — `function_run` returns `failed` and runs nothing even
+  when the function is loaded, and `/reload` returns `successCount 0`; never
+  generate `.mcfunction` files or depend on `/function`. And
+  **`structure_file_write` is not round-trippable** — it writes the file but the
+  template won't load in-session; use `structure_save_from_world` /
+  `structure_load_to_world` (which work). Emit direct block ops
+  (`block_fill_region`/`block_fill_batch`/`block_set_state`/`block_clone_region`/`structure_*`)
+  instead of anything function-driven. Before planning
   any step that depends on a datapack function executing — or on `/reload`
   picking up a generated pack — smoke-test it (run a one-line function that sets
   a marker block, then read the block back). If it doesn't execute, fall back to

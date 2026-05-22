@@ -1,0 +1,6 @@
+# Generated artifacts from running the toolkit / examples
+*.png
+*.npy
+*_fills.json
+__pycache__/
+*.pyc

@@ -59,7 +59,9 @@ Six techniques carry the work — pick the ones the piece needs:
    cascades for cloth, S-curves for limbs and coils. See
    `reference/sculpting.md`.
 3. **Voxelization** — turning a 3D form into a block grid, algorithmically or
-   from an imported model. See `reference/sculpting.md`.
+   from an imported model, authored as a parametric model you **render and
+   verify before placing**. See `reference/render-verify.md` and
+   `reference/sculpting.md`.
 4. **Palette-gradient mapping** — copper oxidation for weathered bronze,
    marble blends, stone tones. See `reference/palettes.md`.
 5. **Armor-stand detailing** — fine decorative elements and posed figures.
@@ -70,6 +72,22 @@ Six techniques carry the work — pick the ones the piece needs:
    forms), `item_display` for museum/pedestal items, and glowing tinted accent
    geometry on any of them. Bedrock cannot do this. See
    `reference/display-entities.md`.
+
+## Render-verify first — never iterate a representational build blind
+
+For any voxelized or parametric piece (a vehicle, creature, character, statue,
+giant logo), **author a model you can see and verify it against the references
+before placing a single block.** You cannot see the world, and a wrong
+silhouette cannot be fixed by detailing — so the cheap iteration happens
+offline, on a render, not in-world. The bundled `voxel` toolkit
+(`${CLAUDE_PLUGIN_ROOT}/tools/voxel`) authors a parametric numpy model, renders
+three orthogonal views to PNG (which you **Read** and compare to references),
+then decomposes the verified model into world fills you place in one
+`block_fill_batch`. After building, confirm with a **scan-render**
+(`block_render_region`, or a surface-mode scan re-rendered) — a visual pass, not
+spot-checked coordinates. This is mandatory for representational forms; the full
+recipe, toolkit API, and the "imported meshes are not authoritative" guardrail
+are in **`reference/render-verify.md`**.
 
 ## Inputs
 
@@ -123,14 +141,18 @@ Pass siblings a shared anchor coordinate through the `mcbuilder:registry`.
 6. **Coordinate siblings** — emit handoffs for any cliff, pedestal, or plinth.
 7. **Design into the plan** — write pre-tiled phases and steps into
    `plan.toon`; save reusable tiles as `mcb:<project>_<element>` (colon
-   namespace) structures via the `blueprinter`. A pixel-art grid or a
+   namespace) structures via the `blueprinter`. A pixel-art grid or a small
    voxelized form is a **generated grid** — have the `blueprinter` build it
    into a scratch area using `block_fill_region` / `block_set_state`, then
    capture it with `structure_save_from_world` into the named template, then
    clear the scratch and place the template wherever needed with
-   `structure_load_to_world`. (Alternatively, if a script produces the NBT
-   directly, write it with `structure_file_write` as base64.) Do not use
-   thousands of individual `fill`/`set` rows when a captured structure serves.
+   `structure_load_to_world`. Do not use thousands of individual `fill`/`set`
+   rows when a captured structure serves. For a **large parametric form** (a
+   vehicle, a creature) that exceeds the ~64×384×64 template envelope, the
+   reusable artifact is instead the **authoring script + the model `.npy`**
+   (see `reference/render-verify.md`): decompose the verified model to a fills
+   list and place it with `block_fill_batch`. Record the script/`.npy` location
+   in the registry, since it cannot be a single structure template.
 
    When a tile is placed mirrored or turned (a left/right pair of wings, four
    faces of an obelisk, scattered weathered fragments), pass
@@ -154,8 +176,13 @@ Pass siblings a shared anchor coordinate through the `mcbuilder:registry`.
      oxidized).
    - **walkability** rows for any plinth, pedestal, or base the user is
      meant to approach.
-8. **Render and iterate** — produce blueprints (`reference/blueprints.md`),
-   show the user, revise, and **loop until they approve**.
+8. **Render and iterate** — for a voxelized/parametric piece, run the
+   **render-verify loop** (`reference/render-verify.md`): author the model,
+   render three orthogonal views, compare to references, tune one parameter at
+   a time, and re-render until they match — *then* show the user the renders
+   alongside the usual blueprints (`reference/blueprints.md`). For non-voxel
+   pieces, produce blueprints directly. Either way, revise and **loop until the
+   user approves**.
 9. **Hand off** — write the plan and register the monument.
 
 ## Reference library
@@ -164,6 +191,7 @@ Read the file for the step you are on — do not load them all up front:
 
 | File | Covers |
 | ---- | ------ |
+| `reference/render-verify.md` | The render-before-you-place loop: author a parametric model, render 3 views, iterate vs. references, decompose → `block_fill_batch`, scan-render to verify. Toolkit API + the imported-mesh guardrail. |
 | `reference/catalog.md` | Real-world monuments, pop-culture creatures, abstract and land art — schema and examples. |
 | `reference/pixel-art.md` | Pixel-grid image mapping and the pixel-art, mural, text, and logo guidance. |
 | `reference/sculpting.md` | Organic-curve construction and voxelization technique. |
@@ -183,6 +211,10 @@ Read the file for the step you are on — do not load them all up front:
   tiled structures along anatomy seams; stay within Y -64 to 320.
 - **Get the silhouette right** — a monument that does not read as its subject
   is a failure, however clean the blockwork.
+- **Render-verify before placing** — for any voxelized/parametric form, author
+  and render the model and confirm it against the references *before* any
+  in-world placement, and scan-render the built result to confirm it. Never
+  iterate a representational build blind. (`reference/render-verify.md`)
 - **No `/random` or `/data`** — use a scoreboard random or structure
   integrity for any variation.
 - **Defer** the pedestal, the cliff, the plinth, and any animation to the

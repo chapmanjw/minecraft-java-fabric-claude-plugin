@@ -57,6 +57,13 @@ grouped, a few questions at a time — until these are settled:
 - **Style & materials** — palette, theme, era.
 - **Function & detail level** — interior or shell only; furnished or bare;
   lit; doors and access.
+- **Scale relationships** — if the build shares a scene with another subject
+  (a figure beside a vehicle, a statue beside a building, two landmarks framing
+  a plaza), **pin the size ratio between them now, before any blocks.** Fix it
+  explicitly (e.g. "the figure stands as tall as the vehicle's roof") and carry
+  it into every element's dimensions. Late-discovered scale mismatches — a
+  70-block-tall vehicle next to an 18-block figure — force expensive rebuilds of
+  work that was individually correct.
 - **Scope boundaries** — what is explicitly *not* included.
 
 Record the request and the answers in

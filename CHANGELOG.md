@@ -6,6 +6,47 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-21
+
+Give the builder **eyes**, and drive bulk builds natively. Folds in the Rivian
+R1S / "Gear Guard Gary" retrospective: a representational build iterated blind
+fails on silhouette, and hundreds of one-at-a-time fills are infeasible. Pairs
+with [`minecraft-java-fabric-mcp-server`](https://github.com/chapmanjw/minecraft-java-fabric-mcp-server)
+**v0.2.0**, which adds the native tools this release leans on (`block_fill_batch`,
+`block_render_region`, `block_scan_summary`, `block_get_map_color`, auto-tiling
+fills). Verified end-to-end against a live 26.1.2 world.
+
+### Added
+
+- **Voxel toolkit** (`tools/voxel/`, Python — stdlib + numpy + Pillow). Author a
+  form as a parametric numpy model (`ellipsoid`/`cylinder`/`line3d`/`box`,
+  fractional anchors, `mirror_x`), render three orthogonal views to PNG
+  (`render_views`), and decompose it to a world-space fills list (`write_fills_json`,
+  greedy maximal boxes split to ≤32k). A `building` palette maps voxel codes to
+  block ids + RGB. Worked example + smoke test in `tools/examples/example_bean.py`.
+  Deps documented in `tools/requirements.txt`; usage in `tools/README.md`.
+- **Render-verify workflow** woven into `monument-builder` (+ new
+  `reference/render-verify.md`), `inspector`, and `surveyor`: author → render →
+  iterate vs. references → place via `block_fill_batch` → confirm with a
+  scan-render (`block_render_region`). The "imported meshes are not authoritative"
+  guardrail is spelled out.
+- **`reference/engine-limits.md`** — one canonical, cross-skill list of hard tool
+  limits and verified behaviour, cited by the orchestrator and block-placing skills.
+- **Bean showcase image** in the README (`docs/images/bean.png`).
+
+### Changed
+
+- **Scale-pinning** added to the `planner` interview: fix the size ratio between
+  co-located subjects before any blocks (a 70-tall vehicle beside an 18-tall
+  figure forces rebuilds).
+- **Engine-limits guidance corrected from live testing (26.1.2):** fills now
+  auto-tile past 32,768 server-side (confirmed); datapack functions are **inert**
+  (`function_run`/`/reload` do nothing — keep using direct block ops);
+  `structure_file_write` writes a file but isn't loadable in-session (use
+  `structure_save_from_world`/`structure_load_to_world`, which work).
+- **`CLAUDE.md`** documents the new `tools/` Python layer (deps + smoke test) and
+  the `reference/engine-limits.md` convention.
+
 ## [0.3.0] - 2026-05-21
 
 Fold in lessons from a large multi-agent autonomous build (the "Aurelia
