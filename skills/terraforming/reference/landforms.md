@@ -10,61 +10,100 @@ horizontal axis, **build it from a per-column heightmap**, not from stacked
 rectangular fills. This is the technique that took Cape Aurelia from a flat
 ziggurat to "1000× better" in one rebuild.
 
-The recipe:
+**Use the `terrain` toolkit, and render-verify it offline before placing
+anything** — `${CLAUDE_PLUGIN_ROOT}/tools/terrain` (numpy + Pillow; the 2.5-D
+counterpart of the `voxel` toolkit). You cannot see the world, and a stack of
+fills *looks* fine in a plan but builds a ziggurat. Authoring the heightfield in
+the toolkit lets you **render it and catch that in seconds**, not after a
+demolition. Read `tools/README.md` for the full API. The loop:
 
-1. **Per-column heightmap.** For each `(x, z)` in the footprint compute a
-   target surface height `h(x, z)` as:
+1. **Author the heightfield.** Compose the surface from primitives that encode
+   the rules by construction:
 
+   ```python
+   import os, sys
+   sys.path.insert(0, os.path.join(os.environ["CLAUDE_PLUGIN_ROOT"], "tools"))
+   from terrain import HeightField, TerrainLayers, render_views, write_terrain_fills
+
+   hf = (HeightField(nx, nz, sea_level=62)
+         .add_fbm(46, octaves=5, base_freq=0.02, warp=20, seed=7)      # rolling base
+         .add_fbm(14, octaves=3, base_freq=0.05, ridge=True, seed=11)  # ridgelines
+         .radial_falloff(max_radius=70, inner=0.12, sz=1.18)           # taper to sea/plain
+         .carve_lake(center=(58, 84), radii=(20, 14), depth=7, seed=3) # organic blob cove
+         .carve_river([(120,10),(104,40),(96,70),(78,96),(60,120)], width=3, depth=5)
+         .build_pad(center=(90, 60), half=(8, 6), level=70, shoulder=9))  # buildable pad
    ```
-   h(x, z) = sea_level
-           + base_amplitude * radial_falloff(x, z, center, max_radius)
-           * sum_octaves(value_noise(x*f, z*f) * a for (f, a) in octaves)
+
+   - `add_fbm` is the **multi-octave value noise** (3–5 octaves); add a low-
+     amplitude `ridge=True` layer for mountain ridgelines, and `warp` to break
+     the griddy look.
+   - `radial_falloff` is the **smoothstep taper** so the landmass eases into the
+     surrounding sea/plain (`sx`/`sz` make it an irregular ellipse, not a disc).
+   - `carve_lake` is the **organic blob** cove/inlet (`hypot(dx/rx, dz/rz) +
+     noise < 1`), never a circle.
+   - `build_pad` is the **blended build pad** with a shouldered skirt.
+
+2. **Erode** — `.erode_thermal(...)` then `.erode_hydraulic(...)`. This is the
+   single biggest realism multiplier: it carves coherent drainage and deposits
+   sediment so the land reads as *eroded*, not *noisy*. Run it once the massing
+   is right (it's the slow step).
+
+3. **Render-verify offline — mandatory.** `render_views(hf, "/abs/scratch/site")`
+   writes three PNGs; **Read them and judge against the references and the
+   non-negotiables before placing a block:**
+   - **hillshade** — terraces, flat tops, and the ziggurat artifact show as flat
+     bands; good erosion reads as branching valleys. Look here first.
+   - **relief** — hypsometric colour map: massing, coastline shape, lake/island
+     outlines, beaches.
+   - **profile** — cross-sections: proof the slopes are compound, not flat-
+     topped or pure 45°.
+
+   Tune one parameter, re-render. This replaces guessing — and is far cheaper
+   than the in-world prototype patch (do that too, but *after* the render reads
+   right).
+
+4. **Materialise and place.** `write_terrain_fills(hf, path, layers, origin=(x,z))`
+   bakes in the rules — double-layer substrate, a no-monoculture surface mix,
+   rock on steep faces, beaches, and **water columns continuous to the seabed**
+   — and emits the same fills JSON the `voxel` placer uses. Place it with one
+   call:
+
+   ```sh
+   python ${CLAUDE_PLUGIN_ROOT}/tools/voxel/mcp_place.py place /abs/scratch/site_fills.json
    ```
 
-   - **Multi-octave value noise.** 3–4 octaves at frequencies (0.06, 0.13,
-     0.27, 0.55) and amplitudes (1.0, 0.5, 0.25, 0.12), summed and normalised.
-     A coherent surface with detail at every scale.
-   - **Radial falloff.** Smoothstep that goes 1 at the centre and 0 at
-     `max_radius`. Multiplied with the noise so the landmass tapers naturally
-     into the surrounding sea or plain.
-   - **Organic blob lakes / coves / inlets.** A cove is a point where
-     `hypot(dx*sx, dz*sz) + valueNoise(x,z) < 1` — an irregular elliptical
-     blob, never a circle or rectangle. Carve from `h` so the column floods.
-   - **Blended build pads.** Where a flat pad is needed for a building, set
-     `h = pad_height` inside the pad and blend a 9-block shoulder where it
-     meets natural terrain. The pad is buildable; the shoulder hides the
-     transition.
+   The heights are absolute world Y, so `sea_level=62` and real coordinates work
+   directly, and coastal columns reach the floor by construction.
 
-2. **Build tiles into a scratch area.** Walk `(x, z)` in tile-sized chunks
-   (≤30×30, tile depth fitting under 64×384×64 — see `command-budget.md`).
-   For each tile, use `block_fill_region` / `block_set_state` to write the
-   computed column heights (stone / substrate / surface block / air or water)
-   into a reserved scratch region. Then call `structure_save_from_world` over
-   that scratch box to save it as `mcb:<project>_terrain_<tile_id>`. Clear
-   the scratch area before the next tile.
+   **On a v0.3.0+ mod, prefer `block_fill_columns`** — send the height grid +
+   palette and the server materialises the columns in one pass, with **no
+   8192-entry cap** and no client-side box decomposition (tile to ≤65,536
+   columns). Probe `tools/list` first; **fall back** to the `mcp_place.py` /
+   `block_fill_batch` path above on older mods. See `reference/engine-limits.md`
+   § Terrain helpers.
 
-   **"Generated offline" means the *heightmap math* runs offline, not the
-   placement.** Emit the columns as MCP block ops (`block_fill_region` /
-   `block_set_state`) or, at most, single `/fill`-`/setblock` commands — write
-   them straight into the world. **Do not generate `.mcfunction` files and
-   `/function` them in:** the mod can refuse to execute datapack functions
-   (`/function` → "should not run", `/reload` → `successCount 0`), and a
-   heightmap baked into a function that never runs leaves the terrain patchy
-   and half-built. If you want to script the generation, have the script print
-   the block ops you'll issue, not a datapack.
+   **"Generated offline" means the *heightmap math* runs offline, not via a
+   datapack.** Place with `mcp_place.py` / `block_fill_batch` / `block_fill_region`.
+   **Never generate `.mcfunction` files and `/function` them in:** the mod can
+   refuse to execute datapack functions (`/function` → "should not run",
+   `/reload` → `successCount 0`), leaving terrain patchy and half-built.
 
-3. **Place tiles.** One `structure_load_to_world` per spot. Interleave reads
-   and writes — place a batch, verify one spot with `block_get_state` or
-   `block_get_top_y`, then continue.
+5. **For reusable tiles, scratch-and-capture.** When a tile will be stamped many
+   times, place it once, `structure_save_from_world` it as
+   `mcb:<project>_terrain_<tile_id>`, then `structure_load_to_world` with varied
+   rotation / mirror / `integrity` (see `command-budget.md`). Keep tiles under
+   64×384×64. The heightfield script + its `.npy` are the reusable artifact for
+   a one-off landform too large to be a single template — record them in the
+   registry, exactly as for a large voxel model.
 
-4. **Tiles reach the seabed.** For coastal tiles, extend the column down to
-   the seabed (or at least 10 blocks below the lowest expected water column)
-   so water sits on real ground, not in a void-over-rock shelf.
+This is fast, repeatable, and produces organic terrain by construction. Stacked
+rectangular fills produced the v1 ziggurat — do not return to that method.
 
-This is fast, repeatable, and produces organic terrain by construction. Once
-the heightmap is right, re-placing a tile is one `structure_load_to_world`
-call. Stacked rectangular fills produced the v1 ziggurat — do not return to
-that method.
+**Import real elevation.** For a *named* real-world feature, `HeightField.from_image()`
+loads a greyscale DEM heightmap PNG (exported from QGIS / Tangram Heightmapper /
+World Machine / SRTM) and scales it to a Y range — the terrain analogue of
+voxelizing a provided mesh, and the highest-fidelity path for a real mountain or
+coastline. Render-check it before building, like any imported data.
 
 ## Naturalising an existing rectangular mass — the talus-skirt rescue
 

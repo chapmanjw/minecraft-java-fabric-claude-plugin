@@ -119,6 +119,14 @@ level_get_biome_at("minecraft:overworld", {x:120,y:64,z:-340})
 - At biome boundaries, call `level_get_biome_at` at multiple points and
   blend the two palettes across a 10–30 block transition zone.
 
+**Paint the biome to match the landform.** Surface blocks alone don't change
+foliage/water tint, mob spawns, or climate — the underlying biome does. On a
+**v0.3.0+ mod**, set the biome of the built region with **`level_fill_biome`**
+(dimension, from/to, biome id, optional `replace_filter`) so a snowy peak spawns
+snowy-biome mobs and tints its foliage, rather than borrowing the surrounding
+biome. **Fall back** to `command_execute` with `/fillbiome` on older mods. Skip
+this when the build already sits in the matching biome.
+
 ## Version note
 
 Cherry blossom, mangrove, deep dark, and pink petals need Java **1.20+**;

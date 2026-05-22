@@ -72,9 +72,15 @@ To plant trees:
      tick speed also speeds crops, fire spread, and leaf decay in loaded chunks
      — raise it briefly and restore it promptly.
    - **Bone meal.** Apply bone meal to each sapling via `player_give_item` /
-     `itemstack_drop_at` + use, or a dispenser. Alternatively use
-     `command_execute` with `/place feature minecraft:<tree_type>` to force a
-     tree at a sapling's position.
+     `itemstack_drop_at` + use, or a dispenser.
+   - **Place feature (most direct).** On a **v0.3.0+ mod**, call
+     **`level_place_feature`** (dimension, feature id, position) to grow a
+     configured feature at a spot — e.g. `minecraft:fancy_oak`,
+     `minecraft:spruce`, `minecraft:flower_default` — no sapling/tick wait, and
+     every placement varies. **Fall back** to `command_execute` with
+     `/place feature minecraft:<feature> <x> <y> <z>` on older mods (same effect,
+     untyped). This also grows **vegetation patches and ore veins** as features —
+     the way to add natural detail (rule 7) without stamping identical copies.
 5. **Vary** species, age, and spacing across a stand so no two trees match —
    that variation is the whole point of growing rather than placing.
 

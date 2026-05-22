@@ -47,10 +47,12 @@ iterations. The target is one.
    methods only:
 
    - **Per-column heightmap** — multi-octave value noise + radial mass falloff
-     + organic blob lakes/coves + blended build pads, generated offline, baked
-     into scratch-area blocks and captured as structure templates. This is the
-     default for non-trivial terrain. See `reference/landforms.md` § The
-     heightmap method.
+     + organic blob lakes/coves + blended build pads + erosion, authored with
+     the **`terrain` toolkit** (`${CLAUDE_PLUGIN_ROOT}/tools/terrain`) and
+     **render-verified offline** (hillshade + relief + cross-section) *before*
+     any block is placed, then materialised to fills and placed with
+     `tools/voxel/mcp_place.py`. This is the default for non-trivial terrain.
+     See `reference/landforms.md` § The heightmap method.
    - **Live sculpt** — alternate `block_fill_region` / `block_set_state` /
      `block_get_top_y` in a feedback loop with the user, never a static plan
      handed to the `worker`. Use for terrain that has to respond to the user's
@@ -80,14 +82,30 @@ iterations. The target is one.
    real water all the way to the floor — never a void-over-rock dry shelf at
    the waterline.
 
-## Prototype-first — no large terrain without a visual checkpoint
+## Render-verify, then prototype — two visual checkpoints before scale-up
 
-Before committing to a terrain area over ~100 blocks of extent, build a
-representative **~20×20 prototype patch** of the planned technique (same
-heightmap, same palette, same module set, just smaller). Sample it, then
-**ask the user to glance** before scaling up. One quick "looks good" prevents
-a full demolition; the Cape Aurelia v1 ziggurat would have died as a 20×20
-patch instead of as the whole headland.
+**First, render the heightfield offline.** Before placing anything for a
+landform over ~30 blocks, author it in the `terrain` toolkit and
+`render_views` it — hillshade, relief, and cross-section profile — then **Read
+the PNGs yourself** and check them against the references and the
+non-negotiables. The Cape Aurelia ziggurat would have shown as flat hillshade
+bands in seconds. This is the cheapest checkpoint and it costs the user nothing.
+
+**Then, for a terrain area over ~100 blocks of extent, build a representative
+~20×20 prototype patch** of the planned technique (same heightmap, same palette,
+same module set, just smaller). Sample it, then **ask the user to glance** before
+scaling up. One quick "looks good" prevents a full demolition.
+
+Both checkpoints are mandatory for "visual coherence required" work — the
+offline render catches your own errors, the in-world glance catches the ones
+only a human eye sees.
+
+**After placing, verify the built terrain visually.** On a **v0.3.0+ mod**,
+call `block_render_region` with `view: hillshade` over the placed bounding box
+(span the full vertical extent) and compare that relief render to your offline
+one — a seam, a flat-topped tile, or a chunk-unload gap shows up immediately.
+**Fall back** to `view: top`, or scan a `block_get_top_y` grid and re-render the
+heightfield offline, on older mods.
 
 This is mandatory, not optional. Quality and craftsmanship are the bar — a
 five-minute checkpoint that prevents a multi-hour demolition is always worth

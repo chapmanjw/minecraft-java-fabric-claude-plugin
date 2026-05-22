@@ -135,6 +135,14 @@ only practical way to get organic shapes at scale. Do not feel obliged to
 live-sculpt when a heightmap will do the job — see `landforms.md § The
 heightmap method`.
 
+On a **v0.3.0+ mod**, place a generated heightmap with **`block_fill_columns`**
+(send the height grid + a small palette; the server fills stone → subsurface →
+surface → water in one pass, with no 8192-entry cap — tile to ≤65,536 columns).
+This is faster than emitting per-box fills and sidesteps scratch-and-capture for
+one-off landforms. **Fall back** to `block_fill_batch` / `block_fill_region`
+(via `tools/voxel/mcp_place.py`) on older mods. Probe `tools/list` first; see
+`reference/engine-limits.md § Terrain helpers`.
+
 ## Randomness without `/random`
 
 Get randomness from:

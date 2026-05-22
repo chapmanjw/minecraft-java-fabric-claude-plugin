@@ -6,6 +6,31 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-22
+
+### Added
+
+- **`terrain` toolkit (`tools/terrain/`).** The 2.5-D counterpart of the `voxel`
+  toolkit: author a `HeightField` (multi-octave noise, radial falloff, blob
+  lakes, carved rivers, build pads), erode it (hydraulic + thermal), and
+  **render-verify offline** (hillshade / relief / cross-section profile) before
+  placing — then materialise to fills (double-layer substrate, no-monoculture
+  surface mix, cliffs, beaches, water columns) and place via the shared
+  `mcp_place.py`. numpy + Pillow only. See `tools/README.md`.
+
+### Changed
+
+- **Terraforming skills now reference the mod's v0.3.0+ terrain tools, gated
+  with fallbacks.** `reference/engine-limits.md` documents them once (new
+  "Terrain helpers" section); terraforming (`landforms`, `command-budget`,
+  `weathering`, `palettes`, `SKILL`) and `surveyor` cite them where they help —
+  `block_fill_columns` for heightmap placement, `level_place_feature` to grow
+  trees/vegetation/ore, `level_fill_biome` for the biome pass,
+  `block_get_top_y heightmap=OCEAN_FLOOR` for seabed reads, and the
+  `block_render_region hillshade` view for placed-terrain verification. Each is
+  written "prefer if available, else current approach" so it stays safe on older
+  mods.
+
 ## [0.4.0] - 2026-05-21
 
 Give the builder **eyes**, and drive bulk builds natively. Folds in the Rivian

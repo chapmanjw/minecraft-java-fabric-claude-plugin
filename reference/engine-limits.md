@@ -47,12 +47,18 @@ on or warning against them; do not assert either way from memory.
 - **To *see* a region, use `block_render_region`** — it returns a PNG (iso /
   side / front / top), rendered server-side from block map colours, with a
   `step` downsample for large areas. This is the verify-time "eyes" and avoids
-  pulling block data into context at all.
+  pulling block data into context at all. On **mod v0.3.0+** it also accepts
+  `view: hillshade` — a relief-shaded plan view for terrain (terraces and flat
+  tops read as flat bands; eroded slopes read as branching relief). See
+  "Terrain helpers" below; fall back to `top` on older mods.
 - **`block_get_map_color`** returns a block's base RGB — the authoritative
   block↔colour mapping for pixel-art quantization and matching a render's palette.
 - **`block_get_top_y` semantics vary** — it has been seen to return the
   *stand-on* Y (first air above the surface), so the solid top is `result − 1`.
-  Verify once per survey and record the convention.
+  Verify once per survey and record the convention. On **mod v0.3.0+** it takes
+  a `heightmap` arg (`WORLD_SURFACE` default, plus `OCEAN_FLOOR` for the seabed,
+  `MOTION_BLOCKING`, `WORLD_SURFACE_WG`, …); omit it on older mods (only
+  `WORLD_SURFACE`).
 - **Don't archaeology-sweep with a fine `block_get_top_y` grid** — too slow.
   Scan a high Y-layer in a few tiles with histogram mode and cluster by
   region + material instead (see `surveyor`).
@@ -93,3 +99,37 @@ on or warning against them; do not assert either way from memory.
   at a 60 rpm limit). The fixes, in order of leverage: **batch** (one
   `block_fill_batch`), **few large fills** (decompose to maximal boxes), and a
   higher configured `rate_limit_rpm` for building sessions.
+
+## Terrain helpers (mod v0.3.0+)
+
+These tools exist only on the **v0.3.0+** MCP mod. **Probe before relying on
+them** — a `tools/list` that lacks the name, or a call that errors
+method-not-found, means an older mod — and use the listed fallback so builds
+still work everywhere. (Where the fallback is "the same `/command` via
+`command_execute`", that works on any version; the typed tool just adds schema
+and validation.)
+
+- **`block_fill_columns`** — materialise a per-column heightmap into terrain in
+  one server-side pass: send a compact height grid + a small palette (surface /
+  subsurface / stone / water indices) instead of thousands of box fills, with
+  **no 8192-entry cap**. Fills each column stone → subsurface → surface and
+  floods to `sea_level`. Capped at **65,536 columns per call** — tile larger
+  terrain. The efficient placement path for the `terrain` toolkit's heightfields.
+  **Fallback:** decompose the heightfield to box fills and place via
+  `block_fill_batch` (paging the 8192 cap) / `block_fill_region` — the existing
+  `tools/voxel/mcp_place.py` path.
+- **`level_place_feature`** — grow a vanilla configured feature at a position
+  (`/place feature <id> <x> <y> <z>`): trees, vegetation, ore veins, geodes,
+  dripstone. The way to *grow* detail rather than stamp copies (terraforming
+  rule 7). **Fallback:** `command_execute` with the same `/place feature`
+  command, or bone-meal / `randomTickSpeed` sapling growth.
+- **`level_fill_biome`** — paint the biome of a region (`/fillbiome`): foliage /
+  water tint, mob spawns, climate. Biome is read-only otherwise. **Fallback:**
+  `command_execute` with `/fillbiome`.
+- **`block_get_top_y` `heightmap` arg** and **`block_render_region` `hillshade`
+  view** — documented inline above; both degrade to their pre-0.3.0 behaviour
+  (`WORLD_SURFACE` only; `top` view) on older mods.
+
+Per the version-lockstep rule, the mod, Fabric API, and Minecraft move together;
+when in doubt about the connected mod's surface, `server_get_status` /
+`tools/list` is the source of truth.

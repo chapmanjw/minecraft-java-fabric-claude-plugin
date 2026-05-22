@@ -50,7 +50,10 @@ Use read-only tools; gather only what a planner would need:
   and find flat, clear ground; `block_get_state` / `block_scan_region` to
   sample composition, biome surface blocks, and obstructions (water, caves,
   trees). `block_scan_region` is capped at 65,536 blocks per call — page large
-  areas.
+  areas. For a **coastal or underwater** site on a **v0.3.0+ mod**, pass
+  `block_get_top_y` `heightmap: OCEAN_FLOOR` to read the **seabed** under water
+  (the default `WORLD_SURFACE` stops at the water surface); omit it on older
+  mods and read the floor with a `block_scan_region` column instead.
   - **Confirm what `block_get_top_y` means in this world before you trust it.**
     It has been observed to return the **stand-on Y** — the first *air* block
     above the highest solid surface — not the solid block's Y, so the solid
