@@ -20,6 +20,13 @@ single batch, then verified in-world — block-for-block.*
 *And **Ghasticlawd** — the project's Ghast × Claude mascot — built the same way:
 voxelized, render-verified against the design, then placed and confirmed in-world.*
 
+![A layered red-rock canyon inspired by the national parks of the American West, terraformed in a live world](docs/images/canyon.png)
+
+*And terrain, not just figures — this red-rock canyon, inspired by the national
+parks of the American West, was shaped by the `terraforming` skill's terrain
+toolkit: a parametric heightfield, hydraulically eroded, render-checked against
+the design, then materialized into the world as block fills.*
+
 It does two things:
 
 1. **Guided setup** — skills and an agent that walk you, step by step, through
