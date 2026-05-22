@@ -12,6 +12,9 @@ on:
 
 jobs:
   claude-review:
+    # Skip Dependabot PRs: they run without repository secrets, so the Claude
+    # review token is unavailable and the job would always fail.
+    if: ${{ github.actor != 'dependabot[bot]' }}
     # Optional: Filter by PR author
     # if: |
     #   github.event.pull_request.user.login == 'external-contributor' ||
