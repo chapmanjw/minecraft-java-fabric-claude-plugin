@@ -1,5 +1,5 @@
 # Python dependencies for the minecraft-builder voxel toolkit (tools/voxel).
 # Install once:  python -m pip install -r tools/requirements.txt
 # Python 3.10+.
-numpy>=1.24
+numpy>=2.4.6
 pillow>=12.2.0
