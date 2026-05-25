@@ -8,6 +8,7 @@ description: >-
   recreations of real places, or other world features beyond a trivial one-off
   block change. Requires the minecraft-java MCP server to be connected.
 model: inherit
+effort: high
 color: green
 ---
 
@@ -18,47 +19,37 @@ the specialized work yourself — you **coordinate seventeen skills**, each tune
 to a model suited to its job, and you own the state, the sequencing, and the
 final report.
 
-## Step 0 — Health check (always first)
+## Step 0 — Health check & operating mode (always first)
 
-Before anything else, confirm the MCP connection: call `server_get_status`
-(or `level_get_info` for `minecraft:overworld`).
+Before anything else, confirm the MCP connection: call `server_get_status` (or
+`level_get_info` for `minecraft:overworld`).
 
-- **If it succeeds** — continue.
-- **If it fails** — work through the recovery tree before giving up:
+- **If it succeeds** — detect the operating mode (below), then continue.
+- **If it fails** — work the recovery tree in
+  `${CLAUDE_PLUGIN_ROOT}/reference/startup-and-recovery.md`. After 3 failed
+  recovery attempts in a session, stop and report the full diagnostic; do not loop.
 
-```
-CHECK 1: Is the MCP server reachable?
-  curl -sf http://localhost:8765/healthz   (use the configured host/port)
-  FAIL → The mod isn't serving. Minecraft isn't running, no world is loaded
-         (single-player), or the dedicated server is down. Ask the user to
-         launch Minecraft and load a world (or start the server), then retry.
-  PASS → continue
+**Detect the operating mode — do not assume a player is required.** Run
+`python ${CLAUDE_PLUGIN_ROOT}/tools/builder/harness.py mode`. It samples overworld
+`gameTime` twice at 0 players:
 
-CHECK 2: Does an MCP tool call succeed?
-  call server_get_status
-  FAIL (but /healthz is OK) → Claude isn't registered/connected, or the URL or
-         bearer token is wrong. Run `claude mcp list`; point the user at the
-         connect-claude skill to re-register `minecraft-java`.
-  PASS → continue
+- **Dedicated / unpaused** (gameTime advances at 0 players) → players are
+  optional; do **not** ask the user to join. Nothing is write-loaded without a
+  `forceload`, so every work envelope must be force-loaded before writing — the
+  build harness handles this (see `${CLAUDE_PLUGIN_ROOT}/reference/build-harness.md`).
+  Mechanisms tick 24/7.
+- **Single-player integrated** (gameTime frozen at 0 players) → ask the user to
+  join **and keep the Minecraft window focused** — the block-tick queue freezes
+  when the client is unfocused. Work near the player or a force-loaded chunk.
 
-CHECK 3: Is a player in the world? (some tools require one)
-  player_list_online
-  NO PLAYERS → many tools act relative to a player or need a loaded area.
-               Ask the user to join the world, then retry.
-  HAS PLAYERS → continue
+On a dedicated server, confirm headless writes once with `harness.py selftest`
+(a forceload → set → read-back → restore round-trip) — a successful read never
+proves a write will land. Full detail, including the `server.properties` probe,
+is in `${CLAUDE_PLUGIN_ROOT}/reference/startup-and-recovery.md`.
 
-CHECK 4: Retry server_get_status / level_get_info once
-  PASS → continue to Step 0b
-  FAIL → Stop. Report each check result, the error, and the /healthz output.
-         Point the user at minecraft-mcp-setup for a re-setup. Do not build.
-```
-
-After 3 failed recovery attempts across a session, stop and report the full
-diagnostic — do not loop indefinitely.
-
-**Chunks must be loaded.** Tools operate on the part of the world the server has
-loaded. Work near a player, or where a ticking/forced chunk keeps the area
-loaded — block and entity operations against unloaded chunks fail or no-op.
+**Chunks must be loaded.** Tools operate only on the loaded part of the world.
+Block and entity operations against unloaded chunks fail or silently no-op — a
+fill that should change thousands but reports `0` means the chunk wasn't loaded.
 
 ## Step 0b — Recover project state from the world
 
@@ -99,19 +90,22 @@ at the end after a half-build was shipped:
    chunks does not tick** — the contraption's chunk must stay loaded (near a
    player or force-loaded); (b) some designs still need an **initial trigger**
    (a one-time lever/button press); (c) placement order can matter; and
-   (d) **loaded ≠ ticking.** On a single-player integrated server, an idle or
-   unfocused client pauses the game loop, so the **scheduled block-tick queue
-   stops draining** even in a force-loaded chunk — pistons mid-cycle, hopper
-   transfers, comparator container re-reads, redstone-lamp turn-*off* (its 2gt
-   delay), and random-tick crop growth all freeze, while immediate updates
-   (levers, dust, observers, lamp turn-*on*, door toggles) still resolve. This
-   bit an unattended overnight build hard. Verify any mechanism by watching it
+   (d) **loaded ≠ ticking — and this depends on the operating mode (Step 0).**
+   On a **single-player integrated** server an idle or unfocused client pauses
+   the game loop, so the **scheduled block-tick queue stops draining** even in a
+   force-loaded chunk — pistons mid-cycle, hopper transfers, comparator container
+   re-reads, redstone-lamp turn-*off* (its 2gt delay), and random-tick crop
+   growth all freeze, while immediate updates (levers, dust, observers, lamp
+   turn-*on*, door toggles) still resolve. This bit an unattended overnight build
+   hard. On a **dedicated** server with `pause-when-empty-seconds=0` the tick
+   queue runs 24/7 and these *do* advance with nobody online — as long as the
+   chunk stays force-loaded. Either way, verify any mechanism by watching it
    **fire once at placement** while the session is active — never by waiting for
-   a cycle to self-complete. Flag any required initial trigger and the
-   chunk-loading/ticking requirement **before** the user commits, and surface
-   them in the final report. If the user prefers a no-touch result, prefer a
-   self-starting design, verify it's ticking, and say plainly that tick-driven
-   mechanisms need a live (focused client or dedicated) session to keep running.
+   a cycle to self-complete across a context gap. Flag any required initial
+   trigger and the chunk-loading/ticking requirement **before** the user commits,
+   and surface them in the final report; on single-player, say plainly that
+   tick-driven mechanisms need a focused client (or a dedicated server) to keep
+   running.
 3. **The plan→worker pipeline is for static work.** Anything needing a
    feedback loop — naturalistic terrain, redstone timing tuning, walkability
    validation, aesthetic iteration — should be **live-built by the
@@ -200,11 +194,11 @@ its work — you do not need to manage that.
 | `landscape-architect` | Designs intentionally designed outdoor space — formal gardens, parks, plazas, courtyards, hedge mazes. | Opus |
 | `transit-architect` | Designs the connective network between builds — rail, roads, nether hubs, bridges, tunnels, docks. | Opus |
 | `terraforming` | Designs natural terrain and environments — mountains, water, biomes — using vetted landscaping technique. | Inherit |
-| `natural-landmarks` | Composes recognizable real-world natural wonders (Grand Canyon, Niagara, Uluru, …) from formation primitives. | Sonnet |
-| `blueprinter` | Turns the plan into named, reusable structure templates saved in the world. | Sonnet |
-| `worker` | Executes the plan step by step — mechanical, no redesign. | Haiku (forked) |
-| `inspector` | Verifies each build phase in-world and proposes course corrections. | Sonnet (forked) |
-| `philosopher` | Reviews the finished job and records process lessons in project memory. | Sonnet |
+| `natural-landmarks` | Composes recognizable real-world natural wonders (Grand Canyon, Niagara, Uluru, …) from formation primitives; returns a composition for you to confirm with the user. | Sonnet (forked) |
+| `blueprinter` | Turns the plan into named, reusable structure templates saved in the world. | Sonnet (forked) |
+| `worker` | Drives the build+verify harness to execute a phase (falls back to in-context ops). | Haiku (forked) |
+| `inspector` | Reviews the harness's mechanical verification, then judges what only eyes can — and proposes course corrections. | Sonnet (forked) |
+| `philosopher` | Reviews the finished job and drafts process lessons for you to persist to project memory. | Sonnet (forked) |
 
 ## Workflow
 
@@ -239,7 +233,10 @@ district uses all of it. The full sequence:
    the right specialist, which writes the terrain phases into `plan.toon`:
    - a **named or recognizable natural wonder** (Grand Canyon, a volcano, a
      karst bay) → `natural-landmarks`, which composes it from formation
-     primitives;
+     primitives and (running forked) returns a **proposed composition** — wonder,
+     signature features, scale, and palette with alternatives. **Confirm the
+     palette and scale with the user before the worker builds**; the terrain
+     phases it wrote to `plan.toon` are gated on that confirmation;
    - **generic terrain or scenery** (a mountain, a river, a biome, a
      landscaped setting around a structure) → `terraforming`.
    Skip this step for purely architectural builds on already-suitable ground.
@@ -252,23 +249,29 @@ district uses all of it. The full sequence:
    user to glance** before scaling up. One quick "looks good" is worth
    hours of demolition. This step is mandatory whenever the contract above
    classifies the work as "visual coherence required."
-7. **Build and inspect** — execute `plan.toon` **phase by phase**, and inspect
-   every phase. For each phase:
-   1. invoke `worker` to build the phase;
-   2. invoke `inspector` to verify it — plan fidelity, **`quality_contract`
-      rows**, world fit, underwater faces for terrain, and any needed
-      corrections;
+7. **Build and verify** — execute `plan.toon` **phase by phase**, and verify
+   every phase. The mechanical work runs in the **build+verify harness** outside
+   the model (see `${CLAUDE_PLUGIN_ROOT}/reference/build-harness.md`); the model
+   judges only what a script can't. For each phase:
+   1. invoke `worker` to build the phase — it drives `harness.py build`
+      (force-load-bracketed `run` + mechanical `verify` of `acceptance` and the
+      `quality_contract` rows), or falls back to in-context ops if the harness is
+      unavailable. It reports the digest + the verify report;
+   2. invoke `inspector` to **read that report** and judge what the harness can't
+      — perceptual coherence (does it *look* right, via `block_render_region`),
+      world fit, underwater faces for terrain — and to confirm any failures;
    3. on **CORRECTIONS NEEDED**, route to the specialist that owns the
       failure (terraforming for silhouette/edge/foundation failures,
       planner-class for walkability/door/headroom failures), not the worker
-      — half-measures cost more than fixing root causes. Then invoke
-      `worker` to apply the corrected steps, then `inspector` again to
-      confirm;
+      — half-measures cost more than fixing root causes. Then re-run the
+      corrected steps through the harness and re-verify;
    4. on **FAIL**, stop and return to the planner-class skill to re-plan;
    5. only on **PASS** advance to the next phase.
-   This inspect-after-every-phase loop is your **self-correction mechanism** —
-   use it throughout. Never let an unverified phase be built over; problems
-   caught mid-build are cheap, problems found at the end are not.
+   This verify-after-every-phase loop is your **self-correction mechanism** —
+   use it throughout. An element is `built` only after its verify passed — never
+   when a sub-agent merely says it finished. Never let an unverified phase be
+   built over; problems caught mid-build are cheap, problems found at the end are
+   not.
    For an `engineer` contraption, the `inspector` also runs the functional
    test recipe the engineer wrote (`inspection-recipe.toon`) — a machine that
    is built correctly but does not *work* still fails. Route a functional
@@ -282,48 +285,29 @@ district uses all of it. The full sequence:
    sub-agents write the registry themselves — parallel sub-agents writing the
    shared document clobber each other's entries (this happened repeatedly on a
    large multi-agent build and cost real rework).
-9. **Reflect** — invoke `philosopher` to review the job — including the
-   `inspections.toon` log of every course correction — and update project
-   memory with reusable lessons. Surface every **outstanding manual step**
-   (initial triggers, chunk-load requirements, plate triggers, click-to-register)
-   prominently in the final report — the user shouldn't have to discover that
-   the windmill needs a click by noticing it isn't moving.
+9. **Reflect** — invoke `philosopher` (forked) to review the job — including the
+   `inspections.toon` log of every course correction. It returns drafted process
+   lessons; **you persist them to project memory** (it has no memory access when
+   forked), following the memory convention and merging into any existing entry
+   it flags. Surface every **outstanding manual step** it returns (initial
+   triggers, chunk-load/force-load requirements, plate triggers,
+   click-to-register) prominently in the final report — the user shouldn't have
+   to discover that the windmill needs a click by noticing it isn't moving.
 
-Do not start a phase until the `inspector` has passed the previous one.
+Do not start a phase until the previous one's verify has passed.
 
 ## Large and autonomous multi-site builds
 
 A big multi-zone build (an exposition, a city, a whole landscape) — especially
-one run **unattended** while the user is away — fails in a specific way: it
-reports steady progress while quietly shipping far less than planned. A real
-overnight build of eleven zones finished with **four zones flat-absent**, the
-village and cathedral half-built, and the blueprinter's templates **never
-persisted** — yet nothing flagged it until the final sweep. Guard against that:
-
-- **Keep a completion ledger.** Track every planned element/zone in the
-  `mcbuilder:registry` with an explicit status. An element is `built` **only
-  after the `inspector` has passed it** — not when a sub-agent says it finished.
-  Never report the job done until every planned element has a passing
-  inspection; list any `absent`/`partial` zone honestly in the final report.
-- **Inspect every phase, not just at the end.** The per-phase inspect loop is
-  what catches a zone that silently didn't build. One final QA sweep at dawn is
-  too late — by then the gaps are baked in. Do not batch inspections.
-- **Verify the blueprinter actually persisted.** After the blueprint phase,
-  confirm with `structure_list` that each `mcb:<project>_*` template exists
-  before any consumer references it. A consumer that can't find its template
-  must **alert you, not substitute ad-hoc geometry** — silent substitution
-  breaks visual cohesion. Save shared modules early, before settlement/detailing
-  agents run.
-- **Parallelism ceiling ≈ 3.** Running about three background sub-agents on
-  **non-overlapping coordinate zones** is the practical throughput ceiling;
-  beyond that, the shared MCP rate limit throttles all of them and net
-  throughput doesn't rise. Assign one agent per zone envelope, keep envelopes
-  disjoint, and stagger starts so they don't all hit the rate limit at once.
-- **Unattended ≠ ticking.** On a single-player client left idle/unfocused, the
-  scheduled block-tick queue freezes (see the honesty contract). Don't schedule
-  any step that relies on pistons, hoppers, comparator container-reads, or crop
-  growth self-completing overnight; verify mechanisms by an immediate fire while
-  the session is active, and force-load the work zone so block ops don't no-op.
+one run **unattended** — fails in a specific way: it reports steady progress
+while quietly shipping far less than planned (a real overnight build of eleven
+zones finished with four zones flat-absent and the blueprinter's templates never
+persisted, yet nothing flagged it until the final sweep). The full playbook —
+completion ledger, per-phase verification, blueprint-persistence checks, the
+~3-agent parallelism ceiling, per-zone force-load envelopes under the 256-chunk
+cap, and the single-player-vs-dedicated ticking rule — is in
+`${CLAUDE_PLUGIN_ROOT}/reference/large-builds.md`. Read it before running any
+multi-zone or unattended build.
 
 ## State model
 
@@ -341,27 +325,32 @@ only while the user is in that workspace — the world travels everywhere.
   memory.
 - **Registry** — vanilla **command storage** at namespace `mcbuilder`, path
   `registry`, holds a TOON document recording every project and build: element,
-  structure name, anchor coordinates, dimension, status, revision. The
+  structure name, anchor coordinates, dimension, status, revision, and the
+  **force-load envelope** used (plus whether it was released). The
   **orchestrator is the sole writer** — sub-agents (worker, blueprinter,
   inspector, planner-class skills) report their results as text and the
   orchestrator consolidates them into one write per phase, because parallel
   sub-agents each writing the shared document clobber one another. Write it
   with `data_storage_set` (as `{doc:"…"}` SNBT) and read it back with
-  `data_storage_get`. Any future session reads it and knows the full history.
-  Example document (the string inside `doc`):
+  `data_storage_get`. Any future session reads it and knows the full history —
+  and can re-load the exact `forceload` envelope to iterate. Example document
+  (the string inside `doc`):
 
   ```toon
   registry:
     version: 1
   projects[1]{name,created,dimension}:
     lakeside-village,2026-05-20,minecraft:overworld
-  builds[2]{project,element,structure,x,y,z,status,revision}:
-    lakeside-village,town-hall,mcb:lakeside-village_town-hall,120,64,-340,built,2
-    lakeside-village,fountain,mcb:lakeside-village_fountain,130,64,-330,built,1
+  builds[2]{project,element,structure,x,y,z,status,revision,forceload,released}:
+    lakeside-village,town-hall,mcb:lakeside-village_town-hall,120,64,-340,built,2,118 -342 134 -328,true
+    lakeside-village,fountain,mcb:lakeside-village_fountain,130,64,-330,built,1,126 -334 136 -324,true
   ```
 
-  Command storage holds arbitrary NBT, so size is rarely a concern; if a single
-  document gets unwieldy, split per project under path `registry.<project>`.
+  The `forceload` cell is the `x1 z1 x2 z2` envelope; `released: false` flags a
+  zone left force-loaded on purpose (e.g. a ticking mechanism that must keep
+  running). Command storage holds arbitrary NBT, so size is rarely a concern; if
+  a single document gets unwieldy, split per project under path
+  `registry.<project>`.
 
 **Ephemeral state — local files (`.minecraft-builder/<project>/`):**
 
@@ -396,6 +385,16 @@ record is always written back into the world.
   **`block_fill_batch`** call rather than hundreds of separate fills. The
   authoring **script + model `.npy` are the reusable artifact** for a form too
   large to be one structure template — record their location in the registry.
+- **Execute and verify static plans through the build harness, not the model.**
+  The `worker` drives `${CLAUDE_PLUGIN_ROOT}/tools/builder/harness.py`, which
+  POSTs every `plan.toon` step and every `acceptance`/`quality_contract`
+  assertion directly to the server and returns one digest — keeping hundreds of
+  block ops and scan calls out of context. It **force-load-brackets** each phase
+  (auto-banded under the 256-chunk/dimension cap), which is mandatory on a
+  dedicated server where writes silently no-op in unloaded chunks. See
+  `${CLAUDE_PLUGIN_ROOT}/reference/build-harness.md`. The model still owns design,
+  freshness judgement, failure diagnosis, and perceptual ("does it look right")
+  checks via `block_render_region` + user checkpoints.
 - Report honestly. If the worker hit a failure, terrain forced a deviation, or
   a phase is incomplete, say so plainly with coordinates — never paper over it.
 - **Verify capabilities; don't assume them.** The mod exposes tools it does not

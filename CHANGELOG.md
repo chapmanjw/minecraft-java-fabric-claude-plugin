@@ -6,6 +6,71 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-05-25
+
+Token-usage optimization + dedicated/headless-server support.
+
+### Added
+
+- **Build + verify harness (`tools/builder/`).** Executes a `plan.toon` phase and
+  mechanically verifies it against the live server **outside the LLM context** —
+  `plan.toon` `steps` are the code, `acceptance` + `quality_contract` are the
+  assertions, the harness is the test runner, and it returns one compact digest
+  instead of hundreds of in-context tool calls. Subcommands: `run`, `verify`,
+  `build`, plus `mode` (dedicated-vs-single-player detection) and `selftest`
+  (write-readiness). Stdlib-only (a minimal TOON reader, an MCP HTTP client, the
+  runner, and the verifier). See `tools/README.md` and
+  `reference/build-harness.md`.
+- **Force-load bracketing.** `run`/`build` wrap each phase in `forceload
+  add`/`remove`, auto-banded under the 256-chunk/dimension cap — mandatory on a
+  dedicated server where writes silently no-op in unloaded chunks. Plans may
+  declare per-phase `envelopes`; the harness derives them from step coordinates
+  otherwise. The force-load is held across both `run` and `verify`.
+- **Rate-limit resilient.** The MCP client backs off and retries on HTTP 429/503,
+  so the verifier's many small reads ride out the per-client `rate_limit_rpm`
+  instead of crashing. Functional `event_trigger` checks return **SKIP** (not
+  FAIL) on a headless server — entity/block events don't fire for MCP-driven
+  actions with no player tracking the chunk — deferring that check to a
+  player-present session.
+- **Validated end-to-end** against a live dedicated server: all nine plan ops
+  (fill/set/replace/clone/place-structure/spawn/block-nbt/set-slot/run) and all
+  contract checks (acceptance, walkability, doors, headroom, block_mix_ratios,
+  silhouette, edge_irregularity, connectivity, foundation_naturalised,
+  water_continuity, block_entity_nbt, event_trigger).
+- **New references:** `reference/build-harness.md`, `reference/startup-and-recovery.md`
+  (server-mode detection + recovery tree), `reference/large-builds.md` (the
+  multi-zone/unattended playbook, extracted from the agent).
+
+### Changed
+
+- **Models routed off Opus where reasoning isn't needed.** `blueprinter`,
+  `philosopher`, and `natural-landmarks` now run **forked** (Sonnet, isolated
+  context) instead of inline on the orchestrator. `philosopher` returns drafted
+  memory lessons for the orchestrator to persist (it has no memory access when
+  forked); `natural-landmarks` returns a proposed composition for the orchestrator
+  to confirm palette/scale with the user.
+- **Orchestrator runs at `effort: high`** (was inheriting the session default) —
+  routing/sequencing/bookkeeping doesn't need max effort; design skills still pin
+  their own.
+- **`worker` drives the harness** (`harness.py build`) as the primary path, with a
+  documented in-context fallback that force-loads the declared envelope.
+- **`inspector` consumes the harness's mechanical verdict** and focuses on what a
+  script can't judge — world fit, functional behaviour, and whether a
+  representational build *reads* (renders + the perceptual call).
+- **Step 0 detects the operating mode** (samples `gameTime` at 0 players) instead
+  of always asking for a player; the "ticking freezes when unfocused" warning is
+  now single-player-conditional (a dedicated server ticks 24/7).
+- **Registry records each build's force-load envelope** and whether it was
+  released, so a later session reloads the exact area to iterate.
+- **`researcher` is WebFetch-first** (out-of-context extraction) and pulls exact
+  dimensions from Wikipedia/Wikidata REST endpoints — no new MCP dependency.
+- **`planner` pins the `acceptance` table schema and an optional `envelopes`
+  block** the harness consumes.
+- **`reference/engine-limits.md`** gains a consolidated force-load / headless-write
+  section (the read-masks-write footgun).
+- Trimmed the orchestrator steering file by moving situational sections (recovery
+  tree, large-build playbook) to on-demand references.
+
 ## [0.5.0] - 2026-05-22
 
 ### Added

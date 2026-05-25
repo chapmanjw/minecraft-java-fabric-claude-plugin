@@ -35,6 +35,29 @@ on or warning against them; do not assert either way from memory.
   success with zero blocks changed. Keep the work zone loaded (near a player,
   or `/forceload`) and watch the changed count.
 
+## Force-loading & headless writes (the #1 unattended-mode footgun)
+
+On a **dedicated / unattended** server (no player online), almost nothing is
+write-loaded. The trap: **reads load chunks on demand and succeed almost
+anywhere, but writes only affect already-loaded chunks and silently no-op**
+otherwise — so a successful `block_get_state` is *not* proof a write will land
+(verified live: a write at spawn no-op'd, then succeeded after `forceload add`).
+
+- **Force-load the work envelope before any write, release it after:**
+  `forceload add <x1> <z1> <x2> <z2>` (block coords) → do all block work →
+  `forceload remove <x1> <z1> <x2> <z2>`.
+- **Cap: 256 chunks per dimension.** Regions wider than that must be built in
+  **Z-bands** (≤256 chunks each), one force-load at a time. Force-load is
+  **per-dimension** — re-do it in the Nether/End.
+- **The build harness does all of this for you.** `harness.py run`/`build`
+  brackets each phase, auto-bands under the cap, and flags any `blocks_changed: 0`
+  as a probable force-load miss. See
+  `${CLAUDE_PLUGIN_ROOT}/reference/build-harness.md`.
+- **Detect the mode first** (`harness.py mode`): a dedicated server ticks 24/7 and
+  needs force-loading; a single-player integrated server needs a focused client
+  and freezes ticks when unfocused. See
+  `${CLAUDE_PLUGIN_ROOT}/reference/startup-and-recovery.md`.
+
 ## Scanning / reading
 
 - **`block_scan_region` is capped at 65,536 blocks per call** and needs a `box`

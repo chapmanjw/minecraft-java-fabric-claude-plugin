@@ -72,8 +72,44 @@ owns the build to re-resolve coordinates against current world state.
 This adds one extra `block_get_state` per phase. It is cheap; the alternative
 (building 16 houses into nothing) is not.
 
-## Execute
+## Build and verify via the harness (primary path)
 
+Do **not** hand-transcribe a phase's steps into the conversation as one MCP call
+after another — that floods context and is the slow path. Instead run the
+**build+verify harness**, which POSTs every step and every check straight to the
+server and returns one digest:
+
+```sh
+python ${CLAUDE_PLUGIN_ROOT}/tools/builder/harness.py build <plan.toon> <phase>
+```
+
+- `build` = `run` (execute the phase's steps, **force-load-bracketed** and
+  auto-banded under the 256-chunk/dimension cap) then `verify` (run the phase's
+  `acceptance` + `quality_contract` checks). Use `run` alone if the orchestrator
+  wants verification handled separately by the `inspector`.
+- It is **stdlib-only** and reads the server URL/auth from `~/.claude.json`, like
+  `voxel/mcp_place.py`. See `${CLAUDE_PLUGIN_ROOT}/reference/build-harness.md`.
+- **Read the exit code and digest.** Exit `0` = every step ran and every check
+  passed → report the digest and advance. Exit `1` = a step failed, a write hit a
+  **force-load miss** (`blocks_changed: 0` on a write that should change blocks),
+  or a check failed → **stop** and report exactly what the digest says; do not
+  guess a fix.
+- **No improvisation still applies.** The harness executes the plan verbatim; you
+  do not edit steps. If a step is malformed or a structure is missing, the digest
+  reports it — relay that, don't patch it.
+
+If the harness is unavailable (no Python, package missing) or the orchestrator
+asks for in-context execution, fall back to the manual path below.
+
+## Execute in-context (fallback path)
+
+- **Force-load first when no player is online.** If `player_list_online` is empty
+  (a dedicated/unattended server), the phase's chunks are not write-loaded:
+  `forceload add <x1> <z1> <x2> <z2>` covering the phase's bounding box (the
+  plan's `envelopes` row for the phase, banded under 256 chunks/dimension) before
+  the first write, and `forceload remove …` after. A `"no change"` / `0`-blocks
+  result on a write you expected to change means the chunk isn't loaded — stop and
+  force-load, don't treat it as a no-op.
 - Work **phase by phase, step by step, in `seq` order**. Never reorder steps.
 - After each step, confirm the call succeeded.
 - If a step **fails or is ambiguous** — a bad block ID, a malformed
@@ -102,9 +138,12 @@ This adds one extra `block_get_state` per phase. It is cheap; the alternative
 
 ## Verify
 
-After each phase, run the plan's `acceptance` checks for that phase with
-`block_get_state` — confirm the expected block is at the expected coordinate.
-If a check fails, stop and report it.
+The harness's `build`/`verify` already runs the phase's `acceptance` +
+`quality_contract` checks mechanically and reports PASS / CORRECTIONS NEEDED /
+FAIL with the failing samples. Relay that verdict — don't re-run the checks by
+hand. On the in-context fallback path, run the `acceptance` checks yourself with
+`block_get_state` (expected block at expected coordinate); if one fails, stop and
+report it.
 
 ## Update state — report it, do not write it
 
@@ -119,11 +158,15 @@ orchestrator consolidates and writes once per phase. Reading the registry with
 
 ## Report
 
-When done — or when you stop on a failure — report concisely:
+When done — or when you stop on a failure — report concisely (relay the harness
+digest when you used it):
 
-- Phases and steps completed, with counts.
-- Any acceptance check that failed, with coordinates.
+- Phases and steps completed, with counts and total blocks changed.
+- The **verify verdict** (PASS / CORRECTIONS NEEDED / FAIL) and any failing
+  check or acceptance coordinate.
 - The first failing step and its error, if you stopped early.
+- The **force-load envelope** used and whether it was released (so the
+  orchestrator records it in the registry).
 - The final registry status of the build.
 
 Do not editorialize or suggest design changes — that is the planner's job.

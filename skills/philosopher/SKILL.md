@@ -7,6 +7,8 @@ description: >-
   session wraps up. Part of the minecraft-builder workflow.
 model: sonnet
 effort: medium
+context: fork
+agent: general-purpose
 ---
 
 # Philosopher
@@ -58,17 +60,21 @@ There are two stores, and mixing them up defeats the purpose:
   `mcbuilder`, path `registry`) if any phase left it inconsistent — including
   any `mcb:<project>_*` template the registry claims exists but `structure_list`
   doesn't show. Do **not** copy build data into project memory.
-- **Process lessons → Claude project memory.** Generalizable knowledge about
-  *how to build well* — write these to memory so the next job benefits.
+- **Process lessons → Claude project memory, via the orchestrator.** Generalizable
+  knowledge about *how to build well* belongs in project memory. **You run forked,
+  so you do not have the parent session's memory directory** — do not try to write
+  memory files yourself. Instead **draft** each lesson and **return it to the
+  orchestrator**, which persists it (the orchestrator owns durable writes, exactly
+  as it does for the registry).
 
-Write each lesson as a project-memory entry following the project's memory
-convention: a file with frontmatter (`type: project` for build-context facts,
-`type: feedback` for "do it this way next time" guidance), a `description`
-line for recall, and a body with **Why** and **How to apply**. Add a one-line
-pointer to the memory index. Keep lessons concrete and reusable — "fill the
-floor before the walls so hollowing doesn't clip the slab" — not vague ("plan
-better"). Check for an existing memory on the same point and update it rather
-than duplicating.
+Draft each lesson in the project's memory convention so the orchestrator can save
+it verbatim: a `name` slug, a `description` line for recall, a `type`
+(`project` for build-context facts, `feedback` for "do it this way next time"
+guidance), and a body with **Why** and **How to apply**. Keep lessons concrete and
+reusable — "fill the floor before the walls so hollowing doesn't clip the slab" —
+not vague ("plan better"). Note in your report which existing memory (if any) each
+lesson should update rather than duplicate, so the orchestrator merges instead of
+appending.
 
 ## Outstanding manual steps — surface them, every time
 
@@ -114,10 +120,21 @@ user shouldn't have to discover that the rotating beam needs a kick by
 noticing it isn't rotating — the orchestrator's final message must include
 the kick steps prominently, every time.
 
-## Report
+## Report — back to the orchestrator
 
-Give the user a short retrospective: what worked, what didn't, the estimate
-gaps, the lessons you recorded, and the **outstanding manual steps**. Confirm
-the world registry is consistent. This closes the build; the world now holds
-everything needed to iterate on it later, and memory holds everything needed
-to build the next one better.
+You run forked, so your report is consumed by the orchestrator (which relays the
+retrospective to the user and persists what needs persisting). Return, clearly
+sectioned:
+
+- **Retrospective** — what worked, what didn't, the estimate gaps.
+- **Drafted memory lessons** — each in the convention above, ready for the
+  orchestrator to save verbatim to project memory (note any existing memory to
+  merge into).
+- **Outstanding manual steps** — the full list (coordinates + action + what it
+  activates), for the orchestrator to surface prominently in the final message.
+- **Registry consistency** — confirm the `mcbuilder:registry` matches the world,
+  and report any inconsistency you fixed (registry fixes you may apply directly
+  via `data_storage_set`, since you run last with no concurrent writers).
+
+This closes the build; the world holds everything needed to iterate on it later,
+and the orchestrator commits your lessons so the next build goes better.

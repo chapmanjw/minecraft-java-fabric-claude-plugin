@@ -155,8 +155,29 @@ Write `.minecraft-builder/<project>/plan.toon` in **TOON**
     direct block ops instead, and never generate `.mcfunction` files expecting
     `/function` to run them.
 
-- **Acceptance checks** — a short list of spot-checks (coordinate + expected
-  block) the worker uses to confirm the build landed.
+- **Acceptance checks** — spot-checks (coordinate + expected block) that confirm
+  the build landed. Write them as a table the build harness parses directly:
+
+  ```toon
+  acceptance[2]{phase,at,expect}:
+    2,126 64 -340,minecraft:oak_door
+    2,121 65 -339,minecraft:stone_bricks
+  ```
+
+- **Force-load envelopes** — for each phase, the `x z` corners of its write
+  bounding box, so the harness (and the fallback worker) can `forceload` the area
+  before writing on a dedicated/unattended server, where writes silently no-op in
+  unloaded chunks. Optional — the harness derives the envelope from the phase's
+  step coordinates if omitted — but declaring it is cheaper and lets you pad for
+  scaffolding. Keep each envelope modest (the cap is 256 chunks/dimension; larger
+  regions are auto-banded):
+
+  ```toon
+  envelopes[2]{phase,corner_a,corner_b}:
+    1,118 -342,134 -328
+    2,118 -342,134 -328
+  ```
+
 - **Blueprint list** — name every reusable element the `blueprinter` must
   create as a structure file (canonical name `mcb:<project>_<element>` — the
   colon namespace; the underscore form fails at create time), so furniture,

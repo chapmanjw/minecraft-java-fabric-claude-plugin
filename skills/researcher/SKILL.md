@@ -20,7 +20,7 @@ proportions and signature details — not just plausible.
 
 ## Research
 
-Use `WebSearch` and `WebFetch` to gather, for the subject:
+Gather, for the subject:
 
 - **Dimensions** — real measurements: footprint, height, key spans. Numbers,
   with sources.
@@ -33,6 +33,35 @@ Use `WebSearch` and `WebFetch` to gather, for the subject:
   (the flying buttresses, the clock face, the stepped ziggurat tiers).
 
 Prefer primary or reputable sources. Note where sources disagree.
+
+### Tool order — extract out-of-context, don't dump pages in
+
+You run forked, but stay lean even here — favour tools that return *answers*, not
+raw page bodies:
+
+1. **`WebFetch` first, for every fact you need.** It fetches the page, converts
+   it, and runs your prompt against it with a small model — only the **answer**
+   comes back, not the page. Ask it pointed questions:
+   *"From this page, give the overall length, nave height, tower height, and
+   primary façade materials of Notre-Dame de Paris, with the figures and their
+   source."* This keeps whole articles out of your context. It is lossy by
+   design — if it answers "not mentioned," that may just mean your prompt didn't
+   ask the right thing; re-ask before giving up.
+2. **Exact numbers from structured endpoints.** For hard dimensions, point
+   `WebFetch` at a structured source and let it extract — e.g. the Wikipedia REST
+   summary (`https://en.wikipedia.org/api/rest_v1/page/summary/<Title>`) or a
+   Wikidata entity (`https://www.wikidata.org/wiki/Special:EntityData/<Qid>.json`,
+   asking for height/length/area properties P2048/P2043/P2046). These are tiny and
+   authoritative — ideal for the `research.toon` numbers.
+3. **`WebSearch` for discovery** (finding the right pages/titles). Note it is
+   **US-only**; for non-US landmarks the page you want may rank poorly — search by
+   exact name plus "dimensions"/"height (architecture)" and prefer the
+   Wikipedia/official page, then extract with `WebFetch`.
+4. **Raw-page fetch is a last resort.** Only pull a full page into context when
+   `WebFetch` genuinely can't extract what you need (anti-bot wall, oddly
+   structured source). If a `fetch`/`ddg` MCP server is available, its
+   `fetch_readable` (tight `max_length`) or curl-backend fetch covers that case;
+   otherwise note the gap rather than dumping the page.
 
 ## Translate to Minecraft
 

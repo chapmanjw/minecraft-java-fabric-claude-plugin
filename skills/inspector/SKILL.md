@@ -54,7 +54,17 @@ that the world is not connected.
 
 ## The checks
 
-### 1. Plan fidelity — was the phase carried out?
+**Start from the harness report.** The build+verify harness (`harness.py verify`,
+see `${CLAUDE_PLUGIN_ROOT}/reference/build-harness.md`) already runs the
+**mechanical** checks — plan fidelity (`acceptance`) and the whole
+`quality_contract` — and returns PASS / CORRECTIONS NEEDED / FAIL with the exact
+failing samples and routing hints. Your job is the judgement the harness
+**cannot** make: world fit (§3), functional behaviour (§4), and whether a
+representational build actually *reads* (§ scan-render). You run the mechanical
+checks below yourself **only on the in-context fallback path** (when the worker
+reported it couldn't use the harness).
+
+### 1. Plan fidelity — was the phase carried out? *(harness-verified; do manually only on fallback)*
 
 - Run the phase's **acceptance checks** from `plan.toon` — confirm the expected
   block is at each expected coordinate with `block_get_state`.
@@ -64,22 +74,23 @@ that the world is not connected.
 - Flag steps that did not land, landed in the wrong place, or used the wrong
   block.
 
-### 2. Quality contract — does the build satisfy its properties?
+### 2. Quality contract — does the build satisfy its properties? *(harness-verified; do manually only on fallback)*
 
-This is the new check. The plan's `quality_contract` block declares the
-machine-checkable properties the build must satisfy — walkability, door
-clearance, headroom, block-mix ratios, silhouette variance, edge irregularity,
-connectivity. **Parse the contract and run every row's sampling algorithm.**
+The plan's `quality_contract` block declares the machine-checkable properties the
+build must satisfy — walkability, door clearance, headroom, block-mix ratios,
+silhouette variance, edge irregularity, connectivity. The **harness runs every
+row's sampling algorithm**; on the fallback path, **parse the contract and run
+them yourself** per `reference/contract-checks.md`.
 
 Acceptance checks confirm "block X is at coord Y." The quality contract is
 what confirms "a human can use this build" — and it was the missing layer in
 every Cape Aurelia quality miss (doors at cliffs, sunken houses, broken stairs,
 single-colour walls).
 
-See `reference/contract-checks.md` for the precise sampling algorithm for each
-row type. A failing row is a real failure, not advisory — emit the failing
-samples as corrections and route back to the planner-class skill that owns the
-build (`terraforming`, `player-house`, etc.), not to the worker.
+A failing row is a real failure, not advisory — whether the harness or you found
+it, emit the failing samples as corrections and route back to the planner-class
+skill that owns the build (`terraforming`, `player-house`, etc.), not to the
+worker.
 
 ### 3. World fit — does it sit in the world correctly?
 
