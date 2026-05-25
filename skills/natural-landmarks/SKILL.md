@@ -9,6 +9,8 @@ description: >-
   recognizable landmark type. Part of the minecraft-builder workflow.
 model: sonnet
 effort: high
+context: fork
+agent: general-purpose
 ---
 
 # Natural Landmarks
@@ -56,8 +58,10 @@ Two rules follow:
    for its primitive composition, or for a freeform request pick primitives
    from `reference/primitives.md` by family.
 3. **Choose a palette.** Select a named preset from `reference/palettes.md`
-   (e.g. `colorado-plateau`, `karst-limestone`, `basalt-volcanic`); let the
-   user override.
+   (e.g. `colorado-plateau`, `karst-limestone`, `basalt-volcanic`). You run
+   forked and cannot interview the user, so **pick a sensible default and offer
+   one or two alternatives in your hand-off** — the orchestrator confirms or
+   overrides the palette with the user before the worker builds.
 4. **Set scale.** Enforce the **minimum recognition floor** from
    `reference/wonders.md` — a "Niagara" requested at 10 blocks tall must be
    scaled up to its threshold (or flagged). Keep each wonder's signature
@@ -144,9 +148,18 @@ signature, scale below the recognition floor. If a signature is weak or
 missing, fix it before reporting done. The `quality_contract` rows above are
 the inspector's automated form of this gate; both run.
 
-## Hand off
+## Hand off — to the orchestrator for confirmation
 
-State the wonder, its signature features, the chosen scale, and the primitive
-composition back to the user, and confirm before building. The terrain phases
-are now in `plan.toon`; the manifest and modules are recorded for later
-iteration.
+You run forked, so you do not confirm with the user directly. Return to the
+orchestrator a **proposed composition** for it to confirm (or adjust) with the
+user before any blocks are placed:
+
+- the wonder and its 2–4 **signature features**,
+- the chosen **scale** and overall footprint,
+- the **palette** (default + the alternatives from step 3),
+- the **primitive composition** (the `landmark.toon` summary).
+
+Write `landmark.toon` and the terrain phases into `plan.toon` as usual, but flag
+that they are **pending user confirmation of palette/scale** — the orchestrator
+gates the worker on that confirmation. The manifest and modules are recorded for
+later iteration.

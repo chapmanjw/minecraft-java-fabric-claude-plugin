@@ -16,6 +16,42 @@ python -m pip install -r tools/requirements.txt
 If a script reports a missing module, that pip line is the fix — say so to the
 user rather than failing silently.
 
+## The `builder` harness — execute and verify a plan outside the model
+
+`builder/` is the **build + verify harness**: it executes a `plan.toon` phase and
+mechanically verifies it against the live server, **entirely outside the LLM
+context**. Instead of the `worker` emitting hundreds of in-context MCP calls and
+the `inspector` issuing dozens of scan calls, the harness POSTs everything
+directly and returns one compact digest. It is the token-efficient path for
+static, contract-checked work.
+
+It is **stdlib-only** — no numpy/Pillow needed (unlike voxel/terrain) — and reads
+the server URL/auth from `~/.claude.json` like `voxel/mcp_place.py`.
+
+```sh
+P=${CLAUDE_PLUGIN_ROOT}/tools/builder/harness.py
+python $P mode                          # dedicated vs single-player (gameTime test)
+python $P selftest                      # write-readiness (forceload→set→read→restore)
+python $P run    <plan.toon> <phase>    # execute a phase (force-load-bracketed, banded)
+python $P verify <plan.toon> <phase>    # run acceptance + quality_contract checks
+python $P build  <plan.toon> <phase>    # run, then verify  (the common case)
+```
+
+Exit `0` = everything passed; `1` = any execution failure, force-load miss, or
+failed check. Think of it as a test harness: `plan.toon` `steps` are the
+code, `acceptance` + `quality_contract` are the assertions, `verify` is the test
+runner. The model keeps design, freshness judgement, failure diagnosis, and the
+perceptual "does it look right" call (renders + user checkpoints). Full detail:
+`${CLAUDE_PLUGIN_ROOT}/reference/build-harness.md`.
+
+### Modules
+
+| Module | What it gives you |
+| ------ | ----------------- |
+| `builder.toon` | Minimal TOON reader — parses `plan.toon` and the server's TOON tool responses. |
+| `builder.mcpclient` | Generic MCP HTTP client (handshake, `call_toon`), config from `~/.claude.json`. |
+| `builder.harness` | Plan model, runner (op→tool, force-load bracketing/banding), verifier (contract checks), CLI. |
+
 ## The `voxel` toolkit — give yourself eyes before you place blocks
 
 The agent cannot see the world. For any representational or parametric build (a

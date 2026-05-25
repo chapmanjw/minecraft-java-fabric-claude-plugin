@@ -7,6 +7,8 @@ description: >-
   structure library for a build. Part of the minecraft-builder workflow.
 model: sonnet
 effort: medium
+context: fork
+agent: general-purpose
 ---
 
 # Blueprinter

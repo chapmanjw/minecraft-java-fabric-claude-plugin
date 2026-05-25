@@ -41,6 +41,7 @@ agents/                         ← agent steering files (.md with YAML frontmat
 skills/<name>/SKILL.md          ← skill playbooks (.md with YAML frontmatter)
 skills/<name>/reference/        ← reference libraries loaded on demand (not always present)
 reference/engine-limits.md      ← cross-skill tool limits & verified behaviour (cited by all block-placing skills)
+tools/builder/                  ← Python build+verify harness: execute a plan.toon phase + run acceptance/quality_contract checks against the live server, outside the LLM (stdlib only: toon reader, MCP client, runner, verifier)
 tools/voxel/                    ← Python voxel toolkit: author → render → decompose → place (numpy + Pillow); mcp_place.py is the shared HTTP placer
 tools/terrain/                  ← Python terrain toolkit: heightfield → erode → render-verify → materialize to fills (numpy + Pillow)
 tools/requirements.txt          ← Python deps for tools/ (core: numpy + Pillow)
