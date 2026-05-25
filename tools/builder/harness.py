@@ -34,7 +34,9 @@ Stdlib only. No dependencies.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import math
 import os
 import re
 import sys
@@ -52,6 +54,24 @@ FORCELOAD_CHUNK_CAP = 256          # vanilla per-dimension forceload cap
 DEFAULT_DIM = "minecraft:overworld"
 AIR_IDS = {"minecraft:air", "minecraft:cave_air", "minecraft:void_air"}
 FLUID_IDS = {"minecraft:water", "minecraft:lava"}
+
+# Fix 5: words that mark a phase as organic terrain (the ziggurat-risk class).
+TERRAIN_KEYWORDS = (
+    "terrain", "landform", "landscape", "mountain", "canyon", "hill", "mesa",
+    "cliff", "ridge", "ridgeline", "coast", "coastline", "shore", "dune",
+    "valley", "plateau", "butte", "slope", "cape", "headland", "ravine",
+    "gorge", "escarpment", "massif", "bluff", "knoll", "scree", "talus",
+    "island", "peninsula", "crater", "volcano", "glacier", "fjord", "reef",
+)
+# A terrain phase must carry at least one of these quality_contract rows.
+TERRAIN_QC_ROWS = (
+    "silhouette", "edge_irregularity", "block_mix_ratios", "asymmetry",
+    "foundation_naturalised", "water_continuity",
+)
+RENDER_DISTANCE_BLOCKS = 200       # ~12 chunks; perceivability threshold from spawn
+# Words that mark a build as connective transit (softens a far-from-spawn flag).
+TRANSIT_KEYWORDS = ("rail", "road", "highway", "path", "bridge", "tunnel",
+                    "station", "transit", "dock", "nether-hub", "elevator")
 
 
 # ===========================================================================
@@ -706,6 +726,23 @@ CHECK_FUNCS = {
 FUNDAMENTAL_CHECKS = {"silhouette", "connectivity", "foundation_naturalised", "water_continuity"}
 
 
+def verify_token(plan, rep):
+    """A content-bound token proving *this* verify run passed (Fix 4).
+
+    Deterministic from the plan identity + phase + every check result, so the
+    same passing verification always yields the same token and a later audit can
+    tell a real PASS from a hand-typed string. It is a tamper-*evidence* tool,
+    not tamper-proof: its value is that a build which never ran verify simply has
+    no token to write, making a self-approved `status:built` row detectable.
+    """
+    parts = [str(plan.project or ""), str(plan.element or ""), str(rep["phase"]),
+             rep["verdict"], str(rep["passed"]), str(rep["failed"])]
+    for (kind, status, _msg) in sorted((r[0], r[1], r[2]) for r in rep["results"]):
+        parts.append(f"{kind}:{status}")
+    digest = hashlib.sha1("|".join(parts).encode("utf-8")).hexdigest()
+    return "vt_" + digest[:12]
+
+
 def verify_phase(client, plan, phase):
     """Run acceptance + every applicable quality_contract check. Returns a report dict."""
     results = []
@@ -724,8 +761,19 @@ def verify_phase(client, plan, phase):
         verdict = "FAIL"
     else:
         verdict = "CORRECTIONS NEEDED"
-    return {"phase": phase, "verdict": verdict, "passed": len(passed),
-            "failed": len(failed), "skipped": len(skipped), "results": results}
+    rep = {"phase": phase, "verdict": verdict, "passed": len(passed),
+           "failed": len(failed), "skipped": len(skipped), "results": results}
+    # Only a passing verification that actually *checked something* mints a
+    # token. A phase with no acceptance and no quality_contract verified nothing
+    # — it must not earn `status:built`, so it gets a note instead of a token.
+    if verdict == "PASS":
+        if passed:
+            rep["token"] = verify_token(plan, rep)
+        else:
+            rep["note"] = ("no acceptance or quality_contract checks defined — "
+                           "nothing was verified, so NO token is minted; do not "
+                           "mark this element built")
+    return rep
 
 
 # ===========================================================================
@@ -781,6 +829,233 @@ def self_test(client, dim=DEFAULT_DIM, at=(5000, 100, 5000)):
 
 
 # ===========================================================================
+# pre-flight lint — refuse the ziggurat anti-pattern (Fix 5)
+# ===========================================================================
+
+def _phase_terrain_blob(plan, phase):
+    """Lower-cased text from the plan identity + this phase's step notes."""
+    bits = [plan.project or "", plan.element or ""]
+    for s in plan.phase_steps(phase):
+        bits.append(str(s.get("note") or ""))
+    return " ".join(bits).lower()
+
+
+def classify_terrain(plan, phase):
+    """True if this phase looks like organic terrain (the ziggurat-risk class)."""
+    blob = _phase_terrain_blob(plan, phase)
+    return any(kw in blob for kw in TERRAIN_KEYWORDS)
+
+
+def _fill_slabs(plan, phase):
+    """Horizontal rectangular slab-fills in a phase: (x1,x2,z1,z2,y) tuples.
+
+    A slab is a fill/replace box wide in both X and Z (>=8) and thin in Y (<=4)
+    — the building block of a Y-banded ziggurat.
+    """
+    slabs = []
+    for s in plan.phase_steps(phase):
+        if s.get("op") not in ("fill", "replace"):
+            continue
+        try:
+            a = parse_coord(s.get("a"))
+            b = parse_coord(s.get("b"))
+        except (ValueError, TypeError):
+            continue
+        dx, dy, dz = abs(a[0] - b[0]), abs(a[1] - b[1]), abs(a[2] - b[2])
+        if dx >= 8 and dz >= 8 and dy <= 4:
+            slabs.append((min(a[0], b[0]), max(a[0], b[0]),
+                          min(a[2], b[2]), max(a[2], b[2]), min(a[1], b[1])))
+    return slabs
+
+
+def detect_ziggurat(slabs):
+    """Stacked rectangular slabs across >=3 Y-levels that share edges / nest."""
+    if len(slabs) < 3:
+        return False
+    ylevels = sorted({sl[4] for sl in slabs})
+    if len(ylevels) < 3:
+        return False
+    shared = 0
+    for i in range(len(slabs)):
+        for j in range(i + 1, len(slabs)):
+            A, B = slabs[i], slabs[j]
+            edge = (A[0] == B[0] or A[1] == B[1] or A[2] == B[2] or A[3] == B[3])
+            nested = ((A[0] >= B[0] and A[1] <= B[1] and A[2] >= B[2] and A[3] <= B[3]) or
+                      (B[0] >= A[0] and B[1] <= A[1] and B[2] >= A[2] and B[3] <= A[3]))
+            if edge or nested:
+                shared += 1
+    return shared >= 2
+
+
+def lint_phase(plan, phase):
+    """Return (is_terrain, [issue strings]) for the pre-execution gate."""
+    issues = []
+    is_terrain = classify_terrain(plan, phase)
+    if not is_terrain:
+        return is_terrain, issues
+    qc = plan.quality_contract or {}
+    if not any(qc.get(r) for r in TERRAIN_QC_ROWS):
+        issues.append(
+            "terrain phase carries NO quality_contract terrain rows "
+            f"({', '.join(TERRAIN_QC_ROWS)}). A terraforming-class phase without "
+            "a quality_contract is a refusal — see "
+            "terraforming/reference/non-negotiable-enforcement.md.")
+    if detect_ziggurat(_fill_slabs(plan, phase)):
+        issues.append(
+            "ziggurat anti-pattern: this phase is stacked Y-banded rectangular "
+            "slab-fills across >=3 elevations that share edges or nest. That is "
+            "the banned terrain construction (terraces + flat tops by definition). "
+            "Use the heightmap method or live sculpt — terraforming hard-rule 1.")
+    return is_terrain, issues
+
+
+def print_lint(phase, issues):
+    print(f"LINT phase {phase}: REFUSED ({len(issues)} issue(s))")
+    for i in issues:
+        print(f"  XX {i}")
+    print("  This phase looks like organic terrain. Route it to terraforming / "
+          "natural-landmarks, or pass --force only if you are certain this is "
+          "NOT organic terrain (e.g. a deliberately rectilinear plaza).")
+
+
+# ===========================================================================
+# registry-backed gates — perceivability + token audit (Fixes 3, 4)
+# ===========================================================================
+
+def fetch_registry(client):
+    """Read mcbuilder:registry command storage and parse the inner TOON doc."""
+    try:
+        data = client.call_toon("data_storage_get",
+                                 {"namespace": "mcbuilder", "path": "registry"})
+    except McpError as e:
+        raise McpError(f"could not read mcbuilder:registry — {e}")
+    doc = None
+    if isinstance(data, dict):
+        if "builds" in data or "projects" in data:
+            return data  # already the parsed registry
+        doc = data.get("doc") or data.get("value") or data.get("data")
+    elif isinstance(data, str):
+        doc = data
+    if isinstance(doc, str) and doc.strip():
+        try:
+            return toon.parse(doc)
+        except toon.ToonError as e:
+            raise McpError(f"registry doc did not parse as TOON — {e}")
+    raise McpError("registry is empty or has an unexpected shape")
+
+
+def _registry_builds(reg):
+    builds = reg.get("builds")
+    return builds if isinstance(builds, list) else []
+
+
+def _build_xyz(b):
+    try:
+        return (int(round(float(b["x"]))), int(round(float(b["y"]))),
+                int(round(float(b["z"]))))
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _world_spawn(client):
+    data = client.call_toon("level_get_spawn_point", {})
+    if isinstance(data, dict):
+        try:
+            return (int(round(float(data.get("x", 0)))),
+                    int(round(float(data.get("y", 64)))),
+                    int(round(float(data.get("z", 0)))))
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def cmd_perceivable(client, spawn=None, threshold=RENDER_DISTANCE_BLOCKS):
+    """Fix 3: a built element a human can't see or reach from spawn isn't done."""
+    reg = fetch_registry(client)
+    builds = [b for b in _registry_builds(reg)
+              if str(b.get("status", "")).strip() in ("built", "partial")]
+    if spawn is None:
+        spawn = _world_spawn(client)
+    if spawn is None:
+        print("PERCEIVABLE: could not resolve world spawn — pass --spawn 'x y z'")
+        return 1
+    if not builds:
+        print("PERCEIVABLE: no built/partial elements in the registry — nothing "
+              "to perceive. (Is the registry being written?)")
+        return 1
+
+    has_transit = any(
+        any(kw in (str(b.get("element", "")) + " " + str(b.get("project", ""))).lower()
+            for kw in TRANSIT_KEYWORDS)
+        for b in builds)
+
+    rows, nearest = [], None
+    for b in builds:
+        xyz = _build_xyz(b)
+        if xyz is None:
+            rows.append((b.get("element", "?"), None, None))
+            continue
+        d = math.hypot(xyz[0] - spawn[0], xyz[2] - spawn[2])
+        rows.append((b.get("element", "?"), d, xyz))
+        nearest = d if nearest is None else min(nearest, d)
+
+    far = [r for r in rows if r[1] is not None and r[1] > threshold]
+    print(f"PERCEIVABLE: spawn={spawn[0]} {spawn[1]} {spawn[2]}  "
+          f"threshold={threshold}  elements={len(builds)}")
+    for (name, d, xyz) in sorted(rows, key=lambda r: (r[1] is None, r[1] or 0)):
+        if d is None:
+            print(f"  ?? {name}: no coordinates in registry row")
+            continue
+        mark = "ok " if d <= threshold else "XX "
+        at = f"@ {xyz[0]} {xyz[1]} {xyz[2]}" if xyz else ""
+        print(f"  {mark}{name}: {d:.0f} blocks from spawn {at}")
+
+    critical = nearest is None or nearest > threshold
+    unreachable = bool(far) and not has_transit
+    if critical:
+        print(f"  XX CRITICAL: nearest element is "
+              f"{'∞' if nearest is None else f'{nearest:.0f}'} blocks from spawn "
+              f"(> {threshold}). A player at spawn sees an empty world. Move a "
+              f"build near spawn, or build connecting transit, before reporting done.")
+    elif unreachable:
+        print(f"  XX {len(far)} element(s) beyond render distance from spawn and "
+              f"NO registered transit connects them — add a path/rail, or report "
+              f"them honestly as not-yet-reachable. Not done.")
+    elif far:
+        print(f"  !! {len(far)} element(s) beyond render distance from spawn, but "
+              f"registered transit exists — confirm it actually connects them.")
+    else:
+        print("  ok every built element is within render distance of spawn.")
+    return 1 if (critical or unreachable) else 0
+
+
+def cmd_audit(client):
+    """Fix 4: flag registry `built` rows with no/blank verify_token (self-approval)."""
+    reg = fetch_registry(client)
+    builds = _registry_builds(reg)
+    if not builds:
+        print("AUDIT: no builds recorded in the registry.")
+        return 0
+    unverified = []
+    for b in builds:
+        if str(b.get("status", "")).strip() != "built":
+            continue
+        tok = str(b.get("verify_token", "")).strip()
+        if not tok or tok.lower() in ("-", "null", "none", "todo") or not tok.startswith("vt_"):
+            unverified.append(b)
+    print(f"AUDIT: {len(builds)} build row(s); {len(unverified)} marked 'built' "
+          f"without a valid verify_token.")
+    for b in unverified:
+        print(f"  XX {b.get('project', '?')}/{b.get('element', '?')}: "
+              f"status=built but verify_token={b.get('verify_token', '<missing>')!r} "
+              f"— self-approved, not verified. Re-run harness verify and record the token.")
+    if unverified:
+        print("  A 'built' row without a vt_ token never passed an independent "
+              "verification. Treat these as unverified until re-checked.")
+    return 1 if unverified else 0
+
+
+# ===========================================================================
 # reporting + CLI
 # ===========================================================================
 
@@ -812,6 +1087,12 @@ def print_report(rep):
     marks = {"PASS": "ok ", "FAIL": "XX ", "SKIP": ".. "}
     for (kind, status, msg) in rep["results"]:
         print(f"  {marks.get(status, '?? ')}{kind}: {msg}")
+    if rep.get("token"):
+        print(f"  VERIFY-TOKEN: {rep['token']}")
+        print(f"    → record this in the registry build row's verify_token cell; "
+              f"status:built is only legitimate with it.")
+    elif rep.get("note"):
+        print(f"  (no token) {rep['note']}")
 
 
 def main(argv=None):
@@ -821,9 +1102,16 @@ def main(argv=None):
         p = sub.add_parser(name)
         p.add_argument("plan")
         p.add_argument("phase")
+        if name in ("run", "build"):
+            p.add_argument("--force", action="store_true",
+                           help="override the terrain anti-pattern lint refusal")
     sub.add_parser("mode")
     st = sub.add_parser("selftest")
     st.add_argument("--dim", default=DEFAULT_DIM)
+    pv = sub.add_parser("perceivable")
+    pv.add_argument("--threshold", type=int, default=RENDER_DISTANCE_BLOCKS)
+    pv.add_argument("--spawn", default=None, help="override world spawn as 'x y z'")
+    sub.add_parser("audit")
     args = ap.parse_args(argv)
 
     client = McpClient()
@@ -836,12 +1124,21 @@ def main(argv=None):
         res = self_test(client, dim=args.dim)
         print(json.dumps(res, indent=2))
         return 0 if res["write_readiness"] == "OK" else 1
+    if args.cmd == "perceivable":
+        spawn = parse_coord(args.spawn) if args.spawn else None
+        return cmd_perceivable(client, spawn=spawn, threshold=args.threshold)
+    if args.cmd == "audit":
+        return cmd_audit(client)
 
     plan = load_plan(args.plan)
 
     if args.cmd == "freshness":
         return _freshness(client, plan, args.phase)
     if args.cmd == "run":
+        _is_terrain, issues = lint_phase(plan, args.phase)
+        if issues and not args.force:
+            print_lint(args.phase, issues)
+            return 1
         digest = run_phase(client, plan, args.phase, forceload=True)
         print_digest(digest)
         return 1 if (digest.get("failures") or digest.get("error")) else 0
@@ -850,6 +1147,10 @@ def main(argv=None):
         print_report(rep)
         return 0 if rep["verdict"] == "PASS" else 1
     if args.cmd == "build":
+        _is_terrain, issues = lint_phase(plan, args.phase)
+        if issues and not args.force:
+            print_lint(args.phase, issues)
+            return 1
         # Hold the force-load across BOTH run and verify (guidance Rule 1).
         _env, bands = phase_envelope_bands(plan, args.phase)
         _forceload(client, bands, "add")

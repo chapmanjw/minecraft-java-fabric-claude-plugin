@@ -97,6 +97,16 @@ python ${CLAUDE_PLUGIN_ROOT}/tools/builder/harness.py build <plan.toon> <phase>
 - **No improvisation still applies.** The harness executes the plan verbatim; you
   do not edit steps. If a step is malformed or a structure is missing, the digest
   reports it — relay that, don't patch it.
+- **A `LINT … REFUSED` result is not yours to override.** If `build`/`run` exits
+  before executing with a terrain anti-pattern refusal (no `quality_contract`, or
+  stacked Y-banded rectangular fills), **stop and relay it verbatim**. Do **not**
+  pass `--force` to push it through — `--force` is an orchestrator decision for a
+  genuinely rectilinear build, never the worker's. The phase routes back to
+  `terraforming`/`natural-landmarks` to be re-authored as a heightmap or live
+  sculpt.
+- **Relay the verify token.** On a PASS the report prints a `VERIFY-TOKEN: vt_…`
+  line. Copy it into your report verbatim — the orchestrator records it in the
+  registry, and `status:built` is illegitimate without it.
 
 If the harness is unavailable (no Python, package missing) or the orchestrator
 asks for in-context execution, fall back to the manual path below.
@@ -163,7 +173,8 @@ digest when you used it):
 
 - Phases and steps completed, with counts and total blocks changed.
 - The **verify verdict** (PASS / CORRECTIONS NEEDED / FAIL) and any failing
-  check or acceptance coordinate.
+  check or acceptance coordinate. On PASS, the **`VERIFY-TOKEN: vt_…`** line
+  verbatim (the orchestrator needs it to mark the element `built`).
 - The first failing step and its error, if you stopped early.
 - The **force-load envelope** used and whether it was released (so the
   orchestrator records it in the registry).

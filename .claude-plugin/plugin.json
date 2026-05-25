@@ -1,6 +1,6 @@
 {
   "name": "minecraft-java",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Agent skills and an agent for driving a live Minecraft Java Edition world through the minecraft-java Fabric MCP mod. Includes a guided, step-by-step setup of the whole stack and an in-world builder agent.",
   "author": {
     "name": "chapmanjw"

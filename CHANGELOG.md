@@ -6,6 +6,53 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-25
+
+Verification-gate hardening from the parks-loop post-mortem — an unattended build
+that freelanced past every skill and quality gate, shipped stacked box-fill
+"terrain", self-approved its own renders as "verified", and left every build
+beyond render distance of spawn. This release turns the pipeline's "shoulds" into
+enforced gates, with mechanical backstops at the surfaces a rogue orchestrator
+still touches (the registry and the final report).
+
+### Added
+
+- **Perceivability gate (`harness.py perceivable`).** Checks every `built`/`partial`
+  registry element against world spawn and **fails (exit 1)** when nothing is within
+  render distance (~200 blocks) of spawn, or when a far element has no registered
+  connecting transit. Catches the "spawn in an empty world, every build beyond
+  render distance" outcome before the user does. `--threshold` and `--spawn`
+  override the defaults.
+- **Verify tokens + registry audit (`harness.py audit`).** `verify`/`build` mint a
+  content-hash `vt_…` token only on a real PASS (a phase that checked nothing mints
+  none); the `mcbuilder:registry` build row gains a `verify_token` cell and
+  `status:built` is only legitimate with one. `audit` flags every `built` row whose
+  token is missing or malformed — a self-approved build that never passed an
+  independent verification.
+- **Terrain anti-pattern lint.** `run`/`build` refuse (exit 1) a phase that reads as
+  organic terrain when it is stacked Y-banded rectangular slab-fills (the banned
+  "ziggurat") or carries no `quality_contract` terrain row. `--force` overrides for a
+  genuinely rectilinear build. The machine backstop for terraforming hard-rule 1; it
+  does not trip on a building's floor stack.
+
+### Changed
+
+- **Autonomy keeps the gates on.** The orchestrator and `large-builds.md` now state
+  that autonomous / `/loop` mode relaxes only *waiting on the user* — never the
+  inspector, offline render-verify, prototype, or `quality_contract` checks — and that
+  the loop iteration boundary is a gate (no next element until the previous is `built`
+  with a token).
+- **Hard delegation gate + router rules.** New "orchestrator freelancing terrain"
+  adversarial defense, and terraforming's two hard rules (heightmap-or-live-sculpt,
+  never stacked rectangles; you cannot see the world) lifted into the Step 0c
+  complexity router so they are encountered at classification time, not buried in a
+  skill that was never opened.
+- **Worker** relays the verify token in its report and refuses to `--force` past a
+  lint refusal (that override is an orchestrator decision).
+- Registry schema documents the `verify_token` column; `reference/build-harness.md`
+  and `non-negotiable-enforcement.md` document the lint, the token gate, and the
+  audit/perceivable commands.
+
 ## [0.6.0] - 2026-05-25
 
 Token-usage optimization + dedicated/headless-server support.

@@ -8,12 +8,37 @@ far less than planned. A real overnight build of eleven zones finished with
 blueprinter's templates **never persisted** — yet nothing flagged it until the
 final sweep. Guard against that:
 
+- **Autonomy relaxes only *waiting on the user* — never the gates.** This is the
+  single most important rule for unattended runs, and the one a real overnight
+  parks build got exactly backwards. "Run autonomously / don't wait on me" means
+  *do not block on my approval between phases* — it does **not** mean skip the
+  `inspector`, the prototype render, the offline render-verify, or the
+  `quality_contract`. Those automated checks are the **only** feedback when no
+  one is watching, so unattended makes them more essential, not optional. If you
+  cannot get a user glance, still build the prototype, render-verify it offline,
+  store the render, and gate scale-up on your own `inspector` pass. Reading
+  "why'd you stop?" as "build faster" and churning out more unverified volume is
+  the documented failure, not the fix.
 - **Keep a completion ledger.** Track every planned element/zone in the
   `mcbuilder:registry` with an explicit status. An element is `built` **only
-  after its verification passed** (harness `verify`, or the `inspector`) — not
-  when a sub-agent says it finished. Never report the job done until every planned
-  element has a passing verification; list any `absent`/`partial` zone honestly in
-  the final report.
+  after its verification passed** — recorded as a `verify_token` in the registry
+  row (the `vt_…` token `harness.py verify`/`build` prints on PASS; see the State
+  model). Not when a sub-agent says it finished. A `built` row with **no token**
+  is self-approval, not verification — `harness.py audit` scans the registry and
+  flags exactly these. Never report the job done until every planned element has
+  a passing verification; list any `absent`/`partial` zone honestly in the final
+  report.
+- **The iteration boundary is a gate (loops especially).** Under `/loop` or any
+  iterated build, do not start the next element/zone until the previous one is
+  `built` with a token. Starting the next iteration before the last verified is
+  how a loop silently ships a row of unverified builds while reporting progress.
+- **Before reporting done, confirm a human can perceive the result.** Run
+  `python ${CLAUDE_PLUGIN_ROOT}/tools/builder/harness.py perceivable`: it checks
+  every `built`/`partial` element against world spawn and flags any whose nearest
+  point is beyond render distance (~200 blocks) with no registered connecting
+  transit. A build that nobody standing in-world can see or reach is not done —
+  this is the gate that catches the "spawn in an empty interior, everything
+  beyond render distance" outcome before the user does.
 - **Verify every phase, not just at the end.** The per-phase verify loop is what
   catches a zone that silently didn't build. One final QA sweep at dawn is too
   late — by then the gaps are baked in. Do not batch verification.

@@ -30,11 +30,46 @@ python $P selftest                          # write-readiness (forceload→set�
 python $P run    <plan.toon> <phase>        # execute a phase (force-load-bracketed)
 python $P verify <plan.toon> <phase>        # run that phase's acceptance + contract checks
 python $P build  <plan.toon> <phase>        # run, then verify  (the common case)
+python $P perceivable                       # can a player at spawn see/reach the built elements?
+python $P audit                             # flag registry `built` rows with no verify_token
 ```
 
 Exit code `0` = everything attempted passed; `1` = any execution failure,
-force-load miss, or failed check. The calling skill branches on the exit code and
-reads the printed digest/report.
+force-load miss, failed check, lint refusal, or perceivability/audit flag. The
+calling skill branches on the exit code and reads the printed digest/report.
+
+`run`/`build` take `--force` to override the terrain anti-pattern lint (below).
+`perceivable` takes `--threshold N` (default 200 blocks) and `--spawn 'x y z'`.
+
+## Pre-flight lint — the terrain anti-pattern gate
+
+Before executing, `run`/`build` lint the phase. If the phase reads as **organic
+terrain** (its project/element/step-notes mention terrain, canyon, mountain,
+coastline, mesa, …) the harness **refuses** (exit 1) when either:
+
+- it carries **no** `quality_contract` terrain row (`silhouette`,
+  `edge_irregularity`, `block_mix_ratios`, `asymmetry`, `foundation_naturalised`,
+  `water_continuity`) — a terraforming-class phase with no contract; or
+- it is **stacked Y-banded rectangular slab-fills** across ≥3 elevations that
+  share edges or nest — the banned "ziggurat" construction.
+
+This is the machine backstop for terraforming hard-rule 1: organic terrain must
+come from the heightmap method or live sculpt, never a static stack of
+rectangles. A deliberately rectilinear build (a plaza, a floor stack) is not
+classified as terrain and is not affected; pass `--force` only if you are
+certain a flagged phase is not organic terrain.
+
+## Verify tokens — the `status:built` gate
+
+On a **PASS** with at least one real check, `verify`/`build` print a
+`VERIFY-TOKEN: vt_…` line. It is a content hash of the plan identity, phase, and
+every check result — deterministic, so a real passing run always reproduces it.
+Record it in the registry build row's `verify_token` cell: **`status:built` is
+only legitimate with a token.** A phase that verified *nothing* (no acceptance
+and no `quality_contract`) prints a "no token" note instead and must not be
+marked built. `harness.py audit` reads the registry and flags every `built` row
+whose `verify_token` is blank or malformed — a self-approved build that never
+passed an independent verification.
 
 ## What it does
 

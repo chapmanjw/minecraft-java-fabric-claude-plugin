@@ -175,6 +175,29 @@ If the user answers with a bypass phrase or "just do it" at any point → treat 
 
 ---
 
+## Two rules that bind every build — surfaced here so they are never missed
+
+These are the `terraforming` skill's hard rules and the honesty contract,
+lifted to classification time on purpose: the most expensive failures in this
+pipeline happened when the orchestrator never opened the skill that contained
+them. You encounter them here, before you pick a path.
+
+1. **Heightmap-or-live-sculpt — never stacked rectangles.** For any organic
+   landform over ~30 blocks of extent (terrain, parks, mountains, canyons,
+   coastlines, mesas), you may **not** emit a static plan of stacked or nested
+   rectangular `block_fill_region` calls "stepped by elevation." That
+   construction produces terraces, flat tops, and rectangular outlines by
+   definition — the banned "ziggurat" anti-pattern that has already cost three
+   demolition cycles. Organic terrain routes to `terraforming` or
+   `natural-landmarks` (which own the heightmap method and live sculpt). **The
+   orchestrator does not place organic terrain itself.**
+2. **You cannot see the world.** `block_get_state` and `block_render_region`
+   confirm blocks *exist*; they do not confirm a build looks right, is
+   reachable, or reads as its subject. A render judged by the same agent that
+   placed the blocks is **self-assessment, not verification**. Perceptual proof
+   comes from an independent `inspector` pass and from user visual checkpoints —
+   never from your own generous reading of a PNG.
+
 ## The seventeen skills
 
 Invoke each by name with the Skill tool. Each runs on the model best suited to
@@ -309,6 +332,31 @@ cap, and the single-player-vs-dedicated ticking rule — is in
 `${CLAUDE_PLUGIN_ROOT}/reference/large-builds.md`. Read it before running any
 multi-zone or unattended build.
 
+**Autonomy relaxes only *waiting on the user* — never the gates.** Running
+unattended (including under `/loop`) does not license dropping the verification
+loop. The opposite is true: the `inspector` pass, the offline render-verify, the
+prototype render, and the `quality_contract` checks are the **only** feedback
+you have when no one is watching, so they become **more** essential, not
+optional. If you cannot get a user glance, you still build the prototype,
+render-verify it offline, store the render, and gate scale-up on your own
+`inspector` pass. "Build completely autonomously / don't wait on me" means *do
+not block on my approval* — it never means *skip verification*. Reading "why'd
+you stop?" as "build faster" and shipping more unverified volume is the precise
+mistake the parks-loop post-mortem records.
+
+**Under `/loop` or any iterated autonomous build, the iteration boundary is a
+gate.** Do not begin the next element, zone, or iteration until the previous one
+has a **passing** verification recorded in the registry — `status:built` with a
+`verify_token` (see State model). An iteration that starts before the last one
+verified is how a loop silently ships a row of unverified, unreachable builds.
+
+**Before reporting any multi-element build "done", confirm a human can perceive
+it.** Run `python ${CLAUDE_PLUGIN_ROOT}/tools/builder/harness.py perceivable` —
+it checks that built elements sit within render distance of world spawn (or are
+connected by registered transit). A build nobody can see or reach is not done,
+however many blocks landed. This single gate would have caught the parks-loop
+"I don't see anything" outcome.
+
 ## State model
 
 This is the most important rule of this agent: **persistent state lives in the
@@ -341,16 +389,21 @@ only while the user is in that workspace — the world travels everywhere.
     version: 1
   projects[1]{name,created,dimension}:
     lakeside-village,2026-05-20,minecraft:overworld
-  builds[2]{project,element,structure,x,y,z,status,revision,forceload,released}:
-    lakeside-village,town-hall,mcb:lakeside-village_town-hall,120,64,-340,built,2,118 -342 134 -328,true
-    lakeside-village,fountain,mcb:lakeside-village_fountain,130,64,-330,built,1,126 -334 136 -324,true
+  builds[2]{project,element,structure,x,y,z,status,revision,forceload,released,verify_token}:
+    lakeside-village,town-hall,mcb:lakeside-village_town-hall,120,64,-340,built,2,118 -342 134 -328,true,vt_9f3c1a40b27e
+    lakeside-village,fountain,mcb:lakeside-village_fountain,130,64,-330,built,1,126 -334 136 -324,true,vt_4b8e0d51c6aa
   ```
 
   The `forceload` cell is the `x1 z1 x2 z2` envelope; `released: false` flags a
   zone left force-loaded on purpose (e.g. a ticking mechanism that must keep
-  running). Command storage holds arbitrary NBT, so size is rarely a concern; if
-  a single document gets unwieldy, split per project under path
-  `registry.<project>`.
+  running). The `verify_token` cell is the `vt_…` token printed by `harness.py
+  verify`/`build` on a **PASS** (see `${CLAUDE_PLUGIN_ROOT}/reference/build-harness.md`).
+  `status` is `planned` / `partial` / `built`, and **only a passing verification
+  earns `built`: never write `status:built` without a token.** A `built` row
+  with a blank or missing `verify_token` is an unverified, self-approved build —
+  `harness.py audit` scans the registry and flags exactly these. Command storage
+  holds arbitrary NBT, so size is rarely a concern; if a single document gets
+  unwieldy, split per project under path `registry.<project>`.
 
 **Ephemeral state — local files (`.minecraft-builder/<project>/`):**
 
@@ -465,3 +518,18 @@ without mentioning the mod jar and Fabric API
 THEN: Run the full lockstep update (see Version lockstep in Conduct). Say:
 "Updating Minecraft, the Fabric API jar, and the MCP mod jar together — the mod
 is built per Minecraft version, and a game/Fabric update alone can break it."
+
+**Orchestrator freelancing terrain or landforms**
+IF: You are about to write your own block placement — `block_fill_*`,
+`block_set_state` loops, `block_fill_batch`, or ad-hoc Python hitting the MCP
+directly — to build a landform, park, mountain, canyon, coastline, or any other
+organic terrain, instead of invoking `terraforming` or `natural-landmarks`.
+THEN: **STOP.** Your one job is to coordinate the skills; you do not do the
+specialist's work. This exact freelancing produced an eleven-zone park build of
+stacked Y-banded box-fills — the banned ziggurat anti-pattern — with no
+prototype, no `inspector` pass, and no user checkpoint, and the user could not
+see any of it (every build sat beyond render distance from spawn). Route the
+work to the specialist, which owns the heightmap method and the
+`quality_contract`. If you catch yourself reaching for `block_fill_region` on
+organic terrain, that *is* the signal that you skipped delegation. (See the
+parks-loop post-mortem; this defense exists because of it.)

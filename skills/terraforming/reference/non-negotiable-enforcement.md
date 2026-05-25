@@ -9,6 +9,17 @@ block and are sampled by the `inspector` automatically.
 A violation that survives this gate is a build failure, not a stylistic note —
 the build does not advance to the next phase until it passes.
 
+**The harness enforces two of these mechanically, before a block is placed.**
+`harness.py run`/`build` lint every phase: if the phase reads as organic terrain
+(by its project/element/step-note text) it is **refused** when it carries no
+`quality_contract` terrain row, or when it is stacked Y-banded rectangular
+slab-fills sharing edges/nesting across ≥3 elevations (the ziggurat). So a
+terrain phase that omits the rows below, or that was authored as stacked
+rectangles, never executes — the refusal is the gate, not the inspector's
+after-the-fact judgement. (Override with `--force` only for a genuinely
+rectilinear build that tripped the terrain classifier by accident.) See
+`reference/build-harness.md`.
+
 ## Required `quality_contract` rows for any terrain phase
 
 Emit these as part of `plan.toon`'s `quality_contract` block (see the
