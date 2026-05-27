@@ -210,6 +210,39 @@ Render from multiple angles — a silhouette error invisible in one view is
 obvious in another. Route a "doesn't read" failure back to `monument-builder`
 to fix the model and re-place, not to the worker.
 
+### Java-exclusive: eye-level verification for ride-through / walk-through builds
+
+The scan-render check above renders a *representational* build from several
+angles. **Terrain you move through needs the same eyes — and the trap is the
+top-down view.** A `block_render_region` `view: top` (or `hillshade`) shows the
+footprint and massing but **hides every vertical face a rider or walker sees**.
+On the parks-loop build a "snow re-skin" passed a top-down look (white from
+above) while the slopes were a gray rock wall from the cart — snow had capped
+only the horizontal tops; and a "blending done" pass showed a smooth top-down
+colour gradient while the shapes were hard walls at eye level. Both were caught
+only by the user's in-game screenshots.
+
+So for any **ride-through / walk-through / silhouette** build (a rail loop, a
+path, a valley, a skyline):
+
+1. Render **`view: iso`** AND an **eye-level slice from the viewer's height**
+   (the rider's Y, looking along the route) — not top-down. Top-down is valid
+   only for genuinely flat-pattern checks (mosaics, ring patterns, road
+   networks).
+2. Sample **camera positions along the route** — a few points spaced around the
+   loop/path — because a wall invisible from one stretch is obvious from the
+   next.
+3. Record a **`rider_pov` row** in the inspection output (below): the sample
+   camera positions/heights and whether the faces read cleanly.
+
+A render you judged yourself is **self-assessment, not verification.** The gate
+for a visual-coherence build is a **user visual checkpoint**; under autonomy
+where no user is available, this independent eye-level pass is the minimum
+substitute — on the parks-loop build two independent inspector passes each found
+real defects the builder had rated "fine." Route an eye-level "reads as a wall /
+clashing seam" failure back to `terraforming` (it is a *shape* problem — hard
+rule 4's continuous field), never to the worker and never to a palette tweak.
+
 ### 5. Adjustments — what needs to change
 
 For every issue, produce a **concrete correction**: the coordinates, what is
@@ -237,6 +270,16 @@ inspections:
 inspection[2]{phase,date,verdict,issues}:
   1,2026-05-17,pass,0
   2,2026-05-17,corrections-needed,3
+```
+
+For a **ride-through / walk-through / silhouette** phase, also record the
+eye-level check as a `rider_pov` row — the camera samples you rendered and
+whether the faces read cleanly:
+
+```toon
+rider_pov[2]{phase,camera,facing,reads_clean,note}:
+  3,118 70 -300,north,yes,snow carried onto the vertical faces too
+  3,134 70 -260,east,no,gray wall on the inside slope — route to terraforming
 ```
 
 When corrections are needed, also write them as a steps table the `worker` can

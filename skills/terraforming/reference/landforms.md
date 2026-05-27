@@ -105,6 +105,56 @@ World Machine / SRTM) and scales it to a Y range — the terrain analogue of
 voxelizing a provided mesh, and the highest-fidelity path for a real mountain or
 coastline. Render-check it before building, like any imported data.
 
+## The continuous-field (belt) method — for blended multi-region terrain
+
+The heightmap method above shapes one landform. When **several named regions
+must abut seamlessly** — a ring of biomes, a valley grading into mountains, four
+parks around a loop — do **not** author each as its own heightfield and stitch
+them: every boundary and corner becomes a wall, and dithering the palette across
+the seam blends *colour* while the *shape* discontinuity stays (terraforming
+hard rule 4). Author the whole span as **one field parameterised by `(s, perp)`.**
+
+`s` is arc-length along a centerline (or closed loop) through the span; `perp` is
+signed perpendicular distance from it. Every cross-section parameter — base
+level, crest height, rise distance, roughness, palette family, snowline — is a
+**continuous function of `s`**, interpolated between region keypoints. With no
+segments, regions morph gradually and corners blend by construction.
+
+The `terrain` toolkit ships the primitive:
+
+```python
+import os, sys
+sys.path.insert(0, os.path.join(os.environ["CLAUDE_PLUGIN_ROOT"], "tools"))
+from terrain import HeightField, Centerline, render_views
+
+loop = Centerline([(20,20),(140,20),(140,108),(20,108)], closed=True)   # the rail ring
+hf = HeightField(160, 128, sea_level=62)
+hf.belt_from_path(loop, [                         # keypoints: (s_frac, cross-section)
+        (0.00, dict(base=64, peak=40, rise=28)),  # red-rock straight
+        (0.25, dict(base=66, peak=70, rise=20)),  # alpine straight (taller, steeper)
+        (0.50, dict(base=64, peak=34, rise=30)),  # forest straight
+        (0.75, dict(base=66, peak=70, rise=20))], # alpine straight
+    corridor_half=4, interior_level=66, roughness=3)  # keep the rail corridor flat
+render_views(hf, "/abs/scratch/loop")             # Read the PNGs; tune; only then place
+```
+
+- **`Centerline(points, closed=…)`** — the path/loop; `query(X, Z)` returns
+  `(s, perp)` for any cells. Reusable for any corridor, road, river, or coast.
+- **`belt_from_path(centerline, keypoints, …)`** — each region is a **belt**:
+  the corridor (`|perp| ≤ corridor_half`) stays flat at `base` (protect a rail
+  here); height rises to `base + peak` at the crest, then falls to
+  `interior_level`, a uniform rolling interior. Rising-then-falling makes it a
+  belt, which also removes the **medial-axis crease** a filled-footprint
+  rectangle leaves down its spine.
+- **`protect=<bool mask>`** — leave a working viaduct, village, or rail footprint
+  untouched, so a re-sculpt fixes the blend without rebuilding hard-won work.
+
+Layer the per-region richness (strata, hoodoos, couloirs) on top **driven by the
+same `(s, perp)`** so it stays seam-free — continuity is a base-layer property,
+richness a detail-layer one (see `SKILL.md` § Continuity belongs in the base
+layer). Render-verify offline, then place via `mcp_place.py` /
+`block_fill_columns` exactly as for the heightmap method.
+
 ## Naturalising an existing rectangular mass — the talus-skirt rescue
 
 If you discover a rectangular foundation, base mass, or "corestone megablock"

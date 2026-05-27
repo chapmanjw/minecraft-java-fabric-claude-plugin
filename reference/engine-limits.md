@@ -18,6 +18,19 @@ on or warning against them; do not assert either way from memory.
   all 40,000.** So an arbitrarily large fill is safe on this build. The `voxel`
   toolkit still caps boxes at 32,000 in `decompose` as belt-and-suspenders for
   older servers — harmless either way.
+- **`block_replace_in_region` silently truncates at ~32,768 blocks per call**
+  *(W×H×L)* — and, **unlike `block_fill_region` above, it is NOT auto-tiled
+  server-side.** It edits ~the first 32,768 matching cells, leaves the rest
+  unchanged, and reports success with **no error** (a higher ~1,048,576 cap also
+  exists, but the 32,768 one bites first). This was the root cause of repeated
+  "the replace didn't do anything" reworks on the parks-grand-loop build — a
+  20×20×113 = 45,200-block despeckle left speckle behind; the same op at
+  14×14×113 = 22,148 cleared it. *Mitigation:* **tile every replace under 32,768
+  blocks** (shrink the XZ tile or split Y for tall features) and **scan-verify
+  after.** The build harness's `replace` op now tiles automatically
+  (`tools/builder/harness.py`, `_tile_box`); a planner emitting `replace` steps
+  by hand must still tile them — the worker's "fills are pre-tiled" guidance does
+  **not** extend to `replace`.
 - **`block_fill_batch` (batch placement).** Where available, place many fills
   in one call instead of hundreds of separate requests — it collapses the
   per-call rate-limit and main-thread-tick overhead that throttle large builds
@@ -33,7 +46,12 @@ on or warning against them; do not assert either way from memory.
   `structure_load_to_world`) over many `block_set_state` calls.
 - **`blocks_changed: 0` = unloaded chunk.** A fill in an unloaded chunk returns
   success with zero blocks changed. Keep the work zone loaded (near a player,
-  or `/forceload`) and watch the changed count.
+  or `/forceload`) and watch the changed count. **`block_replace_in_region` and
+  `level_place_feature` (`/place feature`) likewise silently no-op on unloaded
+  chunks**, and **`block_get_top_y` returns void (−64) there** rather than
+  erroring — so a `−64` top-Y, like a `0`-change write, is a force-load miss,
+  not real data. Additive `forceload add` + a touch-read + a brief settle before
+  any of these, and retry on a `−64`.
 
 ## Force-loading & headless writes (the #1 unattended-mode footgun)
 
@@ -46,6 +64,13 @@ otherwise — so a successful `block_get_state` is *not* proof a write will land
 - **Force-load the work envelope before any write, release it after:**
   `forceload add <x1> <z1> <x2> <z2>` (block coords) → do all block work →
   `forceload remove <x1> <z1> <x2> <z2>`.
+- **Never use `forceload remove all`.** It unloads **every** force-loaded chunk,
+  including spawn chunk (0,0). On the parks build this repeatedly killed an
+  always-day **repeating command block** (the world fell back to its day/night
+  cycle) because the block's chunk was unloaded. Always
+  `forceload remove <the specific box>` you added, and re-assert
+  `forceload add 0 0 0 0` (or wherever a persistent command block lives) at the
+  end of any script that touched force-loads.
 - **Cap: 256 chunks per dimension.** Regions wider than that must be built in
   **Z-bands** (≤256 chunks each), one force-load at a time. Force-load is
   **per-dimension** — re-do it in the Nether/End.
@@ -115,6 +140,25 @@ otherwise — so a successful `block_get_state` is *not* proof a write will land
   `block_fill_batch`, `block_set_state`, `block_clone_region`, `structure_*`) or
   live redstone instead.
 
+## Game rules & world settings
+
+- **Use snake_case gamerule ids on MC 26.x — camelCase is rejected.** On 26.1.2
+  the rule ids are snake_case (`spawn_mobs`, `random_tick_speed`, `advance_time`
+  for the old `doDaylightCycle`, `advance_weather`, `keep_inventory`, …); the
+  historical camelCase names fail with a confusing parser error pointing at the
+  name position, through both `/gamerule` and the typed `level_set_game_rule`
+  tool. **Get the live id from `level_list_game_rules` before setting one**
+  rather than typing a name from memory. The parks-loop retrospective reported
+  "`gamerule` / `level_set_game_rule` rejected on 26.1.x" — that was almost
+  certainly a camelCase id (e.g. `doDaylightCycle`) hitting this rejection, not
+  the surface being inert. **VERIFY** with a one-shot snake_case
+  `level_set_game_rule` round-trip if you depend on it.
+- *Robust regardless:* for permanent world state, a **repeating command block**
+  in a force-loaded chunk is the bulletproof path — a `repeating,
+  always-active` block running `time set day` holds permanent daytime even where
+  a gamerule is awkward. Keep that chunk force-loaded, and never
+  `forceload remove all` (it unloads the block — see Force-loading above).
+
 ## Throughput
 
 - The embedded server marshals every world touch onto the main server tick and
@@ -122,6 +166,14 @@ otherwise — so a successful `block_get_state` is *not* proof a write will land
   at a 60 rpm limit). The fixes, in order of leverage: **batch** (one
   `block_fill_batch`), **few large fills** (decompose to maximal boxes), and a
   higher configured `rate_limit_rpm` for building sessions.
+- **Long runs need 429 backoff.** At the ~60 rpm limit a sustained placement
+  script — a big parametric heightfield placed page-by-page via
+  `block_fill_batch` — *will* hit HTTP 429. Pace requests and back off
+  (exponential, honour any `Retry-After`) rather than hammering. The bundled
+  `tools/voxel/mcp_place.py` paces and retries; a hand-rolled placer must too.
+  Driving such a generated placement script is a first-class execution mode for
+  forms too large to be one structure template — see
+  `${CLAUDE_PLUGIN_ROOT}/reference/build-harness.md`.
 
 ## Terrain helpers (mod v0.3.0+)
 
@@ -138,6 +190,10 @@ and validation.)
   **no 8192-entry cap**. Fills each column stone → subsurface → surface and
   floods to `sea_level`. Capped at **65,536 columns per call** — tile larger
   terrain. The efficient placement path for the `terrain` toolkit's heightfields.
+  **It does not clear blocks *above* the new surface** — re-sculpting terrain
+  *lower* than it was leaves the old taller columns floating. Clear first: run
+  `block_fill_columns` (or `fill_batch`) with an **air** palette from floor to
+  ceiling over the footprint, then fill the real field.
   **Fallback:** decompose the heightfield to box fills and place via
   `block_fill_batch` (paging the 8192 cap) / `block_fill_region` — the existing
   `tools/voxel/mcp_place.py` path.
@@ -145,7 +201,7 @@ and validation.)
   (`/place feature <id> <x> <y> <z>`): trees, vegetation, ore veins, geodes,
   dripstone. The way to *grow* detail rather than stamp copies (terraforming
   rule 7). **Fallback:** `command_execute` with the same `/place feature`
-  command, or bone-meal / `randomTickSpeed` sapling growth.
+  command, or bone-meal / `random_tick_speed` sapling growth.
 - **`level_fill_biome`** — paint the biome of a region (`/fillbiome`): foliage /
   water tint, mob spawns, climate. Biome is read-only otherwise. **Fallback:**
   `command_execute` with `/fillbiome`.

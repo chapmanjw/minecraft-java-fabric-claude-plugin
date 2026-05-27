@@ -6,6 +6,62 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-05-27
+
+Deeper findings from continuing the parks-grand-loop build, with the v0.7.0 gates
+already in place. Where 0.7.0 stopped a rogue orchestrator, 0.8.0 fixes how the
+pipeline **sculpts and verifies blended terrain** — and pins down four hard engine
+limits the build surfaced (chief among them a silent `block_replace_in_region`
+truncation that caused most of the build's "mystery" reworks).
+
+### Added
+
+- **Continuous-field terrain primitive (`terrain.Centerline` +
+  `HeightField.belt_from_path`).** Blended multi-region terrain is a *shape*
+  problem: authoring each region as its own heightfield and butting them together
+  makes a wall at every boundary, and dithering the seam blends colour, not shape.
+  `Centerline` (polyline / closed loop with an arc-length + signed-perpendicular
+  `(s, perp)` query) and `belt_from_path` (every cross-section parameter a
+  continuous function of `s`, with a `protect` mask to spare a working
+  rail/village) make the whole span one continuous field. New terraforming **hard
+  rule 4** and a `landforms.md` § require it whenever ≥2 named regions must blend.
+- **Eye-level verification for ride-through / walk-through builds.** Top-down /
+  hillshade renders hide the vertical faces a rider sees — the parks-loop "snow
+  re-skin" and "blending done" both passed a top-down look and were walls from the
+  cart. The `inspector` now renders iso + an eye-level slice and records a
+  `rider_pov` row; terraforming, the orchestrator honesty contract, and
+  `build-harness.md` state that top-down is for flat-pattern checks only.
+- **Generated-placement-script execution mode.** `build-harness.md` documents
+  driving a paced parametric placement script (`mcp_place.py`: 8192-entry paging +
+  ~60 rpm pacing + 429 backoff) as a first-class mode for forms too large to be one
+  structure template; `engine-limits.md` Throughput names the 429 backoff.
+
+### Changed
+
+- **Harness tiles `block_replace_in_region`.** It silently truncates at ~32,768
+  blocks/call (it is *not* auto-tiled server-side like `block_fill_region`) — the
+  root cause of most of the build's "the replace did nothing" reworks. `harness.py`
+  now tiles every `replace` under the cap (`_tile_box`); `engine-limits.md` and the
+  `worker` document that fills auto-tile but replace does not.
+- **Structural re-sculpt = base + detail-restoration phases.** Terraforming and the
+  orchestrator now treat a rebuild as separable layers — continuity in the base,
+  richness in detail: inventory existing detail before regenerating, drive
+  detailers from `(s, perp)`, and warn before a rebuild regresses a liked
+  dimension.
+- **Engineer: powered rails + stray entities.** A `redstone_block` underneath a
+  powered rail doesn't compute on this mod and `block_fill_batch` fires no
+  neighbour update, so set `powered=true` explicitly via `block_set_state`; and
+  clear stray minecarts/mobs (the #1 false "broken rail") before/after every ride
+  test. Documented in `verification.md` and `setblock-redstone-limits.md`.
+- **More verified engine limits (`engine-limits.md`).** `block_fill_columns` does
+  not clear above the new surface (clear to air first); `block_replace_in_region`
+  and `level_place_feature` no-op on unloaded chunks while `block_get_top_y`
+  returns −64 there; never `forceload remove all` (it unloads spawn chunk 0,0 and
+  killed a persistent always-day command block); and gamerule ids must be
+  **snake_case** on MC 26.x (camelCase is rejected — get the live id from
+  `level_list_game_rules`; a repeating command block remains the bulletproof
+  always-day path).
+
 ## [0.7.0] - 2026-05-25
 
 Verification-gate hardening from the parks-loop post-mortem — an unattended build

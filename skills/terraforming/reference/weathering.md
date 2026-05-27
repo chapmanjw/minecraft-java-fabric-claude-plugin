@@ -66,9 +66,9 @@ To plant trees:
 3. **Space them naturally** — clusters of 3–7 with irregular gaps, never a
    grid. The 7-block rule applies to tree lines too.
 4. **Grow them.** Two methods:
-   - **Tick speed (scriptable).** Temporarily raise `randomTickSpeed` with
-     `command_execute` (`/gamerule randomTickSpeed 300`), let the saplings grow,
-     then **restore it to the default** (`/gamerule randomTickSpeed 3`). Raised
+   - **Tick speed (scriptable).** Temporarily raise `random_tick_speed` with
+     `command_execute` (`/gamerule random_tick_speed 300`), let the saplings grow,
+     then **restore it to the default** (`/gamerule random_tick_speed 3`). Raised
      tick speed also speeds crops, fire spread, and leaf decay in loaded chunks
      — raise it briefly and restore it promptly.
    - **Bone meal.** Apply bone meal to each sapling via `player_give_item` /

@@ -130,6 +130,28 @@ def box_obj(a, b):
             "to": {"x": max(a[0], b[0]), "y": max(a[1], b[1]), "z": max(a[2], b[2])}}
 
 
+def _tile_box(a, b, max_blocks=32000):
+    """Yield ``(lo, hi)`` sub-boxes covering the box ``a``–``b``, each ≤
+    ``max_blocks`` blocks. ``block_replace_in_region`` silently truncates at
+    ~32,768 blocks per call (unlike ``block_fill_region``, which the mod now
+    auto-tiles server-side) — it edits the first ~32k and reports success for
+    the rest. Tile under that ceiling so a large replace fully lands. See
+    reference/engine-limits.md § Block placement."""
+    lo = [min(a[i], b[i]) for i in range(3)]
+    hi = [max(a[i], b[i]) for i in range(3)]
+    step = [hi[i] - lo[i] + 1 for i in range(3)]
+    while step[0] * step[1] * step[2] > max_blocks:
+        ax = step.index(max(step))
+        step[ax] = max(1, step[ax] // 2)
+    for x0 in range(lo[0], hi[0] + 1, step[0]):
+        for y0 in range(lo[1], hi[1] + 1, step[1]):
+            for z0 in range(lo[2], hi[2] + 1, step[2]):
+                yield ((x0, y0, z0),
+                       (min(x0 + step[0] - 1, hi[0]),
+                        min(y0 + step[1] - 1, hi[1]),
+                        min(z0 + step[2] - 1, hi[2])))
+
+
 def is_air(bid):
     return bid in AIR_IDS or bid.endswith(":air") or bid.endswith("_air")
 
@@ -270,12 +292,21 @@ def execute_step(client, dim, step):
         # `block` is the replacement; `note` carries the target block id to replace.
         if not note:
             return False, "replace op requires the target block id in 'note'", None, True
-        text, _ = client.call_text("block_replace_in_region",
-                                   {"dimension": dim, "box": box_obj(parse_coord(a), parse_coord(b)),
-                                    "target": norm_id(str(note).split()[0]),
-                                    "replacement": parse_block_spec(block)})
-        n = _changed_count(text)
-        return True, text, n, (n == 0)
+        target = norm_id(str(note).split()[0])
+        repl = parse_block_spec(block)
+        # block_replace_in_region truncates at ~32,768 blocks/call (it does NOT
+        # auto-tile like block_fill_region) — tile so a large replace fully lands.
+        total, last, tiles = 0, "", 0
+        for lo, hi in _tile_box(parse_coord(a), parse_coord(b)):
+            text, _ = client.call_text("block_replace_in_region",
+                                       {"dimension": dim, "box": box_obj(lo, hi),
+                                        "target": target, "replacement": repl})
+            n = _changed_count(text)
+            total += (n or 0)
+            last, tiles = text, tiles + 1
+        detail = last if tiles == 1 else (
+            f"{last} (replace tiled into {tiles} sub-boxes ≤32k; {total} replaced total)")
+        return True, detail, total, (total == 0)
     if op == "clone":
         ca, cb = parse_coord(a), parse_coord(b)
         dest = parse_coord(note)

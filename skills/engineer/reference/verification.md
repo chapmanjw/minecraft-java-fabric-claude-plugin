@@ -88,7 +88,7 @@ on a specific field.
 | Sorter | put a stack of the target item in the input | output and overflow chests | target item only in its row; others empty |
 | Mob farm | spawn the mob in the spawn box, or wait a cycle | collection chest | drops arrive within the expected rate |
 | Clock | apply the enable signal | a target coord, sampled repeatedly | oscillation period within ±1 tick of plan |
-| Minecart | place a test cart at the start | detector rails along the route | rails fire in order, ETAs within ~2 ticks |
+| Minecart | **clear stray entities** (`kill @e[type=minecart]` + stray mobs), then place a test cart at the start | detector rails along the route | rails fire in order, ETAs within ~2 ticks; no mid-route stall |
 | Elevator | place an entity at the base | a coord at the top | entity arrives within the budgeted time |
 | Music | trigger the sequencer | the note-block coords | each pulses in sequence |
 
@@ -106,7 +106,8 @@ corrected steps:
 | Filter hopper skips matching items | A non-matching item is in its collection range | Re-route the item stream so matching items arrive alone |
 | Timing path lands a tick early/late | Repeater delays not summed to the design budget | Re-check the deterministic timing budget; adjust repeater delays so paths align |
 | Mob farm: zero spawns | Spawn surface too bright, or outside the spawn shell | Re-check light level (block-light 0 for hostiles on modern Java) and the ~24–128-block shell at the world's simulation distance |
-| Powered rail does not propel the cart | The rail is not actually powered | Power it from an adjacent block/repeater facing it, and respect the ~1-per-30–38 spacing |
+| Powered rail does not propel the cart | On this mod a `redstone_block` underneath does **not** compute/hold the rail's power, and `block_fill_batch` fires no neighbor update — so the rail lands `powered=false` and acts as a **brake** | Set `powered=true` **explicitly** via `block_set_state` (default update_flags 3) on each powered rail; don't rely on an underneath redstone source or a batch fill. Respect the ~1-per-30–38 spacing |
+| Cart dead-stops partway along a working route | A **stray entity** is sitting on the rail — a stalled earlier test cart, or an ejected/spawned mob (a pig, etc.). The #1 false "broken rail" | `kill @e[type=minecart]` AND stray mobs (`@e[type=pig]`, …) along the route **before and after** every ride test, then re-test |
 | Door corner does not move | A stuck piston, or a missed power/timing connection | Free the piston / clear obstruction; verify the corner's power and timing against the design |
 | Iron-golem / villager farm rate low | A village-mechanics problem, not engineering | Hand the village half back to `village-planner` |
 

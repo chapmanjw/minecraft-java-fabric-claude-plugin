@@ -122,4 +122,31 @@ The harness does the deterministic, high-volume work. The model still owns:
 against current terrain?), **failure diagnosis and routing** when a check fails in
 a way the fixed routing table doesn't cover, and **perceptual judgement** — "does
 it *look* right" — which no assertion captures and which stays with
-`block_render_region` + user visual checkpoints.
+`block_render_region` + user visual checkpoints. For a **ride-through /
+walk-through** build that means an **iso + eye-level** render from the viewer's
+height — never a top-down plan view, which hides the vertical faces a viewer
+actually sees (the parks-loop "snow re-skin" and "blending done" both passed a
+top-down look and were walls from the cart). And a render judged by the same
+agent that placed the blocks is self-assessment, not verification — the gate is
+an independent `inspector` pass and a user visual checkpoint.
+
+## Generated placement scripts — a third execution mode
+
+The harness executes a `plan.toon` of discrete steps; the `worker` can also fall
+back to in-context ops. There is a **third mode** for a form too large or too
+parametric to be a single structure template or a tractable step list — a whole
+continuous heightfield, a voxelized monument, a ring-spanning belt: **drive a
+generated placement script.** Author the form as a parametric model (the
+`terrain` / `voxel` toolkits), render-verify it offline, then place it with the
+bundled paced placer:
+
+```sh
+python ${CLAUDE_PLUGIN_ROOT}/tools/voxel/mcp_place.py place /abs/scratch/field_fills.json
+```
+
+`mcp_place.py` pages `block_fill_batch` under the 8192-entry cap, paces under the
+~60 rpm limit, and backs off on HTTP 429. The authoring **script + model `.npy`
+are the reusable, registry-worthy artifact** — record their location in the
+registry exactly as for a structure template, since the form can be regenerated
+and re-placed from them. A hand-rolled placer must replicate the pacing + 429
+backoff (see `${CLAUDE_PLUGIN_ROOT}/reference/engine-limits.md` § Throughput).

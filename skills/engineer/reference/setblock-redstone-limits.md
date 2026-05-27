@@ -61,7 +61,12 @@ These work without intervention as long as the chunk is loaded and ticking.
   other receiver, activates normally — the neighbour update propagates power.
 - **Static power: `minecraft:redstone_block` adjacent to receiver.** A redstone
   block placed next to a piston/lamp/dispenser activates the receiver
-  immediately. Reliable.
+  immediately. Reliable. **Exception — powered rails:** a `redstone_block`
+  *underneath* a `powered_rail` does **not** compute/hold its power on this mod,
+  and a `block_fill_batch` placement fires no neighbour update — the rail lands
+  `powered=false` and acts as a **brake**. Set `powered=true` explicitly with
+  `block_set_state` (default update_flags 3) on each powered rail (see
+  `reference/verification.md` correction catalog).
 - **Button / pressure plate.** Players or mobs trigger these; pre-placed,
   unpressed, they work the moment something interacts.
 - **Lit redstone torch + adjacent dust.** A `minecraft:redstone_torch[lit=true]`

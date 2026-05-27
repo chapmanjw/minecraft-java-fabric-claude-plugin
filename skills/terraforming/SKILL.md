@@ -82,6 +82,25 @@ iterations. The target is one.
    real water all the way to the floor — never a void-over-rock dry shelf at
    the waterline.
 
+4. **Blended multi-region terrain is ONE continuous field — never independent
+   adjacent fields.** When ≥2 named regions must abut seamlessly (a ring of
+   biomes, a valley grading into mountains, four parks around a loop), authoring
+   each region as its own heightfield and butting them together produces a
+   **wall at every boundary and corner** — the same class of error as the
+   ziggurat, one level up. Colour-dithering the seam (blending the *palette*)
+   **cannot** fix a *shape* discontinuity. Instead author the whole span as a
+   **single continuous heightfield parameterised by `(s, perp)`** — `s` =
+   arc-length along a centerline/loop, `perp` = signed perpendicular distance —
+   where **every cross-section parameter (peak height, rise distance, base
+   level, roughness, palette family, snowline) is a continuous function of
+   `s`**, interpolated between region keypoints. With no segments, regions morph
+   gradually and corners blend by construction. Use the `terrain` toolkit's
+   **`Centerline` + `HeightField.belt_from_path`** primitive
+   (`${CLAUDE_PLUGIN_ROOT}/tools/terrain`); `belt_from_path` takes a `protect`
+   mask so a re-sculpt fixes the blend without rebuilding a working rail or
+   village. **Required** whenever named regions must blend — see
+   `reference/landforms.md` § The continuous-field (belt) method.
+
 ## Render-verify, then prototype — two visual checkpoints before scale-up
 
 **First, render the heightfield offline.** Before placing anything for a
@@ -106,6 +125,19 @@ call `block_render_region` with `view: hillshade` over the placed bounding box
 one — a seam, a flat-topped tile, or a chunk-unload gap shows up immediately.
 **Fall back** to `view: top`, or scan a `block_get_top_y` grid and re-render the
 heightfield offline, on older mods.
+
+**But hillshade and top are *plan* views** — good for massing, seams, and
+flat-tops, and **blind to the vertical faces a viewer sees.** For any
+**ride-through / walk-through** terrain (a rail loop, a path, a valley you walk),
+ALSO render **`view: iso` and an eye-level slice from the viewer's height**, and
+judge the faces, not just the footprint. The parks-loop "snow re-skin done" read
+white from the top while the slopes were a gray rock wall from the cart (snow
+capped only the horizontal tops); "blending done" read as a smooth colour
+gradient from the top while the shapes were hard walls at eye level. Top-down is
+sufficient only for genuinely flat-pattern work (mosaics, ring patterns, road
+networks). And a render judged by the agent that placed the blocks is
+self-assessment — a **user visual checkpoint**, or under autonomy an independent
+`inspector` **eye-level** pass, is the gate.
 
 This is mandatory, not optional. Quality and craftsmanship are the bar — a
 five-minute checkpoint that prevents a multi-hour demolition is always worth
@@ -137,7 +169,7 @@ read as "kindergarten":
    stamp the same tree twice — duplicated trees are an instant tell. Plant
    biome-appropriate saplings with proper spacing and light, then grow them
    with bone meal (`player_give_item` / `itemstack_drop_at` + use) or a
-   temporary `randomTickSpeed` boost via `command_execute`. See
+   temporary `random_tick_speed` boost via `command_execute`. See
    `reference/weathering.md`.
 
 ## The five-pass workflow
@@ -161,6 +193,28 @@ taller") by re-running one pass.
 
 For isolated features (a hill on a plain) **build up**; for valleys, canyons,
 and lake basins **carve down** from a raised landmass.
+
+## Continuity belongs in the base layer; richness belongs in detail layers
+
+These two are **separable**, and conflating them is what makes a rebuild
+regress. The continuous base field (hard rule 4) owns *shape and blend*; the
+bespoke per-region detail — strata, hoodoo clusters, snow couloirs, dense
+feature packing — owns *richness*. So:
+
+- **Don't throw detail away to fix blend.** When a blend problem forces a
+  re-sculpt, drive the existing per-region detailers **from the continuous
+  field's `(s, perp)` parameters** (so they stay seam-free) rather than
+  replacing them with a generic shell. A ground-up regenerate that fixes
+  blending but drops the accumulated craft is a regression the user *will*
+  notice ("lost a lot of the detail that was good" — parks-loop Finding C).
+- **A structural re-sculpt is base + mandatory detail-restoration passes**, not
+  base + point-features. Before regenerating, **inventory the detail that
+  already exists** (from the registry and prior scripts) and schedule its
+  re-application on top of the new base, parameterised by the same `s` so it
+  stays continuous. Re-placing point features (lakes, geysers, arches) is **not**
+  a substitute for the fine per-region surface detail and density.
+- **Warn before you regress.** If a rebuild will trade away a dimension the user
+  liked, say so *before* doing it and offer to layer the old detail back.
 
 ## Reference library
 
@@ -225,6 +279,8 @@ Match effort to size (full detail in `reference/command-budget.md`):
 | Anti-pattern | Fix |
 | ------------ | --- |
 | Stacked/nested rectangular fills (the "ziggurat") | Heightmap method (scratch-and-capture) or live sculpt — never stacked rectangles for organic terrain |
+| Independent per-region heightfields butted together (walls/seams at every boundary) | One continuous `(s, perp)` field — every cross-section parameter a function of arc-length; `Centerline` + `belt_from_path` |
+| Colour-dithering a seam to "blend" two regions | Blends palette, not shape — the walls remain; fix the field, not the colours |
 | Rectangular underwater foundation ("corestone") | Talus skirt + corner knolls + side mounds, or bury beneath naturalistic terrain |
 | Void-over-rock dry shelf at the waterline | Extend every coastal tile down to the seabed so water columns are continuous |
 | Single-block staircase slopes | 7-block rule + lateral jitter + occasional 2-block jumps |

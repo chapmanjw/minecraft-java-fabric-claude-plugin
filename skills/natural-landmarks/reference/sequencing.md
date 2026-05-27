@@ -57,7 +57,7 @@ as carved and orderly, not eroded.
 
 Pointed dripstone, vines, glow lichen, moss carpet, flowering azalea, and
 saplings go on **after** everything else. Suppress vegetation spread during
-construction (`command_execute` with `/gamerule mobGriefing false`, or remove
+construction (`command_execute` with `/gamerule mob_griefing false`, or remove
 ticking areas) so grass does not
 creep over bare-rock landmarks. Use `coarse_dirt` / `rooted_dirt` as the
 substrate next to rock to block grass spread.

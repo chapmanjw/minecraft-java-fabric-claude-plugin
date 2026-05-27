@@ -22,6 +22,65 @@ def smoothstep(edge0: float, edge1: float, x: np.ndarray) -> np.ndarray:
     return t * t * (3 - 2 * t)
 
 
+class Centerline:
+    """A polyline (or closed loop) through the field's ``(x, z)`` grid, with
+    arc-length parameterisation — the primitive for **blended multi-region
+    terrain** (see ``HeightField.belt_from_path``).
+
+    ``query`` returns, for every cell, the arc-position ``s`` of its nearest
+    point on the line and the *signed* perpendicular distance ``perp`` (one sign
+    per side of travel). Authoring terrain as a continuous function of
+    ``(s, perp)`` — every cross-section parameter a continuous function of
+    ``s`` — makes adjacent regions morph into one another instead of butting
+    together as walls (parks-grand-loop Finding A). Reusable for any corridor,
+    road, river, coast, or ring. Points are in the same grid-index space as
+    ``carve_river`` / ``carve_lake``.
+    """
+
+    def __init__(self, points: list, *, closed: bool = False) -> None:
+        pts = [np.asarray(p, dtype=float) for p in points]
+        if closed and len(pts) > 1 and not np.allclose(pts[0], pts[-1]):
+            pts = pts + [pts[0]]
+        if len(pts) < 2:
+            raise ValueError("Centerline needs at least 2 points")
+        self.pts = pts
+        self.closed = bool(closed)
+        seglen = np.array([float(np.hypot(*(b - a)))
+                           for a, b in zip(pts[:-1], pts[1:])])
+        self.seglen = np.maximum(seglen, 1e-9)
+        self.cumlen = np.concatenate([[0.0], np.cumsum(self.seglen)])
+        self.length = float(self.cumlen[-1])
+
+    def query(self, X, Z):
+        """Vectorised nearest-point query over coordinate arrays ``X``/``Z``
+        (any broadcastable shape). Returns ``(s, perp)`` of the same shape:
+        ``s`` is arc-length to the nearest point on the line, ``perp`` the
+        signed perpendicular offset from it."""
+        X = np.asarray(X, dtype=float)
+        Z = np.asarray(Z, dtype=float)
+        shape = np.broadcast(X, Z).shape
+        best_d2 = np.full(shape, np.inf)
+        best_s = np.zeros(shape)
+        best_perp = np.zeros(shape)
+        for i, (p0, p1) in enumerate(zip(self.pts[:-1], self.pts[1:])):
+            seg = p1 - p0
+            L2 = float(seg @ seg) or 1e-9
+            t = np.clip(((X - p0[0]) * seg[0] + (Z - p0[1]) * seg[1]) / L2,
+                        0.0, 1.0)
+            projx = p0[0] + t * seg[0]
+            projz = p0[1] + t * seg[1]
+            dx, dz = X - projx, Z - projz
+            d2 = dx * dx + dz * dz
+            sl = float(self.seglen[i])
+            cross = (seg[0] * dz - seg[1] * dx) / sl     # signed perpendicular
+            s = self.cumlen[i] + t * sl
+            take = d2 < best_d2
+            best_d2 = np.where(take, d2, best_d2)
+            best_s = np.where(take, s, best_s)
+            best_perp = np.where(take, cross, best_perp)
+        return best_s, best_perp
+
+
 class HeightField:
     def __init__(self, nx: int, nz: int, sea_level: float = 62.0,
                  base: float = 62.0) -> None:
@@ -113,6 +172,80 @@ class HeightField:
         d = np.hypot(dx, dz)
         w = 1.0 - smoothstep(0.0, shoulder, d)        # 1 on the pad, →0 past skirt
         self.h = self.h * (1 - w) + level * w
+        return self
+
+    def belt_from_path(self, centerline: "Centerline", keypoints: list, *,
+                       fall: float = 24.0, interior_level: Optional[float] = None,
+                       corridor_half: float = 0.0, roughness: float = 0.0,
+                       roughness_freq: float = 0.05, seed: int = 0,
+                       protect: Optional[np.ndarray] = None) -> "HeightField":
+        """Sculpt a continuous **belt** of terrain around ``centerline`` whose
+        cross-section parameters vary *continuously* along the line — the fix
+        for blended multi-region terrain (parks-grand-loop Finding A).
+
+        Authoring four independent per-region heightfields and butting them
+        together produces walls at every boundary and corner; colour-dithering
+        the seam cannot fix a *shape* discontinuity. Instead express the whole
+        ring as one field parameterised by ``(s, perp)``: ``s`` (arc-length
+        along ``centerline``) selects the cross-section, ``perp`` (signed
+        distance from it) positions the column within it. Because every
+        parameter is a continuous function of ``s``, adjacent regions morph
+        into one another and corners blend — there are no segments to abut.
+
+        ``keypoints`` — a list of ``(s_frac, params)`` where ``s_frac`` is the
+        fractional arc-position 0..1 and ``params`` a dict with:
+          - ``peak``  crest height *above* ``base`` (blocks),
+          - ``rise``  horizontal distance from the corridor out to the crest,
+          - ``base``  corridor floor level (world Y).
+        Each is linearly interpolated in ``s`` between keypoints (wrapping for a
+        closed ``centerline``), so e.g. ``peak`` eases from one region's value
+        to the next with no seam.
+
+        Cross-section (function of ``d = |perp|``): the corridor
+        (``d <= corridor_half``) stays flat at ``base`` — pass ``corridor_half``
+        to protect a rail/road centre; height then rises to ``base + peak`` at
+        the crest and falls back to ``interior_level`` (a uniform rolling
+        interior) over ``fall`` blocks. Rising *then* falling makes it a *belt*,
+        which also removes the medial-axis crease a filled-footprint rectangle
+        leaves down its spine.
+
+        ``protect`` — an optional boolean ``(nx, nz)`` mask of cells to leave
+        untouched (an existing viaduct, village, or rail footprint), so a
+        re-sculpt fixes the blend without rebuilding hard-won work.
+        """
+        X, Z = np.meshgrid(np.arange(self.nx), np.arange(self.nz), indexing="ij")
+        s, perp = centerline.query(X, Z)
+        sf = (s / centerline.length) if centerline.length else np.zeros_like(s)
+
+        def interp(name: str, default: float) -> np.ndarray:
+            keys = sorted(keypoints, key=lambda k: k[0])
+            xs = [float(k[0]) for k in keys]
+            ys = [float(k[1].get(name, default)) for k in keys]
+            if centerline.closed and xs:                 # wrap the domain past [0,1]
+                xs = [xs[-1] - 1.0] + xs + [xs[0] + 1.0]
+                ys = [ys[-1]] + ys + [ys[0]]
+            return np.interp(sf, xs, ys)
+
+        base = interp("base", self.sea_level)
+        peak = interp("peak", 0.0)
+        rise = np.maximum(interp("rise", 16.0), 1e-6)
+        interior = self.sea_level if interior_level is None else float(interior_level)
+
+        def _ss(t):                                      # smoothstep on a 0..1 array
+            t = np.clip(t, 0.0, 1.0)
+            return t * t * (3.0 - 2.0 * t)
+        flank = np.maximum(np.abs(perp) - corridor_half, 0.0)
+        crest = base + peak
+        up = _ss(flank / rise)                           # 0 at corridor, 1 at crest
+        h_up = base + (crest - base) * up
+        down = _ss((flank - rise) / max(fall, 1e-9))     # 0 at crest, 1 in interior
+        h = h_up * (1.0 - down) + interior * down
+
+        if roughness:
+            n = fbm(self.nx, self.nz, octaves=3, base_freq=roughness_freq, seed=seed)
+            h = h + roughness * (n - 0.5) * 2.0 * np.clip(up, 0.0, 1.0)
+
+        self.h = np.where(protect, self.h, h) if protect is not None else h
         return self
 
     # -- shaping ----------------------------------------------------------

@@ -196,7 +196,13 @@ them. You encounter them here, before you pick a path.
    reachable, or reads as its subject. A render judged by the same agent that
    placed the blocks is **self-assessment, not verification**. Perceptual proof
    comes from an independent `inspector` pass and from user visual checkpoints —
-   never from your own generous reading of a PNG.
+   never from your own generous reading of a PNG. For a **ride-through /
+   walk-through** build, that independent check must be at **eye-level / iso
+   from the viewer's height** — a **top-down** render hides the vertical faces a
+   rider sees (the parks-loop "snow re-skin" and "blending done" both passed a
+   top-down look and were walls from the cart). A user visual checkpoint is the
+   gate for visual-coherence builds; under autonomy, the independent eye-level
+   `inspector` pass is the minimum substitute.
 
 ## The seventeen skills
 
@@ -284,10 +290,20 @@ district uses all of it. The full sequence:
       — perceptual coherence (does it *look* right, via `block_render_region`),
       world fit, underwater faces for terrain — and to confirm any failures;
    3. on **CORRECTIONS NEEDED**, route to the specialist that owns the
-      failure (terraforming for silhouette/edge/foundation failures,
+      failure (terraforming for silhouette/edge/foundation/blend failures,
       planner-class for walkability/door/headroom failures), not the worker
-      — half-measures cost more than fixing root causes. Then re-run the
-      corrected steps through the harness and re-verify;
+      — half-measures cost more than fixing root causes. A "regions don't
+      blend / reads as a wall" failure is a **shape** problem (terraforming hard
+      rule 4 — one continuous `(s, perp)` field), not a palette one; do not
+      accept a colour-dither patch for it. A failure that warrants a
+      **structural re-sculpt** is **base + mandatory detail-restoration
+      phases**, not base + point-features: before regenerating, inventory the
+      detail that already exists (registry + prior scripts) and schedule its
+      re-application on the new base, and **warn the user before any rebuild
+      that will regress a dimension they liked** (e.g. trading bespoke detail
+      for a smoother blend) — offer to layer the old detail back (parks-loop
+      Finding C). Then re-run the corrected steps through the harness and
+      re-verify;
    4. on **FAIL**, stop and return to the planner-class skill to re-plan;
    5. only on **PASS** advance to the next phase.
    This verify-after-every-phase loop is your **self-correction mechanism** —

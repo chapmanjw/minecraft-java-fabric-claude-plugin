@@ -130,10 +130,15 @@ asks for in-context execution, fall back to the manual path below.
   practice, after every ~6–8 heavy ops (large fill, structure place, big
   clone), drop in one light `block_get_state` before continuing — avoid
   chasing a write burst with another write burst.
-- Execute each `fill` step exactly as sized in the plan. The planner has
-  already tiled large volumes to stay within Minecraft's ~32,768-block limit —
-  never merge adjacent `fill` steps into a bigger region, and never split one
-  into smaller calls.
+- Execute each `fill` and `replace` step exactly as sized in the plan. The
+  planner tiles large volumes; never merge adjacent steps into a bigger region,
+  and never split one into smaller calls. **`block_fill_region` auto-tiles past
+  32,768 server-side, but `block_replace_in_region` does NOT** — a `replace`
+  step whose box exceeds ~32,768 blocks silently truncates (edits the first
+  ~32k, reports success). If you see a `replace` step with a box larger than
+  that, **stop and report it** as a malformed step for re-planning rather than
+  running it. (On the harness path this is handled for you — the harness tiles
+  `replace` automatically.)
 - **Watch for `blocks_changed: 0`.** Block ops in unloaded chunks return
   success with zero blocks changed. If a fill that should change thousands
   reports zero, the chunk wasn't loaded — stop and tell the orchestrator to
