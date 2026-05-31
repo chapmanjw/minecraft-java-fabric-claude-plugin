@@ -24,9 +24,9 @@ one per skill, run in order:
 | Phase | Skill | What it does |
 | ----- | ----- | ------------ |
 | 1 | `setup-fabric` (this one) | Minecraft Java Edition with the Fabric loader. |
-| 2 | `install-mcp-mod` | The MCP mod jar + its matching Fabric API jar in `mods/`. |
-| 3 | `setup-mcp-server` | The mod's `config.json`, launched and verified on `/healthz`. |
-| 4 | `connect-claude` | Register the MCP server with Claude so the Java tools appear. |
+| 2 | `setup-mod` | The MCP mod jar + its matching Fabric API jar in `mods/`. |
+| 3 | `setup-server` | The mod's `config.json`, launched and verified on `/healthz`. |
+| 4 | `setup-connect` | Register the MCP server with Claude so the Java tools appear. |
 
 Tell the user this is Phase 1, and that each phase ends by handing off to the
 next. Budget ~10 minutes for a single-player setup, ~20–30 for a dedicated
@@ -142,4 +142,4 @@ Confirm with the user (the relevant set for their branch):
 
 Then hand off: tell the user Phase 1 is done and the next step installs the MCP
 mod and its Fabric API dependency. Offer to continue with the
-**`install-mcp-mod`** skill now.
+**`setup-mod`** skill now.

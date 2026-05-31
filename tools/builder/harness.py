@@ -17,7 +17,7 @@ CLI:
   python -m builder.harness run    <plan.toon> <phase>   # execute a phase (forceload-bracketed)
   python -m builder.harness verify <plan.toon> <phase>   # run that phase's checks
   python -m builder.harness build  <plan.toon> <phase>   # run, then verify  (the common case)
-  python -m builder.harness freshness <plan.toon> <phase>  # stale-plan pre-check only
+  python -m builder.harness freshness <plan.toon> <phase>  # stale-plan pre-check (terrain columns vs live top-Y)
 
 Exit code: 0 if everything the command attempted passed; 1 on any failure
 (execution error, force-load miss, or a failed check). Designed so the calling
@@ -185,6 +185,10 @@ class Plan:
         self.steps = data.get("steps") or []
         self.acceptance = data.get("acceptance") or []
         self.quality_contract = data.get("quality_contract") or {}
+        # Top-level recipe reference (emit writes "<prefix>.recipe.json" and names
+        # it here) + a phase-level verify_token, both consumed by the terrain lint.
+        self.recipe = meta.get("recipe") or data.get("recipe")
+        self.verify_token = meta.get("verify_token") or data.get("verify_token")
         self.envelopes = {}
         for row in (data.get("envelopes") or []):
             try:
@@ -268,13 +272,237 @@ def _changed_count(text):
     return int(m.group(1)) if m else None
 
 
-def execute_step(client, dim, step):
-    """Map one plan step to its MCP tool call. Returns (ok, detail, changed, warn)."""
+# Terrain ops whose payload is a sidecar JSON file relative to the plan dir.
+TERRAIN_OPS = ("columns", "strata", "fillbiome", "scatter", "erode")
+SCATTER_BATCH = 4096       # level_place_features_batch per-call entry cap
+
+
+def _load_payload(step, base_dir):
+    """Load a terrain step's sidecar ``payload`` JSON, resolved against the plan dir."""
+    payload = step.get("payload")
+    if not payload:
+        raise ValueError(f"{step.get('op')} step requires a 'payload' file")
+    path = payload if os.path.isabs(payload) else os.path.join(base_dir or "", payload)
+    with open(path, encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def _coerce_int(v):
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        try:
+            return int(round(float(v)))
+        except (TypeError, ValueError):
+            return None
+
+
+_BLOCKS_SET_RE = re.compile(r"blocks?_set\s*[:=]\s*(-?\d+)", re.I)
+
+
+def _columns_count(result):
+    """blocks_set from a block_fill_columns(_strata) reply ('columns: N\\nblocks_set: M').
+
+    ``call_toon`` normally TOON-parses the text into a dict; fall back to a
+    targeted ``blocks_set`` regex on a raw text reply so we never mistake the
+    leading ``columns:`` integer for the block count."""
+    if isinstance(result, dict):
+        for key in ("blocks_set", "blocksSet", "blocks_changed", "blocksChanged"):
+            if key in result:
+                return _coerce_int(result[key])
+        return None
+    m = _BLOCKS_SET_RE.search(result or "")
+    return int(m.group(1)) if m else _changed_count(result)
+
+
+def _exec_columns(client, dim, step, base_dir, tool):
+    """columns -> block_fill_columns; strata -> block_fill_columns_strata.
+
+    The payload is ONE plan dict (already <=65,536 columns; emit pre-tiles).
+    Asserts blocks_set > 0 (0 is a force-load miss or an empty tile)."""
+    plan = _load_payload(step, base_dir)
+    args = dict(plan)
+    args["dimension"] = args.get("dimension") or dim
+    if tool == "block_fill_columns":
+        args.pop("strata", None)              # single-stone tool ignores strata bands
+        args.pop("base_stone", None)
+        args.pop("jitter_amplitude", None)
+        args.pop("jitter_freq", None)
+    else:
+        if not args.get("strata"):
+            return False, "strata step payload carries no strata[] bands", None, True
+        args.setdefault("base_stone", args.get("stone") or "minecraft:stone")
+    result = client.call_toon(tool, args)
+    n = _columns_count(result)
+    detail = f"{tool}: {result if isinstance(result, str) else json.dumps(result)}"
+    warn = (n == 0 or n is None)
+    return True, detail, n, warn
+
+
+def _exec_fillbiome(client, dim, step, base_dir):
+    """fillbiome -> a JSON list of level_fill_biome arg dicts (climate.to_biome_fill_plan).
+
+    Each rect may carry from/to as {x,y,z} dicts or as [x,y,z] lists. Asserts at
+    least one rect was painted; a fillbiome that touches 0 rectangles is a miss."""
+    rects = _load_payload(step, base_dir)
+    if not isinstance(rects, list):
+        return False, "fillbiome payload must be a JSON list of rectangles", None, True
+    painted, last = 0, ""
+    for rect in rects:
+        frm, to = rect.get("from"), rect.get("to")
+        args = {"dimension": rect.get("dimension") or dim,
+                "from": _corner(frm), "to": _corner(to),
+                "biome": rect.get("biome")}
+        if rect.get("replace_filter"):
+            args["replace_filter"] = rect["replace_filter"]
+        text, is_err = client.call_text("level_fill_biome", args)
+        last = text
+        if not is_err:
+            painted += 1
+    warn = (painted == 0)
+    return True, f"level_fill_biome x{painted}/{len(rects)} (last: {last})", painted, warn
+
+
+def _corner(c):
+    """Coerce a from/to corner ({x,y,z} or [x,y,z]) into the tool's {x,y,z} shape."""
+    if isinstance(c, dict):
+        return {"x": c.get("x"), "y": c.get("y"), "z": c.get("z")}
+    if isinstance(c, (list, tuple)) and len(c) == 3:
+        return {"x": c[0], "y": c[1], "z": c[2]}
+    raise ValueError(f"bad biome corner {c!r}")
+
+
+def _scatter_feature(p):
+    """One placement -> {feature, x, y, z}. Accepts a dict or a (x,y,z,kind,id) tuple."""
+    if isinstance(p, dict):
+        return {"feature": p.get("feature") or p.get("id"),
+                "x": _coerce_int(p.get("x")), "y": _coerce_int(p.get("y")),
+                "z": _coerce_int(p.get("z"))}
+    if isinstance(p, (list, tuple)) and len(p) >= 5:
+        # scatter.py tuple order: (x, y, z, kind, id)
+        return {"feature": p[4], "x": _coerce_int(p[0]),
+                "y": _coerce_int(p[1]), "z": _coerce_int(p[2])}
+    raise ValueError(f"bad scatter placement {p!r}")
+
+
+def _exec_scatter(client, dim, step, base_dir):
+    """scatter -> JSON list of placements; batched into level_place_features_batch
+    calls of <=4096 entries. Asserts at least one feature placed."""
+    placements = _load_payload(step, base_dir)
+    if not isinstance(placements, list):
+        return False, "scatter payload must be a JSON list of placements", None, True
+    feats = [_scatter_feature(p) for p in placements]
+    placed, batches, last = 0, 0, ""
+    for i in range(0, len(feats), SCATTER_BATCH):
+        chunk = feats[i:i + SCATTER_BATCH]
+        result = client.call_toon("level_place_features_batch",
+                                  {"dimension": dim, "features": chunk,
+                                   "stop_on_error": False})
+        batches += 1
+        if isinstance(result, dict):
+            n = None
+            for key in ("placed", "features_placed", "featuresPlaced", "count", "succeeded"):
+                if key in result:
+                    n = _coerce_int(result[key])
+                    break
+            placed += (n if n is not None else len(chunk))
+            last = json.dumps(result)
+        else:
+            placed += len(chunk)            # text reply: assume the batch landed
+            last = result
+    warn = (placed == 0 or not feats)
+    return True, f"level_place_features_batch: {placed} feature(s) in {batches} batch(es) (last: {last})", placed, warn
+
+
+def _exec_erode(client, dim, step, base_dir):
+    """erode -> {tool: block_erode_region|block_erode_hydraulic, args:{...}}.
+
+    block_erode_region is synchronous (read blocks_changed). block_erode_hydraulic
+    is async: start, poll status until DONE/FAILED, then read the result. Asserts
+    blocks_changed > 0 (unless the args request a dry_run)."""
+    spec = _load_payload(step, base_dir)
+    tool = (spec.get("tool") or "").strip()
+    args = dict(spec.get("args") or {})
+    args.setdefault("dimension", dim)
+    dry = bool(args.get("dry_run"))
+
+    if tool == "block_erode_region":
+        result = client.call_toon("block_erode_region", args)
+        n = _erode_changed(result)
+        warn = (not dry) and (n == 0 or n is None)
+        return True, f"block_erode_region: {_short(result)}", n, warn
+
+    if tool in ("block_erode_hydraulic", "block_erode_hydraulic_start"):
+        start = client.call_toon("block_erode_hydraulic_start", args)
+        job_id = start.get("job_id") if isinstance(start, dict) else None
+        if not job_id:
+            return False, f"block_erode_hydraulic_start returned no job_id: {_short(start)}", None, True
+        state = _poll_hydraulic(client, job_id)
+        if state == "FAILED":
+            return False, f"hydraulic erosion job {job_id} FAILED", None, True
+        if state == "TIMEOUT":
+            return False, (f"hydraulic erosion job {job_id} did not reach DONE within "
+                           f"{_HYDRAULIC_POLL_MAX} polls — job still running or stalled; "
+                           "re-poll block_erode_hydraulic_status before reading the result"), None, True
+        result = client.call_toon("block_erode_hydraulic_result", {"job_id": job_id})
+        n = _erode_changed(result)
+        warn = (not dry) and (n == 0 or n is None)
+        return True, f"block_erode_hydraulic[{job_id}] {state}: {_short(result)}", n, warn
+
+    return False, f"erode step: unknown tool {tool!r}", None, True
+
+
+_HYDRAULIC_TERMINAL = {"DONE", "FAILED", "COMPLETE"}
+_HYDRAULIC_POLL_MAX = 600           # ~ up to 5 min at the 0.5s floor below
+
+
+def _poll_hydraulic(client, job_id):
+    """Poll block_erode_hydraulic_status until a terminal state. Returns the state."""
+    import time
+    for _ in range(_HYDRAULIC_POLL_MAX):
+        status = client.call_toon("block_erode_hydraulic_status", {"job_id": job_id})
+        state = str(status.get("state", "")).upper() if isinstance(status, dict) else ""
+        if state in _HYDRAULIC_TERMINAL:
+            return "DONE" if state == "COMPLETE" else state
+        time.sleep(0.5)
+    return "TIMEOUT"
+
+
+def _erode_changed(result):
+    if isinstance(result, dict):
+        for key in ("blocks_changed", "blocksChanged", "moved"):
+            if key in result:
+                return _coerce_int(result[key])
+        return None
+    return _changed_count(result)
+
+
+def _short(v):
+    s = v if isinstance(v, str) else json.dumps(v)
+    return s if len(s) <= 240 else s[:237] + "..."
+
+
+def execute_step(client, dim, step, base_dir=None):
+    """Map one plan step to its MCP tool call. Returns (ok, detail, changed, warn).
+
+    ``base_dir`` resolves a terrain op's ``payload`` sidecar JSON (the plan dir)."""
     op = (step.get("op") or "").strip()
     a = step.get("a")
     b = step.get("b")
     block = step.get("block")
     note = step.get("note")
+
+    # --- terrain ops: bulk landform placement via the column/biome/scatter tools.
+    if op == "columns":
+        return _exec_columns(client, dim, step, base_dir, "block_fill_columns")
+    if op == "strata":
+        return _exec_columns(client, dim, step, base_dir, "block_fill_columns_strata")
+    if op == "fillbiome":
+        return _exec_fillbiome(client, dim, step, base_dir)
+    if op == "scatter":
+        return _exec_scatter(client, dim, step, base_dir)
+    if op == "erode":
+        return _exec_erode(client, dim, step, base_dir)
 
     if op == "fill":
         text, _ = client.call_text("block_fill_region",
@@ -365,6 +593,7 @@ def run_phase(client, plan, phase, forceload=True):
     env, bands = phase_envelope_bands(plan, phase)
     digest["bands"] = bands
     digest["envelope"] = env
+    base_dir = os.path.dirname(plan.path) if plan.path else None
 
     if forceload:
         _forceload(client, bands, "add")
@@ -372,7 +601,7 @@ def run_phase(client, plan, phase, forceload=True):
         for s in steps:
             seq = s.get("seq")
             try:
-                ok, detail, changed, warn = execute_step(client, plan.dimension, s)
+                ok, detail, changed, warn = execute_step(client, plan.dimension, s, base_dir=base_dir)
             except (McpError, ValueError) as e:
                 digest["failures"].append({"seq": seq, "op": s.get("op"), "error": str(e)})
                 return digest  # stop on first hard failure, like the worker
@@ -566,7 +795,7 @@ def check_silhouette(client, dim, rows):
         var = (max(ys) - min(ys)) if ys else 0
         ok = var >= min_var
         results.append(("silhouette", "PASS" if ok else "FAIL",
-                        f"y_variance={var} (min {min_var})" + ("" if ok else " -> too flat; regenerate noise (terraforming)")))
+                        f"y_variance={var} (min {min_var})" + ("" if ok else " -> too flat; regenerate noise (terrain-shape)")))
     return results
 
 
@@ -588,7 +817,7 @@ def check_edge_irregularity(client, dim, rows):
         ok = worst <= max_run
         results.append(("edge_irregularity", "PASS" if ok else "FAIL",
                         f"{r.get('edge_name','edge')} longest_run={worst} (max {max_run})"
-                        + ("" if ok else " -> add lateral jitter (terraforming)")))
+                        + ("" if ok else " -> add lateral jitter (terrain-shape)")))
     return results
 
 
@@ -648,7 +877,7 @@ def check_foundation_naturalised(client, dim, rows):
         ok = worst_n is not None and worst_n >= min_unique
         results.append(("foundation_naturalised", "PASS" if ok else "FAIL",
                         f"{r.get('name','foundation')}: {worst_n} unique at y={worst_y} (min {min_unique})"
-                        + ("" if ok else " -> sheer face; apply talus-skirt (terraforming)")))
+                        + ("" if ok else " -> sheer face; apply talus-skirt (terrain-shape)")))
     return results
 
 
@@ -680,6 +909,44 @@ def check_water_continuity(client, dim, rows):
         results.append(("water_continuity", "PASS" if bad is None else "FAIL",
                         f"{r.get('coast_name','coast')}: continuous" if bad is None
                         else f"{r.get('coast_name','coast')}: dry void below water at {bad} -> extend terrain to seabed"))
+    return results
+
+
+def check_seam(client, dim, rows):
+    """Build<->world boundary must meet as a graded apron, not a hard wall.
+
+    A seam row ``{a, b, max_step}`` names the boundary line (``a``/``b`` are
+    ``x z`` or ``x y z`` endpoints). Sample ``block_get_top_y`` at every 1-block
+    step along the line and FAIL if any adjacent pair differs by more than
+    ``max_step`` blocks — a sheer wall where build meets terrain (failure mode
+    #2). This is the in-world twin of the offline ``verify.verify_seam`` check."""
+    results = []
+    for r in rows:
+        try:
+            a_xz, b_xz = _xz(r["a"]), _xz(r["b"])
+        except (KeyError, ValueError):
+            results.append(("seam", "FAIL", f"bad seam row {r}: needs 'a' and 'b' as 'x z'"))
+            continue
+        max_step = float(r.get("max_step", 12))
+        cells = _line_cells((a_xz[0], 0, a_xz[1]), (b_xz[0], 0, b_xz[1]))
+        ys, worst, worst_at = [], 0.0, None
+        for (x, _y, z) in cells:
+            ys.append(_top_solid_y(client, dim, x, z))
+        prev = None
+        for i, y in enumerate(ys):
+            if y is None:
+                continue
+            if prev is not None:
+                step = abs(y - prev)
+                if step > worst:
+                    worst, worst_at = step, cells[i][:1] + cells[i][2:]
+            prev = y
+        ok = worst <= max_step
+        name = r.get("name", "seam")
+        results.append(("seam", "PASS" if ok else "FAIL",
+                        f"{name}: max adjacent step={worst:.0f} (max {max_step})"
+                        + ("" if ok else f" at {worst_at} -> hard wall; grade an apron "
+                           "(terrain-integrate) — terrain-shape hard-rule 1")))
     return results
 
 
@@ -748,13 +1015,16 @@ CHECK_FUNCS = {
     "connectivity": check_connectivity,
     "foundation_naturalised": check_foundation_naturalised,
     "water_continuity": check_water_continuity,
+    "seam": check_seam,
     "block_entity_nbt": check_block_entity_nbt,
     "event_trigger": check_event_trigger,
 }
 
 # Failing these means the terrain/layout generation is wrong → re-plan (FAIL).
 # Anything else failing is correctable with a few steps → CORRECTIONS NEEDED.
-FUNDAMENTAL_CHECKS = {"silhouette", "connectivity", "foundation_naturalised", "water_continuity"}
+# `seam` is fundamental: a hard build<->world wall is a re-shape, not a patch.
+FUNDAMENTAL_CHECKS = {"silhouette", "connectivity", "foundation_naturalised",
+                      "water_continuity", "seam"}
 
 
 def verify_token(plan, rep):
@@ -871,10 +1141,70 @@ def _phase_terrain_blob(plan, phase):
     return " ".join(bits).lower()
 
 
+def phase_has_terrain_op(plan, phase):
+    """True if any step in the phase is a terrain op (columns/strata/fillbiome/
+    scatter/erode). These ops only exist to place generated landform, so their
+    presence makes the phase a terrain phase regardless of its note text."""
+    return any((s.get("op") or "").strip() in TERRAIN_OPS for s in plan.phase_steps(phase))
+
+
 def classify_terrain(plan, phase):
-    """True if this phase looks like organic terrain (the ziggurat-risk class)."""
+    """True if this phase is organic terrain — either it carries a terrain op
+    (the harness-executed path) or its note/identity text reads as terrain (the
+    ziggurat-risk class)."""
+    if phase_has_terrain_op(plan, phase):
+        return True
     blob = _phase_terrain_blob(plan, phase)
     return any(kw in blob for kw in TERRAIN_KEYWORDS)
+
+
+def _phase_steps_ops(plan, phase):
+    return [(s.get("op") or "").strip() for s in plan.phase_steps(phase)]
+
+
+def recipe_on_disk(plan):
+    """Resolve the plan's top-level ``recipe`` field to an existing file (relative
+    to the plan dir). Returns the absolute path if it exists, else None."""
+    ref = plan.recipe
+    if not ref or not isinstance(ref, str):
+        return None
+    base = os.path.dirname(plan.path) if plan.path else ""
+    path = ref if os.path.isabs(ref) else os.path.join(base, ref)
+    return path if os.path.isfile(path) else None
+
+
+def phase_verify_token(plan, phase):
+    """The verify token gating this terrain phase: a phase-level token on a step,
+    or the plan-level token. Returns the token string, or None."""
+    for s in plan.phase_steps(phase):
+        tok = s.get("verify_token")
+        if tok and str(tok).strip():
+            return str(tok).strip()
+    if plan.verify_token and str(plan.verify_token).strip():
+        return str(plan.verify_token).strip()
+    return None
+
+
+def classify_footprint(plan, phase):
+    """True if this phase lands a structure/foundation onto the world — it has a
+    place-structure step, OR a ``foundation_naturalised`` qc row, OR an ``erode``
+    op carrying a ``protect_box`` (terrain naturalising into a built mass). A
+    footprint phase must prove its build<->world boundary is graded (a seam row)."""
+    if "place-structure" in _phase_steps_ops(plan, phase):
+        return True
+    if (plan.quality_contract or {}).get("foundation_naturalised"):
+        return True
+    base = os.path.dirname(plan.path) if plan.path else None
+    for s in plan.phase_steps(phase):
+        if (s.get("op") or "").strip() != "erode":
+            continue
+        try:
+            spec = _load_payload(s, base)
+        except (OSError, ValueError):
+            continue
+        if isinstance(spec, dict) and (spec.get("args") or {}).get("protect_box"):
+            return True
+    return False
 
 
 def _fill_slabs(plan, phase):
@@ -918,25 +1248,64 @@ def detect_ziggurat(slabs):
     return shared >= 2
 
 
+NONNEG_REF = "${CLAUDE_PLUGIN_ROOT}/reference/terrain/non-negotiables.md"
+
+
 def lint_phase(plan, phase):
-    """Return (is_terrain, [issue strings]) for the pre-execution gate."""
+    """Return (is_terrain, [issue strings]) for the pre-execution gate.
+
+    A **terrain phase** (any step is a terrain op, or the notes read as terrain)
+    must (a) reference an on-disk recipe.json, (b) carry a verify_token, and (c)
+    carry at least one terrain quality_contract row. A **footprint phase** (lands
+    a structure/foundation) must additionally carry a ``seam`` row. The ziggurat
+    construction is refused outright. The harness is the SINGLE terrain path —
+    ungated terrain never executes."""
     issues = []
     is_terrain = classify_terrain(plan, phase)
     if not is_terrain:
         return is_terrain, issues
     qc = plan.quality_contract or {}
+
+    # (a) the recipe.json the field was generated from must exist on disk — terrain
+    # placed without a re-derivable recipe is unverifiable and unrepeatable.
+    if not recipe_on_disk(plan):
+        ref = plan.recipe
+        issues.append(
+            "terrain phase has no on-disk recipe.json: the plan's top-level "
+            f"'recipe' field is {ref!r} and no such file exists relative to the "
+            "plan. emit.emit_plan_toon writes '<prefix>.recipe.json' and names it "
+            f"here. No recipe -> no gate. See {NONNEG_REF}.")
+
+    # (b) a verify_token proves the offline verify gate actually ran and passed.
+    if not phase_verify_token(plan, phase):
+        issues.append(
+            "terrain phase carries NO verify_token (phase-level on a step, or "
+            "plan-level). emit stamps verify.offline_token(report) only when the "
+            f"offline verify PASSed. A token-less terrain phase never cleared the "
+            f"gate — refused. See {NONNEG_REF}.")
+
+    # (c) at least one machine-checkable terrain quality_contract row.
     if not any(qc.get(r) for r in TERRAIN_QC_ROWS):
         issues.append(
             "terrain phase carries NO quality_contract terrain rows "
-            f"({', '.join(TERRAIN_QC_ROWS)}). A terraforming-class phase without "
-            "a quality_contract is a refusal — see "
-            "terraforming/reference/non-negotiable-enforcement.md.")
+            f"({', '.join(TERRAIN_QC_ROWS)}). A terrain-class phase without a "
+            f"quality_contract is a refusal — see {NONNEG_REF}.")
+
+    # footprint phase: the build<->world boundary must be proven graded.
+    if classify_footprint(plan, phase) and not qc.get("seam"):
+        issues.append(
+            "footprint phase (it lands a structure/foundation) carries NO 'seam' "
+            "quality_contract row. The build<->world boundary must be sampled for "
+            "a hard wall (block_get_top_y along the seam line); add a seam row "
+            f"{{a,b,max_step}} proving a graded apron. See {NONNEG_REF}.")
+
     if detect_ziggurat(_fill_slabs(plan, phase)):
         issues.append(
             "ziggurat anti-pattern: this phase is stacked Y-banded rectangular "
             "slab-fills across >=3 elevations that share edges or nest. That is "
             "the banned terrain construction (terraces + flat tops by definition). "
-            "Use the heightmap method or live sculpt — terraforming hard-rule 1.")
+            "Use the heightmap recipe (block_fill_columns) or live sculpt — "
+            "terrain-shape hard-rule 1.")
     return is_terrain, issues
 
 
@@ -944,9 +1313,10 @@ def print_lint(phase, issues):
     print(f"LINT phase {phase}: REFUSED ({len(issues)} issue(s))")
     for i in issues:
         print(f"  XX {i}")
-    print("  This phase looks like organic terrain. Route it to terraforming / "
-          "natural-landmarks, or pass --force only if you are certain this is "
-          "NOT organic terrain (e.g. a deliberately rectilinear plaza).")
+    print("  This phase looks like organic terrain. Route it through the "
+          "terrain-shape / terrain-landmark path (recipe -> offline verify -> "
+          "emit -> harness), or pass --force only if you are certain this is NOT "
+          "organic terrain (e.g. a deliberately rectilinear plaza).")
 
 
 # ===========================================================================
@@ -1045,7 +1415,7 @@ def cmd_perceivable(client, spawn=None, threshold=RENDER_DISTANCE_BLOCKS):
     unreachable = bool(far) and not has_transit
     if critical:
         print(f"  XX CRITICAL: nearest element is "
-              f"{'∞' if nearest is None else f'{nearest:.0f}'} blocks from spawn "
+              f"{'inf' if nearest is None else f'{nearest:.0f}'} blocks from spawn "
               f"(> {threshold}). A player at spawn sees an empty world. Move a "
               f"build near spawn, or build connecting transit, before reporting done.")
     elif unreachable:
@@ -1120,7 +1490,7 @@ def print_report(rep):
         print(f"  {marks.get(status, '?? ')}{kind}: {msg}")
     if rep.get("token"):
         print(f"  VERIFY-TOKEN: {rep['token']}")
-        print(f"    → record this in the registry build row's verify_token cell; "
+        print(f"    -> record this in the registry build row's verify_token cell; "
               f"status:built is only legitimate with it.")
     elif rep.get("note"):
         print(f"  (no token) {rep['note']}")
@@ -1198,23 +1568,130 @@ def main(argv=None):
     return 0
 
 
-def _freshness(client, plan, phase, sample=3):
-    """Sample the first few fill/set steps; HALT if the world doesn't match plan 'b'."""
-    checked = 0
+FRESHNESS_DRIFT_TOLERANCE = 24      # blocks; live top-Y this far from planned = drift
+
+
+def _freshness(client, plan, phase, sample=4):
+    """Stale-plan pre-check.
+
+    A terrain ``columns``/``strata`` step's payload carries the planned surface Y
+    per column, so we *can* check freshness: sample a few columns, compare the
+    planned height against the live ``block_get_top_y``, and WARN if the world has
+    drifted far from what the plan assumes (someone re-shaped the area, or the
+    coordinates are stale). For any other op the schema carries no before-state —
+    we cannot determine freshness, so we say so plainly (proceed with
+    forceload + selftest) rather than silently reporting OK.
+
+    Exit 0 = no drift detected OR cannot-determine (an honest non-blocking note);
+    exit 1 = a terrain column drifted past the tolerance (a likely stale plan).
+    """
+    base_dir = os.path.dirname(plan.path) if plan.path else None
+    env = plan.envelopes.get(_as_int(phase)) or derive_envelope(plan, phase)
+    planned = []          # (x, z, planned_y)
+    terrain_steps = 0
     for s in plan.phase_steps(phase):
-        if checked >= sample:
+        if (s.get("op") or "").strip() not in ("columns", "strata"):
+            continue
+        terrain_steps += 1
+        try:
+            payload = _load_payload(s, base_dir)
+        except (OSError, ValueError) as e:
+            print(f"FRESHNESS phase {phase}: cannot read a {s.get('op')} payload "
+                  f"({e}); cannot determine drift — proceed with forceload + selftest.")
+            return 0
+        planned += _column_height_samples(payload, want=sample)
+        if len(planned) >= sample:
             break
-        if s.get("op") not in ("fill", "set"):
+
+    # Resolve the live surface at each sampled column. Force-load the bands first
+    # so a read isn't a void (−64) force-load miss masquerading as drift.
+    samples = []          # (x, z, planned_y, live_y)
+    bands = chunk_bands(*env) if env else []
+    if planned:
+        _forceload(client, bands, "add")
+        try:
+            for (x, z, py) in planned[:sample]:
+                samples.append((x, z, py, _top_solid_y(client, plan.dimension, x, z)))
+        finally:
+            _forceload(client, bands, "remove")
+
+    if not samples:
+        if terrain_steps:
+            print(f"FRESHNESS phase {phase}: {terrain_steps} terrain column step(s) "
+                  "but no sampleable columns (empty/degenerate payload); cannot "
+                  "determine drift — proceed with forceload + selftest.")
+        else:
+            print(f"FRESHNESS phase {phase}: no terrain column steps and the "
+                  "fill/set/clone schema carries no before-state, so freshness "
+                  "CANNOT be determined here — proceed with forceload + selftest "
+                  "(harness.py selftest), which proves writes land before you build.")
+        if env:
+            print(f"  envelope(x,z): {env}")
+        return 0
+
+    drifted, lines = [], []
+    for (x, z, planned, live) in samples[:sample]:
+        if live is None:
+            lines.append(f"  ?? ({x},{z}): planned surface y={planned}, live top-Y "
+                         "unreadable (-64/void = force-load miss, not drift)")
             continue
-        b = s.get("b")
-        if not b or s.get("op") == "set":
-            continue
-        # For fill, b is the second corner, not a before-state, in this schema; skip.
-        checked += 1
-    print(f"FRESHNESS phase {phase}: sampled {checked} step(s); "
-          f"no stale-coordinate mismatch detected (schema carries no before-state).")
+        delta = abs(live - planned)
+        mark = "ok " if delta <= FRESHNESS_DRIFT_TOLERANCE else "XX "
+        lines.append(f"  {mark}({x},{z}): planned y={planned} live={live} (d={delta})")
+        if delta > FRESHNESS_DRIFT_TOLERANCE:
+            drifted.append((x, z, planned, live, delta))
+
+    verdict = "DRIFTED" if drifted else "fresh"
+    print(f"FRESHNESS phase {phase}: {verdict} — sampled {len(lines)} terrain "
+          f"column(s) vs live top-Y (tolerance {FRESHNESS_DRIFT_TOLERANCE} blocks)")
+    for ln in lines:
+        print(ln)
+    if drifted:
+        print(f"  XX {len(drifted)} column(s) drifted past tolerance — the plan's "
+              "coordinates look STALE against the current world (re-shaped or "
+              "moved). Re-survey and re-emit before executing; do not overwrite "
+              "live terrain blind.")
+        return 1
+    print("  ok the live surface still matches the plan's assumed heights.")
     return 0
 
 
+def _column_height_samples(payload, want=4):
+    """Pick up to ``want`` ``(x, z, planned_y)`` triples spread across a columns
+    plan payload (row-major index = xi*length + zi). The caller resolves the live
+    surface at each (x, z) to compare against ``planned_y``."""
+    if not isinstance(payload, dict):
+        return []
+    try:
+        ox = int(payload["origin"]["x"])
+        oz = int(payload["origin"]["z"])
+        w = int(payload["width"])
+        ln = int(payload["length"])
+        heights = payload["height"]
+    except (KeyError, TypeError, ValueError):
+        return []
+    n = w * ln
+    if n <= 0 or not isinstance(heights, list) or len(heights) < n:
+        return []
+    # Spread the picks across the grid (row-major index = xi*length + zi).
+    picks = []
+    for k in range(want):
+        idx = (k * (n - 1) // max(1, want - 1)) if want > 1 else 0
+        xi, zi = divmod(idx, ln)
+        x, z = ox + xi, oz + zi
+        planned = _coerce_int(heights[idx])
+        picks.append((x, z, planned))
+    return picks
+
+
 if __name__ == "__main__":
+    # The Windows console defaults to cp1252; any non-ASCII in a printed digest
+    # (e.g. a distance ∞ or a Δ) would otherwise raise UnicodeEncodeError AFTER
+    # the verdict+token are printed, turning a PASS into exit 1 and breaking the
+    # exit-code contract callers branch on. Force UTF-8 so output never crashes.
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     sys.exit(main())

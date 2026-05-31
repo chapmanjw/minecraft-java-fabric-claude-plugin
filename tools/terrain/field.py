@@ -248,6 +248,34 @@ class HeightField:
         self.h = np.where(protect, self.h, h) if protect is not None else h
         return self
 
+    # -- graph authoring (Pillar 1) ---------------------------------------
+    @classmethod
+    def from_graph(cls, spec, nx: int, nz: int, *, sea_level: float = 62.0,
+                   seed: int = 0, centerline: "Centerline" = None) -> "HeightField":
+        """Build a heightfield by evaluating a sampler-graph recipe over the
+        grid. ``spec`` is a dict/JSON node tree (see ``terrain.samplers``); the
+        evaluated field becomes ``h`` directly (so the graph's output should be
+        in world-Y units — wrap the noise in a ``CubicSpline``/``Scale``/``Bias``
+        to map into a Y range). If ``centerline`` is given, its ``(s, perp)``
+        fields are exposed to ``BeltCoord`` nodes."""
+        from .samplers import from_spec, EvalContext
+        hf = cls(nx, nz, sea_level=sea_level)
+        ctx = EvalContext.grid(nx, nz, seed=seed)
+        if centerline is not None:
+            X, Z = ctx.X, ctx.Z
+            ctx.s, ctx.perp = centerline.query(X, Z)
+        hf.h = np.asarray(from_spec(spec).eval(ctx), dtype=float)
+        return hf
+
+    def apply_spline_remap(self, points) -> "HeightField":
+        """Map the current height through a piecewise-linear transfer curve
+        ``[[in,out], ...]`` — the 1.18 continentalness remap. Use to reshape the
+        height histogram (what fraction is ocean / lowland / highland)."""
+        xs = [float(p[0]) for p in points]
+        ys = [float(p[1]) for p in points]
+        self.h = np.interp(self.h, xs, ys)
+        return self
+
     # -- shaping ----------------------------------------------------------
     def smooth(self, iterations: int = 1) -> "HeightField":
         """Separable 1-2-1 blur (numpy, no scipy). Softens stairstep artifacts
@@ -258,6 +286,48 @@ class HeightField:
             kx = (hp[:-2, 1:-1] + 2 * hp[1:-1, 1:-1] + hp[2:, 1:-1]) / 4.0
             kp = np.pad(kx, 1, mode="edge")
             self.h = (kp[1:-1, :-2] + 2 * kp[1:-1, 1:-1] + kp[1:-1, 2:]) / 4.0
+        return self
+
+    def gaussian_smooth(self, sigma: float = 2.0, *, mask: np.ndarray = None
+                        ) -> "HeightField":
+        """scipy Gaussian blur (wider, smoother than the 1-2-1 kernel). With
+        ``mask``, only the masked cells are replaced by the blurred value."""
+        from scipy.ndimage import gaussian_filter
+        sm = gaussian_filter(self.h, sigma=sigma)
+        self.h = np.where(mask, sm, self.h) if mask is not None else sm
+        return self
+
+    def melt(self, *, mask: np.ndarray = None, strength: float = 2.0,
+             amount: float = 0.5) -> "HeightField":
+        """Subtractive Gaussian (slumping / thermal-erosion-lite, Axiom's Melt):
+        blends material off ridges toward the blurred surface. ``amount`` (0..1)
+        is how far toward the blurred target to move; ``mask`` limits where."""
+        from scipy.ndimage import gaussian_filter
+        target = gaussian_filter(self.h, sigma=max(strength, 1e-3))
+        delta = np.minimum(target - self.h, 0.0) * float(amount)  # only lower
+        if mask is not None:
+            delta = np.where(mask, delta, 0.0)
+        self.h = self.h + delta
+        return self
+
+    def distort(self, *, scale: float = 0.03, distance: float = 6.0,
+                seed: int = 0) -> "HeightField":
+        """Domain-warp the height by resampling at noise-displaced coordinates
+        (Axiom's Distort) — breaks clean contours into organic ones."""
+        from scipy.ndimage import map_coordinates
+        from .noise import ValueNoise2D
+        X, Z = np.meshgrid(np.arange(self.nx, dtype=float),
+                           np.arange(self.nz, dtype=float), indexing="ij")
+        dx = (ValueNoise2D(seed + 7).sample(X * scale, Z * scale) - 0.5) * 2 * distance
+        dz = (ValueNoise2D(seed + 19).sample(X * scale, Z * scale) - 0.5) * 2 * distance
+        self.h = map_coordinates(self.h, [X + dx, Z + dz], order=1, mode="nearest")
+        return self
+
+    def weld(self, mask: np.ndarray, *, strength: float = 2.0) -> "HeightField":
+        """Additive Gaussian across a boundary band (Axiom's Weld) — the
+        in-place seam join. See ``terrain.blend.weld``."""
+        from .blend import weld as _weld
+        self.h = _weld(self.h, mask, strength=strength)
         return self
 
     def erode_hydraulic(self, **kwargs) -> "HeightField":
@@ -275,15 +345,44 @@ class HeightField:
         self.h = thermal(self.h, **kwargs)
         return self
 
+    def carve_rivers_from_flow(self, *, threshold: float = 800.0,
+                               depth: float = 0.3) -> "HeightField":
+        """Carve an emergent river network from flow accumulation (no polylines).
+        See ``terrain.erosion.fluvial_rivers``. Clamped above sea level."""
+        from .erosion import fluvial_rivers
+        self.h = fluvial_rivers(self.h, threshold=threshold, depth=depth,
+                                sea_level=self.sea_level)
+        return self
+
     def clamp(self, min_y: float = -64.0, max_y: float = 320.0) -> "HeightField":
         np.clip(self.h, min_y, max_y, out=self.h)
         return self
 
-    # -- analysis ---------------------------------------------------------
+    # -- analysis (Pillar 2 masks) ----------------------------------------
     def slope_deg(self) -> np.ndarray:
         """Per-cell slope in degrees (gradient magnitude), 1 block per cell."""
         gx, gz = np.gradient(self.h)
         return np.degrees(np.arctan(np.hypot(gx, gz)))
+
+    def aspect_deg(self) -> np.ndarray:
+        from .masks import aspect_deg
+        return aspect_deg(self.h)
+
+    def curvature(self) -> np.ndarray:
+        from .masks import curvature
+        return curvature(self.h)
+
+    def dist_to_water(self) -> np.ndarray:
+        from .masks import dist_to_water
+        return dist_to_water(self.h, self.sea_level)
+
+    def mask_slope(self, lo: float = 0.0, hi: float = 90.0) -> np.ndarray:
+        from .masks import mask_slope
+        return mask_slope(self.h, lo, hi)
+
+    def mask_y(self, op: str, y: float) -> np.ndarray:
+        from .masks import mask_y
+        return mask_y(self.h, op, y)
 
     def summary(self) -> dict:
         h = self.h

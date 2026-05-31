@@ -1,5 +1,12 @@
-# Python dependencies for the minecraft-builder voxel toolkit (tools/voxel).
+# Python dependencies for the minecraft-builder local toolkits (tools/voxel + tools/terrain).
 # Install once:  python -m pip install -r tools/requirements.txt
 # Python 3.10+.
+#
+# numpy + Pillow: voxel + terrain core. scipy: terrain masks/blend/field/erosion
+# (imported unguarded — required by the terrain toolkit). opensimplex: the
+# OpenSimplex2S noise basis for the sampler graph (optional; the toolkit falls
+# back to Perlin if absent).
 numpy>=2.4.6
 pillow>=12.2.0
+scipy>=1.11
+opensimplex>=0.4

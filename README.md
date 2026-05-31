@@ -23,7 +23,7 @@ voxelized, render-verified against the design, then placed and confirmed in-worl
 ![A layered red-rock canyon inspired by the national parks of the American West, terraformed in a live world](docs/images/canyon.png)
 
 *And terrain, not just figures — this red-rock canyon, inspired by the national
-parks of the American West, was shaped by the `terraforming` skill's terrain
+parks of the American West, was shaped by the `terrain-shape` skill's terrain
 toolkit: a parametric heightfield, hydraulically eroded, render-checked against
 the design, then materialized into the world as block fills.*
 
@@ -33,9 +33,10 @@ It does two things:
    standing up the whole stack: Minecraft Java with the Fabric loader, the MCP
    mod and its Fabric API dependency, the mod's configuration, and the
    connection to Claude.
-2. **Building in the world** — a `minecraft-builder` agent that surveys,
-   researches, plans, blueprints, builds, and reflects, coordinating a set of
-   model-tuned skills to design and construct elements in a live world.
+2. **Building in the world** — a `minecraft-builder` agent that routes each
+   request to one of four `build-*` orchestrators, each of which sequences a set
+   of model-tuned leaf skills — survey, research, plan, blueprint, build, verify,
+   reflect — to design and construct elements in a live world.
 
 ## The stack
 
@@ -88,9 +89,9 @@ localhost (no token, no firewall changes); each skill also covers the
 | Skill | Phase | What it covers |
 | ----- | ----- | -------------- |
 | `setup-fabric` | 1 | Install Minecraft Java Edition and the Fabric loader — a single-player client or a headless dedicated server. |
-| `install-mcp-mod` | 2 | Download the MCP mod jar and the matching Fabric API jar and install both into the `mods/` folder. |
-| `setup-mcp-server` | 3 | Configure the mod's `config.json`, launch, and verify the embedded MCP server is listening (`/healthz`); capture the bearer token for remote setups. |
-| `connect-claude` | 4 | Register the MCP server with Claude and verify with a live tool call. |
+| `setup-mod` | 2 | Download the MCP mod jar and the matching Fabric API jar and install both into the `mods/` folder. |
+| `setup-server` | 3 | Configure the mod's `config.json`, launch, and verify the embedded MCP server is listening (`/healthz`); capture the bearer token for remote setups. |
+| `setup-connect` | 4 | Register the MCP server with Claude and verify with a live tool call. |
 
 To start a fresh setup, just ask Claude to set up Minecraft Java for MCP — the
 first skill triggers automatically — or invoke it explicitly:
@@ -101,50 +102,81 @@ first skill triggers automatically — or invoke it explicitly:
 
 ## Builder skills
 
-Seventeen skills make up the build pipeline. Each runs on the model best suited
-to its work — heavy reasoning where it pays off, a small model for mechanical
-execution. The `minecraft-builder` agent invokes them in order; you can also
-invoke any one directly.
+The build pipeline is organized in three tiers. The `minecraft-builder` agent is
+Tier 1: it owns state and the quality gates and routes every request to exactly
+one Tier-2 orchestrator. The four `build-*` orchestrators are domain playbooks
+that sequence the Tier-3 leaf skills and thread one shared coherence context (one
+survey, one terrain recipe, one palette, one biome plan, one integration pass) so
+a build holds together. The leaves are single-purpose specialists, each running on
+the model best suited to its work — heavy reasoning where it pays off, a small
+model for mechanical execution. A leaf never hands off to a sibling; it returns its
+result to the orchestrator, which sequences the next leaf. There is no trivial path:
+every request runs the full gated spine, depth-scaled. Twenty-eight skills in all.
+You can invoke any one directly, but the agent is the intended entry point.
+
+The full list, tiers, and models live in
+[`skills/TAXONOMY.md`](skills/TAXONOMY.md).
+
+**Tier 2 — `build-*` orchestrators** (Opus, inline). Every request maps to one:
+
+| Skill | Routes for |
+| ----- | ---------- |
+| `build-natural-world` | terrain, landforms, biomes, water, natural scenery, named natural wonders, caves |
+| `build-settlement` | villages, cities, districts, a building with grounds and context |
+| `build-structure` | one named or standalone building, replica, statue/monument, player house |
+| `build-systems` | redstone, farms, contraptions, transit lines, nether hubs, mechanisms |
+
+**Tier 3 — leaf specialists**, grouped by prefix:
 
 | Skill | Role | Model |
 | ----- | ---- | ----- |
-| `surveyor` | Investigates the world — terrain, biomes, existing builds, surroundings. | Sonnet |
-| `researcher` | Researches real-world references for faithful recreation. | Sonnet |
-| `planner` | Captures requirements, interviews the user, produces a fully-resolved plan. | Opus |
-| `player-house` | Designs a player's base of operations — adaptive interview, iterated blueprints, full plan. | Opus |
-| `village-planner` | Designs functional villages and settlements, reusing standard building types. | Opus |
-| `city-planner` | Designs whole cities and districts — urban fabric, zoning, streets, transit, vernacular reuse. | Opus |
-| `building-architect` | Designs specific named buildings — real-world and fictional replicas, originals. | Opus |
-| `engineer` | Designs and verifies complex redstone and mechanical contraptions — Java-correct, with functional tests. | Opus |
-| `monument-builder` | Designs monuments and build-art — statues, creatures, abstract sculpture, pixel art, logos. | Opus |
-| `landscape-architect` | Designs intentionally designed outdoor space — formal gardens, parks, plazas, courtyards, hedge mazes. | Opus |
-| `transit-architect` | Designs the connective network between builds — rail, roads, nether hubs, bridges, tunnels, docks. | Opus |
-| `terraforming` | Designs natural terrain and environments — mountains, water, biomes — using vetted landscaping technique. | Inherit |
-| `natural-landmarks` | Composes recognizable real-world natural wonders from a library of formation primitives. | Sonnet |
-| `blueprinter` | Turns the plan into named, reusable structure templates in the world. | Sonnet |
-| `worker` | Executes the plan step by step — mechanical, no redesign. | Haiku |
-| `inspector` | Verifies each build phase in-world and proposes course corrections. | Sonnet |
-| `philosopher` | Reviews the finished job and records process lessons in project memory. | Sonnet |
+| `survey-site` | Investigates the live world — terrain, biomes, existing builds, surroundings. | Sonnet |
+| `survey-research` | Researches real-world references, including geology and ecology, for faithful recreation. | Sonnet |
+| `terrain-shape` | Designs naturalistic terrain as a recipe — mountains, water, biomes. | Sonnet |
+| `terrain-landmark` | Composes recognizable real-world natural wonders from formation primitives. | Sonnet |
+| `terrain-ecology` | Plants biome ecology and runs the scatter recipe. | Sonnet |
+| `terrain-integrate` | Grounds a build into the world — apron erosion, seam blend (Gate B). | Sonnet |
+| `terrain-cave` | Designs subterranean space — caves, caverns, ravines. | Sonnet |
+| `design-house` | Designs a player's base of operations. | Opus |
+| `design-village` | Designs settlements up to ~15 buildings, reusing standard building types. | Opus |
+| `design-city` | Designs cities and districts (~16+) — urban fabric, zoning, streets, vernacular reuse. | Opus |
+| `design-building` | Designs specific named buildings — real-world and fictional replicas, originals. | Opus |
+| `design-monument` | Designs monuments and build-art — statues, creatures, sculpture, pixel art, logos. | Opus |
+| `design-grounds` | Designs intentional outdoor space — gardens, parks, plazas, courtyards, hedge mazes. | Opus |
+| `system-redstone` | Designs and verifies redstone and mechanical contraptions — Java-correct, with functional tests. | Opus |
+| `system-transit` | Designs the connective network between builds — rail, roads, nether hubs, bridges, tunnels. | Opus |
+| `exec-plan` | Captures requirements, interviews the user, produces a fully-resolved `plan.toon`. | Opus |
+| `exec-blueprint` | Turns the plan into named, reusable `mcb:*` structure templates in the world. | Sonnet |
+| `exec-worker` | Executes the plan step by step via the harness — mechanical, no redesign. | Haiku |
+| `exec-inspect` | Verifies each build phase in-world and proposes course corrections (Gate C). | Sonnet |
+| `exec-reflect` | Reviews the finished job and drafts process lessons for project memory. | Sonnet |
 
-The `terraforming`, `natural-landmarks`, `player-house`, `village-planner`,
-`city-planner`, `building-architect`, `engineer`, `monument-builder`,
-`landscape-architect`, and `transit-architect` skills each carry a `reference/`
-library — landforms, water, palettes, weathering, formation primitives, wonder
-recipes, rooms, styles, layouts, village mechanics, urban zoning, vernacular
-modules, architectural techniques, redstone contraptions, sculpting and
-pixel-art technique, garden traditions, network topology and transit
-engineering, interview scripts, blueprint rendering — loaded on demand so the
-detail never bloats context until it is needed.
+The `terrain-*`, `design-*`, `system-*`, and `exec-*` leaves carry `reference/`
+libraries loaded on demand so the detail never bloats context until it is needed —
+landforms and command budgets, rooms and styles and layouts, village mechanics,
+urban zoning, architectural technique, redstone limits, contract checks, blueprint
+rendering. The shared terrain core (`reference/terrain/` — palettes, water,
+weathering, formation primitives, non-negotiables) is promoted to the plugin root
+and linked by every terrain leaf rather than copied.
 
 For representational and parametric builds (vehicles, creatures, statues),
-`monument-builder` runs a **render-verify loop** backed by a bundled Python
-voxel toolkit (`tools/voxel/`, stdlib + numpy + Pillow): author the form as a
-parametric model, render three orthogonal views to PNG and check the silhouette
-*before* placing a block, stamp the whole thing into the world in one
-`block_fill_batch`, then confirm with an in-world `block_render_region`. See
-[`tools/README.md`](tools/README.md). The agent can't see the world, and a
-wrong silhouette can't be detailed away — so the cheap iteration happens on a
-render first. (The bean above was built exactly this way.)
+`design-monument` runs a **render-verify loop** backed by a bundled Python voxel
+toolkit (`tools/voxel/`, numpy + Pillow): author the form as a parametric model,
+render three orthogonal views to PNG and check the silhouette *before* placing a
+block, stamp the whole thing into the world in one `block_fill_batch`, then confirm
+with an in-world `block_render_region`. See [`tools/README.md`](tools/README.md).
+The agent can't see the world, and a wrong silhouette can't be detailed away — so
+the cheap iteration happens on a render first. (The bean above was built exactly
+this way.)
+
+Terrain works the same way through a separate toolkit. `terrain-shape` and the
+other terrain leaves author land as a **recipe** — a composable sampler graph —
+verify it offline (Gate A: ziggurat, seam, and relief checks), and materialize it
+with `block_fill_columns` in one server call rather than a voxel grid. The terrain
+toolkit (`tools/terrain/`) adds **scipy** to the numpy + Pillow base, and uses
+**opensimplex** when present (falling back to Perlin noise otherwise). The build
+harness (`tools/builder/`) is stdlib-only. Install all the Python deps once with
+`python -m pip install -r tools/requirements.txt`.
 
 ## Agents
 
@@ -156,10 +188,11 @@ host).
 
 **`minecraft-builder`** — designs and constructs elements in a live world. It
 health-checks the MCP connection (and points you at `minecraft-mcp-setup` if
-the world isn't reachable), recovers existing project state from the world,
-then coordinates the seventeen builder skills: survey → research → plan → shape →
-blueprint → build → inspect → reflect. Delegate to it for anything beyond a trivial block change —
-e.g. *"Build a lakeside village near the nearest player."*
+the world isn't reachable), recovers existing project state from the world, then
+routes the request to one of the four `build-*` orchestrators, which sequences the
+leaf skills through one gated spine: survey → research → plan → shape → ecology →
+blueprint → build → integrate → inspect → register → reflect. Delegate to it for
+any build — e.g. *"Build a lakeside village near the nearest player."*
 
 Use the individual `/minecraft-java:*` skills directly if you'd rather drive
 one step yourself.
@@ -181,14 +214,14 @@ world travels everywhere:
 
 Local files under `.minecraft-builder/<project>/` (requirements, survey, plan)
 are treated as throwaway scratch — Markdown for prose, TOON for structured
-data. The `philosopher` records only *process lessons* in project memory, never
-build data.
+data. The `exec-reflect` skill records only *process lessons* in project memory,
+never build data.
 
 ## MCP connection
 
 This plugin does **not** auto-register an MCP server, because the endpoint and
 posture are per-user (your own host, port, and — for remote setups — a bearer
-token). The `connect-claude` skill registers it for you.
+token). The `setup-connect` skill registers it for you.
 
 For a **single-player** install the mod listens on `http://127.0.0.1:8765/mcp`
 with no authentication — just the URL is needed. For a **dedicated/remote**

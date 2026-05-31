@@ -13,3 +13,12 @@
 Thumbs.db
 .idea/
 .vscode/
+
+# Local-only working dirs — receipts + build showcase (never commit)
+.research/
+.minecraft-builder/
+
+# Python caches (defense-in-depth; tools/.gitignore also covers these)
+__pycache__/
+*.pyc
+.pytest_cache/

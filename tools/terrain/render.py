@@ -141,10 +141,70 @@ def render_profile(hf: HeightField, out: str, *, axis: str = "x",
     return out
 
 
+def render_slope(hf: HeightField, out: str, *, px: int = 3,
+                 steep_deg: float = 50.0) -> str:
+    """Slope-map view (Pillar 8): green = gentle, yellow = moderate, red = steep
+    (≥ ``steep_deg``), blue = water. The view that exposes the bare-vertical-wall
+    failure mode — anything red must be materialised as rock by the slant
+    palette, not left as default surface."""
+    from .masks import slope_deg
+    s = slope_deg(hf.h)
+    t = np.clip(s / 90.0, 0.0, 1.0)
+    # green→yellow→red ramp
+    r = np.clip(t * 2.0, 0, 1)
+    g = np.clip(2.0 - t * 2.0, 0, 1)
+    rgb = np.stack([r, g, np.zeros_like(t)], axis=-1) * 255.0
+    rgb[s >= steep_deg] = (220, 30, 30)
+    rgb[hf.h < hf.sea_level] = _SEA
+    _upscale(_to_image(np.clip(rgb, 0, 255).astype(np.uint8)), px).save(out)
+    return out
+
+
+def render_eye_level(hf: HeightField, out: str, *, axis: str = "x",
+                     at: float = 0.5, scale: int = 3, pad: int = 10) -> str:
+    """A single filled cross-section drawn as a *side elevation* — what a player
+    standing beside the landform actually sees (the view top-down renders hide).
+    Fills terrain solid below the surface line and water to sea level, so flat
+    vertical faces and hidden cliffs are unmistakable."""
+    h = hf.h
+    if axis == "x":
+        length = hf.nx
+        line = h[:, int(hf.nz * at)]
+    else:
+        length = hf.nz
+        line = h[int(hf.nx * at), :]
+    y_lo = float(min(line.min(), hf.sea_level))
+    y_hi = float(max(line.max(), hf.sea_level))
+    span = max(y_hi - y_lo, 1.0)
+    W = length * scale + 2 * pad
+    H = int(span * scale) + 2 * pad
+    img = Image.new("RGB", (W, H), (200, 220, 240))      # sky
+    d = ImageDraw.Draw(img)
+
+    def yx(i, y):
+        return pad + i * scale, H - pad - (y - y_lo) * scale
+
+    sea_y = H - pad - (hf.sea_level - y_lo) * scale
+    # water band
+    d.rectangle([pad, sea_y, W - pad, H - pad], fill=(60, 110, 170))
+    # solid terrain columns
+    for i in range(len(line)):
+        x0 = pad + i * scale
+        top = H - pad - (float(line[i]) - y_lo) * scale
+        col = (110, 160, 70) if line[i] >= hf.sea_level else (120, 110, 95)
+        d.rectangle([x0, top, x0 + scale - 1, H - pad], fill=col)
+    img.save(out)
+    return out
+
+
 def render_views(hf: HeightField, prefix: str, *, px: int = 3) -> list:
-    """Write the three standard terrain views and return their paths."""
+    """Write the standard terrain views and return their paths. Now includes the
+    slope map and an eye-level elevation — never judge terrain from the top-down
+    views alone (the parks-grand-loop lesson)."""
     return [
         render_hillshade(hf, f"{prefix}_hillshade.png", px=px),
         render_relief(hf, f"{prefix}_relief.png", px=px),
         render_profile(hf, f"{prefix}_profile.png"),
+        render_slope(hf, f"{prefix}_slope.png", px=px),
+        render_eye_level(hf, f"{prefix}_eye.png"),
     ]

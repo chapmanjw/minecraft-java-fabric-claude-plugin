@@ -1,0 +1,197 @@
+# Contract checks — sampling algorithms
+
+The `quality_contract` block in `plan.toon` declares the properties a build
+must satisfy. This file is the precise, executable form of each row type —
+the sampling algorithm, the threshold, and the action on failure.
+
+A failing row is a real failure: emit it as a correction and route back to
+the skill that owns the build (terrain-shape, design-house, etc.), not to
+exec-worker as a paint-over.
+
+## walkability[]{from,to,note}
+
+Sample a straight-line ray from `from` to `to`, step 1 block at a time. At
+each step, sample two cells with `block_get_state`:
+
+- **Floor cell** at `(x, y, z)` — must be a stand-on-able block (any solid;
+  not air, water, lava, or fence-top).
+- **Head cell** at `(x, y+1, z)` — must be air, a door, or a trapdoor in
+  open state.
+
+**Fail** if any step has no stand-on-able floor **or** the head cell is
+blocked.
+
+**Correction:** emit the failing coords; if there is no walkable route
+between named rooms, route to exec-plan-class skill — the layout is wrong,
+not the blocks.
+
+## doors[]{at,facing,clearance_blocks}
+
+For the door at `at` with `facing` (north / south / east / west) and a
+clearance of `clearance_blocks` in front and behind:
+
+- Compute the forward offset for `facing` (e.g. south = `(0, 0, +1)`).
+- For each step `i` from 1 to `clearance_blocks` in front and behind:
+  - **Floor** at `at + i*forward` (and `at + i*back`) must be stand-on-able.
+  - **Head** at `at + i*forward + (0,1,0)` (and back) must be air.
+
+**Fail** if either side is blocked — door faces a cliff, a wall, or has no
+floor underneath. This is the Cape Aurelia "doors facing cliffs" failure.
+
+**Correction:** the layout is wrong. Route to exec-plan-class skill;
+re-orient the door or re-site the building.
+
+## headroom[]{over_region_a,over_region_b,min_clear}
+
+For every `(x, z)` column in the region between `over_region_a` and
+`over_region_b`:
+
+- Find the highest solid block in the column (call it `y_top`).
+- Sample blocks at `y_top + 1` through `y_top + min_clear`.
+
+**Fail** if any sampled block is not air — i.e. the headroom over the
+floor/stair/corridor is less than `min_clear`.
+
+**Correction:** raise the ceiling or re-pitch the stair. Route to the
+planner-class skill if the failure is systemic; emit `fill ... air` steps
+for the worker only if it is a one-off obstruction.
+
+## block_mix_ratios[]{region_a,region_b,palette,max_single_ratio}
+
+`palette` is a comma-separated list of expected block IDs. Use
+`block_scan_region` over the region between `region_a` and `region_b`. Its
+bounding box is capped at 65,536 blocks per call, so split a larger region into
+sub-boxes that each fit. Tally either way:
+
+- **Per-member:** call once per palette member with `match_block_id` set, and
+  read the returned match count for each.
+- **Full:** omit `match_block_id` to get every block in the box (results capped
+  at 65,536), and tally the IDs yourself.
+
+Then compute the ratio for each: `count(block) / total_cells`.
+
+**Fail** if any single block exceeds `max_single_ratio`, **or** if any
+palette member is missing entirely. A 100%-white_concrete wall, or a wall
+that's "60–80% white_concrete" but is actually 95%, fails here.
+
+**Correction:** retune the palette weights in the source generator. For
+small regions, emit `replace` steps that swap in the missing palette members
+at the right ratio. Do not paint over with a single block.
+
+## silhouette[]{region_a,region_b,sample_count,min_y_variance}
+
+Sample `sample_count` random `(x, z)` points in the region's footprint,
+spaced at least 5 blocks apart. For each, call `block_get_top_y` to find
+the surface Y.
+
+**Fail** if `max(y) - min(y) < min_y_variance` — the silhouette is too flat
+(a plateau, terrace, or ziggurat top).
+
+**Correction:** the heightmap is too flat in this region. Route back to
+terrain-shape to regenerate the noise with higher amplitude or an added
+peak; re-place the affected tile.
+
+## edge_irregularity[]{edge_name,from,to,max_collinear_run}
+
+Walk the edge from `from` to `to` in 1-block steps, sampling the surface
+block at each step. Track runs of consecutive blocks where X **or** Z stays
+the same (i.e. a straight horizontal segment).
+
+**Fail** if any run of identical X or identical Z exceeds
+`max_collinear_run`. This is the 7-block rule in checkable form.
+
+**Correction:** the edge was carved as a rectangle. Route back to
+terrain-shape to add lateral jitter every 4–7 blocks, or widen the radial
+falloff so the edge curves.
+
+## foundation_naturalised[]{name,perimeter_a,perimeter_b,y_lo,y_hi,min_unique_blocks}
+
+Walk the perimeter of the named foundation between `perimeter_a` and
+`perimeter_b` at two depths (`y_lo` and `y_hi`), sampling every 4 blocks. For
+each sample collect the block ID.
+
+**Fail** if fewer than `min_unique_blocks` distinct IDs appear along the
+sample at either depth — the underwater face is a sheer rectangle of one
+block (the Cape Aurelia corestone failure).
+
+**Correction:** apply the talus-skirt rescue from
+`terrain-shape/reference/landforms.md`. Do not paint over with one block.
+
+## water_continuity[]{coast_name,from,to,sample_count}
+
+Sample `sample_count` random points along the coastline between `from` and
+`to`, just outside the visible coast. For each, walk the column downward
+from `y = sea_level` to the seabed.
+
+**Fail** if any column has an air block above water — i.e. a dry void shelf
+where water should be. This was the Cape Aurelia v1 waterline rock-shelf
+failure.
+
+**Correction:** extend the affected terrain tile downward to the seabed and
+re-place. Do not patch with surface water sources; the column must be
+continuous.
+
+## connectivity[]{site_a,site_b,via}
+
+Two named sites must be reachable along the named path. Apply the
+`walkability` algorithm between the registered anchor of `site_a` and the
+registered anchor of `site_b`, optionally following the path named in `via`
+(rail, road, footbridge).
+
+**Fail** if no walkable route connects them. This was the Cape Aurelia
+"disconnected paths between districts" failure.
+
+**Correction:** route back to the `system-transit` skill to connect the
+sites; do not insert ad-hoc fills.
+
+## event_trigger[]{event_types,trigger_note,expect_type,expect_pos_radius} (Java-exclusive)
+
+A functional check using the event system rather than geometry sampling. Use
+when a contract row must confirm an interactive feature works (a door can be
+opened, a mechanism fires, a mob farm is killing).
+
+1. Call `events_subscribe(event_types)` → `subscription_id`.
+2. Apply the trigger described in `trigger_note` (ask the user, or run
+   `command_execute` / `command_execute_as`).
+3. Call `events_poll(subscription_id)` and inspect the returned events.
+4. Call `events_unsubscribe(subscription_id)`.
+
+**Fail** if no event of type `expect_type` was received within the expected
+timeframe, or if the event's position is outside `expect_pos_radius` blocks
+of the declared position.
+
+**Correction:** the mechanism is not functioning. Route to the `system-redstone`
+for diagnosis; do not patch with fill steps.
+
+## block_entity_nbt[]{at,field_path,expected_value} (Java-exclusive)
+
+A content-precision check using `block_entity_get_nbt`. Use when the contract
+requires verifying exact block-entity content — sign text, container items,
+spawner config, lectern book — beyond what `block_get_state` can confirm.
+
+1. Call `block_entity_get_nbt(at)` → NBT object.
+2. Navigate to `field_path` (dot-separated, e.g. `front_text.messages.0`).
+3. Compare the value to `expected_value`.
+
+**Fail** if the field is absent or does not match `expected_value`. A sign
+with wrong text, a chest missing the seeded items, or a spawner with the
+wrong entity ID all fail here — even if the block ID and state are correct.
+
+**Correction:** emit a `block-nbt` correction step (op `block-nbt` at the
+failing position, `note` = the corrected SNBT). The worker applies it with
+`block_entity_set_nbt`. Re-read with `block_entity_get_nbt` to confirm.
+
+## How to run the full contract
+
+For each phase in the plan, the inspector reads the phase's slice of the
+`quality_contract` (rows scoped to that phase's region) and runs the
+sampling algorithms above. Aggregate the verdicts:
+
+- All rows pass → **PASS**.
+- One or more rows fail with a localised fix → **CORRECTIONS NEEDED** with
+  the failing samples and the correction steps.
+- One or more rows fail fundamentally (silhouette flat, foundation a
+  rectangle, no route between sites) → **FAIL**, recommend re-planning the
+  phase with the owning specialist.
+
+Re-sample after corrections land. Always.

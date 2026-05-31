@@ -1,6 +1,19 @@
-# Generated artifacts from running the toolkit / examples
+# Generated artifacts from running the toolkit
 *.png
 *.npy
 *_fills.json
 __pycache__/
 *.pyc
+.pytest_cache/
+
+# Captured run / console output (scratch)
+*_run.txt
+*_place.txt
+pytest_full.txt
+
+# tools/examples/ holds curated worked examples only. Everything else there is
+# generated build output (columns / biomes / scatter / recipe JSON, plan.toon)
+# or one-off session scripts — ignore all of it, allow only the curated set.
+examples/*
+!examples/example_bean.py
+!examples/example_terrain.py

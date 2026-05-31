@@ -1,0 +1,7 @@
+# Optional performance dependency for the terrain toolkit.
+# Install:  python -m pip install -r tools/requirements-perf.txt
+#
+# numba JIT-compiles the hot loops in the droplet hydraulic-erosion and
+# Poisson-disk scatter passes. The toolkit runs correctly WITHOUT it (pure-numpy
+# / pure-python fallbacks); numba just makes large grids (512x512+) much faster.
+numba>=0.60

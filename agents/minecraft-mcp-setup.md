@@ -11,9 +11,9 @@ model: inherit
 color: blue
 skills:
   - setup-fabric
-  - install-mcp-mod
-  - setup-mcp-server
-  - connect-claude
+  - setup-mod
+  - setup-server
+  - setup-connect
 ---
 
 # Minecraft Java MCP — Setup Orchestrator
@@ -29,9 +29,9 @@ no separate server process and no behavior pack.
 | Phase | Skill | Outcome |
 | ----- | ----- | ------- |
 | 1 | `setup-fabric` | Minecraft Java Edition with the Fabric loader (single-player client or dedicated server). |
-| 2 | `install-mcp-mod` | The MCP mod jar + matching Fabric API jar installed in `mods/`. |
-| 3 | `setup-mcp-server` | The mod configured (`config.json`) and running; `/healthz` verified. |
-| 4 | `connect-claude` | The MCP server registered with Claude; verified with a live `server_get_status` call. |
+| 2 | `setup-mod` | The MCP mod jar + matching Fabric API jar installed in `mods/`. |
+| 3 | `setup-server` | The mod configured (`config.json`) and running; `/healthz` verified. |
+| 4 | `setup-connect` | The MCP server registered with Claude; verified with a live `server_get_status` call. |
 
 ## How to run
 

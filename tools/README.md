@@ -7,7 +7,10 @@ desktop app), where the agent has local Bash and can read the PNGs it produces.
 
 ## Dependencies
 
-Stdlib + **numpy** + **Pillow** only. Install once:
+The `builder` harness is stdlib-only. The `voxel` toolkit needs **numpy** +
+**Pillow**. The `terrain` toolkit additionally needs **scipy** (masks, blend,
+field, erosion — imported unguarded) and optionally **opensimplex** (the
+OpenSimplex2S noise basis; falls back to Perlin if absent). Install all once:
 
 ```sh
 python -m pip install -r tools/requirements.txt
@@ -145,8 +148,8 @@ The 2.5-D counterpart of `voxel`, for **natural terrain** — mountains, islands
 valleys, coastlines. The same blindness applies: a stack of rectangular fills
 produces a flat-topped ziggurat and nothing in-world tells you until the user
 sees it (the Cape Aurelia rebuild). So author a heightfield you can *render and
-check offline first*, then materialise it to blocks. Stdlib + numpy + Pillow
-only — no extra deps.
+check offline first*, then materialise it to blocks. Needs numpy + Pillow +
+**scipy** (and optional opensimplex).
 
 The loop (seconds per iteration, all offline):
 

@@ -1,0 +1,189 @@
+live_tools: 102
+cases: 183
+pass: 94
+fail: 0
+skip: 89
+uncovered: 0
+advancement_get_definition	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+advancement_grant	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+advancement_list_all	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+advancement_list_player	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+advancement_revoke	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+block_clone_region	PASS	
+block_entity_clear_inventory	PASS	
+block_entity_get_nbt	PASS	
+block_entity_set_nbt	PASS	
+block_erode_hydraulic_result	PASS	
+block_erode_hydraulic_start	PASS	
+block_erode_hydraulic_status	PASS	
+block_erode_region	PASS	
+block_fill_batch	PASS	
+block_fill_columns	PASS	
+block_fill_columns_strata	PASS	
+block_fill_region	PASS	
+block_get_map_color	PASS	
+block_get_state	PASS	
+block_get_top_y	PASS	
+block_render_region	PASS	
+block_replace_in_region	PASS	
+block_scan_region	PASS	
+block_scan_summary	PASS	
+block_set_state	PASS	
+bossbar_add	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+bossbar_get	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+bossbar_list	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+bossbar_remove	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+bossbar_set_color	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+bossbar_set_max	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+bossbar_set_name	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+bossbar_set_players	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+bossbar_set_style	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+bossbar_set_value	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+bossbar_set_visible	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+command_execute	PASS	
+command_execute_as	PASS	
+command_register	SKIP	not live (admin access) — enable via mod config to test
+content_registry_get_fuel	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+content_registry_is_compostable	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+content_registry_is_flammable_block	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+content_registry_set_compostable	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+content_registry_set_flammable_block	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+content_registry_set_fuel	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+data_attachment_get	SKIP	no attachment type registered (mod cannot create attachment types) — data_attachment_set returns 'failed'
+data_attachment_list_keys	PASS	
+data_attachment_remove	SKIP	no attachment type registered (mod cannot create attachment types) — data_attachment_set returns 'failed'
+data_attachment_set	SKIP	no attachment type registered (mod cannot create attachment types) — data_attachment_set returns 'failed'
+data_storage_get	PASS	
+data_storage_list_namespaces	PASS	
+data_storage_remove	PASS	
+data_storage_set	PASS	
+datapack_disable	SKIP	not live (admin access) — enable via mod config to test
+datapack_enable	SKIP	not live (admin access) — enable via mod config to test
+datapack_list_available	PASS	
+datapack_list_enabled	PASS	
+entity_add_tag	PASS	
+entity_apply_damage	PASS	
+entity_apply_effect	PASS	
+entity_despawn	PASS	
+entity_get	PASS	
+entity_get_components	PASS	
+entity_get_effects	PASS	
+entity_get_nbt	PASS	
+entity_kill	PASS	
+entity_list_tags	PASS	
+entity_query	PASS	
+entity_remove_effect	PASS	
+entity_remove_tag	PASS	
+entity_set_nbt	PASS	
+entity_set_velocity	PASS	
+entity_summon	PASS	
+entity_teleport	PASS	
+events_list_subscriptions	PASS	
+events_poll	PASS	
+events_subscribe	PASS	
+events_unsubscribe	PASS	
+fluid_storage_get	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+fluid_storage_list_at	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+function_get_definition	SKIP	no datapack functions loaded (function_list empty)
+function_list	PASS	
+function_run	SKIP	destructive — run with --destructive
+inventory_clear_slot	PASS	
+inventory_count_items	PASS	
+inventory_get	PASS	
+inventory_set_slot	PASS	
+inventory_swap_slots	PASS	
+item_modify_block_slot	PASS	
+item_modify_entity_slot	PASS	
+itemstack_describe	PASS	
+itemstack_drop_at	PASS	
+level_create_explosion	SKIP	not live (admin access) — enable via mod config to test
+level_fill_biome	PASS	
+level_get_biome_at	PASS	
+level_get_difficulty	PASS	
+level_get_dimension_info	PASS	
+level_get_game_rule	PASS	
+level_get_info	PASS	
+level_get_spawn_point	PASS	
+level_get_time	PASS	
+level_get_weather	PASS	
+level_lightning_strike	PASS	
+level_list_biomes_in_dimension	PASS	
+level_list_dimensions	PASS	
+level_list_game_rules	PASS	
+level_place_feature	PASS	
+level_place_features_batch	PASS	
+level_play_sound	SKIP	no player online (playsound targets @a)
+level_set_difficulty	SKIP	not live (admin access) — enable via mod config to test
+level_set_game_rule	SKIP	not live (admin access) — enable via mod config to test
+level_set_spawn_point	PASS	
+level_set_time	PASS	
+level_set_weather	PASS	
+level_spawn_particle	SKIP	no player online (particle broadcast has no audience)
+loot_table_generate	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+loot_table_get_definition	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+loot_table_list	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+player_clear_all_inventory	SKIP	not live (opt-in domain 'players') — enable via mod config to test
+player_clear_inventory_slot	SKIP	not live (opt-in domain 'players') — enable via mod config to test
+player_get_info	SKIP	not live (opt-in domain 'players') — enable via mod config to test
+player_get_inventory	SKIP	not live (opt-in domain 'players') — enable via mod config to test
+player_give_item	SKIP	not live (opt-in domain 'players') — enable via mod config to test
+player_grant_xp	SKIP	not live (opt-in domain 'players') — enable via mod config to test
+player_kick	SKIP	not live (opt-in domain 'players' + admin access) — enable via mod config to test
+player_list_online	SKIP	not live (opt-in domain 'players') — enable via mod config to test
+player_play_sound	SKIP	not live (opt-in domain 'players') — enable via mod config to test
+player_send_actionbar	SKIP	not live (opt-in domain 'players') — enable via mod config to test
+player_send_message	SKIP	not live (opt-in domain 'players') — enable via mod config to test
+player_send_title	SKIP	not live (opt-in domain 'players') — enable via mod config to test
+player_set_camera	SKIP	not live (opt-in domain 'players') — enable via mod config to test
+player_set_gamemode	SKIP	not live (opt-in domain 'players') — enable via mod config to test
+player_set_spawn_point	SKIP	not live (opt-in domain 'players') — enable via mod config to test
+player_set_xp_level	SKIP	not live (opt-in domain 'players') — enable via mod config to test
+recipe_find_by_ingredient	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+recipe_find_by_result	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+recipe_get_definition	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+recipe_list	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+resource_condition_evaluate	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+resource_loader_get_resource	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+resource_loader_list_namespaces	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+schedule_clear	PASS	
+schedule_function	SKIP	no loaded datapack function to schedule (function_list empty); /schedule function would be refused
+schedule_list	PASS	
+scoreboard_add_objective	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+scoreboard_add_score	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+scoreboard_add_team	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+scoreboard_get_objective	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+scoreboard_get_score	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+scoreboard_list_objectives	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+scoreboard_list_teams	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+scoreboard_remove_objective	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+scoreboard_remove_team	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+scoreboard_reset_participant	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+scoreboard_set_display_slot	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+scoreboard_set_score	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+scoreboard_team_add_member	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+scoreboard_team_remove_member	SKIP	not live (opt-in domain 'gameplay') — enable via mod config to test
+server_get_motd	PASS	
+server_get_status	PASS	
+server_reload_resources	SKIP	not live (admin access) — enable via mod config to test
+server_save_all_worlds	PASS	
+server_set_motd	PASS	
+structure_delete	PASS	
+structure_file_delete	PASS	
+structure_file_list	PASS	
+structure_file_read	PASS	
+structure_file_write	PASS	
+structure_get_info	PASS	
+structure_list	PASS	
+structure_load_to_world	PASS	
+structure_save_from_world	PASS	
+tag_check_membership	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+tag_get_members	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+tag_list_in_registry	SKIP	not live (opt-in domain 'registries') — enable via mod config to test
+worldborder_add_size	SKIP	not live (admin access) — enable via mod config to test
+worldborder_get	PASS	
+worldborder_set_center	SKIP	not live (admin access) — enable via mod config to test
+worldborder_set_damage_amount	SKIP	not live (admin access) — enable via mod config to test
+worldborder_set_damage_buffer	SKIP	not live (admin access) — enable via mod config to test
+worldborder_set_size	SKIP	not live (admin access) — enable via mod config to test
+worldborder_set_warning_blocks	SKIP	not live (admin access) — enable via mod config to test
+worldborder_set_warning_time	SKIP	not live (admin access) — enable via mod config to test

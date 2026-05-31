@@ -6,6 +6,74 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-05-30
+
+The build pipeline becomes a single, gated, three-tier system. Every request runs
+one playbook — there is no "trivial" inline path — and terrain can no longer reach
+the world except through the verified harness. The 0.8.0 `belt`/`Centerline`
+primitive is now a first-class, recipe-expressible part of that path, so a blended
+multi-region landscape (the parks-grand-loop case) is authored, gated, and placed
+as one continuous field.
+
+### Added
+
+- **Three-tier, no-trivial agent model.** The `minecraft-builder` agent routes
+  every request to exactly one Tier-2 `build-*` orchestrator (`build-natural-world`,
+  `build-settlement`, `build-structure`, `build-systems`), which sequences forked
+  Tier-3 leaf skills (`survey-*`, `terrain-*`, `design-*`, `system-*`, `exec-*`)
+  through one gated spine
+  (survey→research→plan→shape→ecology→blueprint→build→integrate→inspect→register→reflect).
+  28 skills under namespaced prefixes; `skills/TAXONOMY.md` is the index and
+  `scripts/migrate-skills.mjs` the old→new renamer.
+- **Belt terrain as a durable recipe.** `recipe.build_field` accepts a `belt`
+  section (a `Centerline` + `belt_from_path` keypoints, with optional `micro_relief`
+  and `smooth`) and `emit` accepts a `belt_regions` material that morphs the palette
+  region→region around the loop. A continuous blended ring is now one recipe run
+  through the gated harness, not hand-driven placement.
+- **The single gated terrain path (`terrain.emit.emit_plan_toon`).** Terrain is a
+  recipe, verified offline (GATE A `terrain/verify.py`:
+  ziggurat / seam / relief / monoculture / underwater), materialised to a tiled
+  `block_fill_columns` plan, and executed only by the stdlib `builder.harness`,
+  which lint-gates the phase (refuses recipe-less / token-less / seamless / ziggurat
+  terrain), count-asserts every op, and mints a verify token (GATE C, including the
+  in-world seam check).
+- **Expanded `tools/terrain/` toolkit.** New modules: `blend` (box-blur /
+  sparse-convolution / weld / pad-crop seam blends), `climate` (`BiomeField`),
+  `masks`, `recipe`, `scatter`, `verify`, `emit`, and a sampler graph (`samplers/`);
+  `materialize` gains the column / strata plan and exact tiling.
+- **Live MCP integration suite (`tools/itest/`).** Per-tool cases run against the
+  live server to validate each MCP tool end-to-end, with a recorded baseline.
+- **Validator regression guards (`scripts/validate-plugin.mjs`).** Resolves
+  reference-link targets, rejects deleted skill names, checks agent `skills:`
+  resolution, and enforces the taxonomy bijection — a folder-only rename can no
+  longer pass green with stale skill bodies.
+
+### Changed
+
+- **Skill layout and reference tree.** The flat skill set is replaced by the
+  prefixed three-tier layout; shared terrain cores (primitives, palettes, water,
+  weathering, non-negotiables) are promoted to `reference/terrain/` and execution
+  notes consolidated under `reference/execution/`. Skill *names* changed — anything
+  referencing the old names must update (see `TAXONOMY.md`).
+- **Tool-surface guidance.** Skills and `reference/execution/engine-limits.md`
+  document the mod's ten-domain category + access model and the lean ~102-tool
+  default surface (the builder runs entirely within the default-on set).
+
+### Fixed
+
+- **Terrain seams are a shape fix, not a colour fix.** The gated path enforces the
+  blend with offline and in-world seam checks, closing the parks-grand-loop failure
+  mode where butted regions left a wall no colour dither could hide.
+- **The offline gate runs its full check set.** `emit_world` now feeds the material
+  spec and recipe to `verify`, so the palette-monoculture and blended-seam checks
+  actually run on the emit path (previously skipped).
+- **`scatter.scatter_for_biomes` out-of-bounds.** A Poisson sample landing at index
+  `== n` on the far grid edge no longer raises; out-of-range points are dropped.
+- **Build-harness output is encoding-safe.** `builder.harness` no longer crashes
+  printing its digest on a Windows cp1252 console (a non-ASCII glyph used to raise
+  *after* the verdict, turning a PASS into a nonzero exit and breaking the exit-code
+  contract callers branch on).
+
 ## [0.8.0] - 2026-05-27
 
 Deeper findings from continuing the parks-grand-loop build, with the v0.7.0 gates
