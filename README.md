@@ -66,6 +66,12 @@ the mod jar to a matched, known-good set and upgrade them together. The mod's
 release notes list the supported Minecraft versions (v0.1.0 supports **1.21.11,
 26.1.1, and 26.1.2**). Treat the whole stack as experimental.
 
+Get the MCP server mod from
+[**Modrinth**](https://modrinth.com/mod/fabric-api-mcp-server) or
+[**CurseForge**](https://www.curseforge.com/minecraft/mc-mods/fabric-api-mcp-server)
+(or the [GitHub Releases page](https://github.com/chapmanjw/minecraft-java-fabric-mcp-server/releases)) —
+pick the jar matching your Minecraft version. The `setup-mod` skill walks you through it.
+
 ## Install
 
 Add this repo as a plugin marketplace and install the plugin:
