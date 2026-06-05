@@ -4,4 +4,4 @@
 # numba JIT-compiles the hot loops in the droplet hydraulic-erosion and
 # Poisson-disk scatter passes. The toolkit runs correctly WITHOUT it (pure-numpy
 # / pure-python fallbacks); numba just makes large grids (512x512+) much faster.
-numba>=0.60
+numba>=0.65.1
