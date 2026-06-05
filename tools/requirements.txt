@@ -8,5 +8,5 @@
 # back to Perlin if absent).
 numpy>=2.4.6
 pillow>=12.2.0
-scipy>=1.11
+scipy>=1.17.1
 opensimplex>=0.4
