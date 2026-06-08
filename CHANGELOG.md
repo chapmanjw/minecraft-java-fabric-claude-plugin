@@ -4,7 +4,13 @@ All notable changes to this project are documented in this file. The format is b
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.0.0] - 2026-06-07
+
+The 1.0 milestone. The plugin learns the two-endpoint stack — the world server plus
+the new client inspection endpoint for eye-level verification — and folds the Zion
+showcase build's hard-won lessons (sourced rail boosters, same-generator canyon
+ends, adversarial inspection, the force-load and full-footprint-clear rules) into
+the builder skills and the local toolkit.
 
 ### Added
 
