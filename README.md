@@ -236,6 +236,16 @@ environment variable so it stays out of version control.
 [`.mcp.json.example`](.mcp.json.example) in this repo is a reference template
 showing both the no-auth localhost form and the token-via-env pattern.
 
+The mod actually exposes **two** servers from one jar: `minecraft-java` (the
+world tools, port 8765) and an optional `minecraft-java-client` (inspection —
+`view_capture` returns the player's real first-person frame, plus `sense_*` /
+`client_status`, port 8766) that runs inside a real rendered client so Claude can
+SEE the world as a player does. Connect the world server always; add the
+inspection server when a client is running (single-player serves both from one
+process). `setup-connect` covers the server-only, client-only, and server+client
+patterns, and `exec-inspect` uses the real-client frame for in-game verification
+when it's connected.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for conventions and how to validate

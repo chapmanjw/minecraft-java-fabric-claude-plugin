@@ -26,6 +26,36 @@ Before starting, get from the user:
 > plugin expect MCP tools under that name (`mcp__minecraft-java__*`). Use
 > exactly `minecraft-java` as the server name below.
 
+## One or two servers? (world + inspection)
+
+The mod exposes **two** MCP servers from one jar. Connect whichever match the
+user's setup:
+
+- **`minecraft-java`** — the **world** server (read/write the world: `level_*`,
+  `block_*`, `entity_*`, …). Runs wherever a Minecraft server runs — a dedicated
+  server, or single-player's integrated server. Default `http://localhost:8765/mcp`.
+  **Always connect this.**
+- **`minecraft-java-client`** — the **inspection** server: SEE the world the way
+  a player does. `view_capture` returns the player's actual first-person frame as
+  a PNG; `sense_crosshair` / `sense_raycast` / `sense_entities` / `sense_screen` /
+  `client_status` read client-side perception. Runs **inside a real, rendered
+  client**. Default `http://localhost:8766/mcp`. Connect this **only when a real
+  client is running** (see patterns below). Name it **exactly
+  `minecraft-java-client`** — `exec-inspect` looks for `mcp__minecraft-java-client__*`.
+
+The three supported patterns:
+
+| Pattern | What's running | Connect |
+| --- | --- | --- |
+| **Server-only** | a dedicated/headless server | `minecraft-java` only |
+| **Client-only** | a single-player client (its integrated server runs too) | both — one process serves 8765 (world) + 8766 (inspection) |
+| **Server + client combo** | a dedicated server + a separate client joined to it | both — `minecraft-java` on the server host:8765, `minecraft-java-client` on the client host:8766 |
+
+The inspection server is **optional**: everything builds without it; it adds the
+real-pixel "what does this look like in-game" check that `exec-inspect` uses when
+present (and falls back to the synthetic `block_render_region` + a user screenshot
+when absent).
+
 Ask the user which Claude they're connecting: **Claude Code** (CLI / IDE
 extension) or **Claude Desktop**. Follow the matching section.
 
@@ -39,6 +69,17 @@ natively. Use `claude mcp add`.
 ```sh
 claude mcp add --transport http minecraft-java "http://localhost:8765/mcp"
 ```
+
+**Add the inspection server** when a real client is running (single-player, or a
+client joined to the server) — see the patterns table above:
+
+```sh
+claude mcp add --transport http minecraft-java-client "http://localhost:8766/mcp"
+```
+
+For a server+client combo, point each at its own host (the world server on the
+dedicated host, the inspection server on the client host). Add a matching
+`--header "Authorization: Bearer <token>"` if that endpoint requires auth.
 
 **Dedicated / remote (with token):**
 
@@ -140,6 +181,17 @@ A registered server isn't a working one — confirm with a **live call**:
    world-level reads work.
 3. As a visible smoke test, run `command_execute` with `say MCP connected` and
    confirm the user sees the message in the in-game chat.
+4. **If you connected `minecraft-java-client`:** call **`client_status`** — it
+   needs no arguments and confirms the inspection client is in a world (it
+   reports `in_game`, position, facing). Then **`view_capture`** returns the
+   player's first-person frame as an image you can `Read`. A successful capture
+   means the real-pixel inspection path is live. (If `client_status` reports
+   `in_game: false`, the client is on the title screen — join a world and retry.)
+   `view_capture` defaults to `close_screen: true`, so it dismisses the pause/Esc
+   menu that opens when you alt-tab and still returns a clean world frame; to stop
+   that menu opening on focus loss at all, toggle Pause on Lost Focus off in-game
+   with **F3 + P**. The client window must not be minimized (minimized = no
+   rendering = no capture).
 
 If a call fails:
 
@@ -158,6 +210,8 @@ Once `server_get_status` returns cleanly, the setup is complete:
 - [ ] `minecraft-java` MCP server registered with Claude.
 - [ ] Java tools (`level_*`, `block_*`, `entity_*`, …) visible.
 - [ ] A live test call succeeded against the world.
+- [ ] *(if a client is running)* `minecraft-java-client` registered; `client_status`
+      and `view_capture` succeeded — Claude can SEE the world as a player.
 
 Tell the user they're done — all four phases are complete. Suggest next steps:
 

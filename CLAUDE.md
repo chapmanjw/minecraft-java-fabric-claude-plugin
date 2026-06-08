@@ -24,13 +24,21 @@ can read the PNGs they produce.
 
 This is the Claude-facing piece of a two-repository system. The MCP server is **embedded in the Fabric mod** and runs inside Minecraft — there is no separate server process and no behavior pack.
 
+The mod has **two entrypoints / two MCP endpoints** from one jar:
+
 ```
 Claude (Code / Desktop)
-  │ MCP over Streamable HTTP (http://127.0.0.1:8765/mcp)
-minecraft-java-fabric-mcp-server   ← Fabric mod; embeds the MCP server
-  │ Minecraft server API + Fabric API (on the main thread)
-the Minecraft world
+  │ MCP over Streamable HTTP                 │ MCP over Streamable HTTP
+  │ minecraft-java  (127.0.0.1:8765/mcp)     │ minecraft-java-client (127.0.0.1:8766/mcp)
+  ▼                                          ▼
+McpServerMod (main entrypoint)              McpClientMod (client entrypoint)
+  │ server API, server main thread            │ client API, client/render thread
+  │ WORLD tools (level_/block_/entity_…)      │ INSPECTION tools (view_capture, sense_*, client_status)
+  ▼                                          ▼
+the Minecraft world  ◄──── same world, the client joins as a player ────►
 ```
+
+`minecraft-java` runs wherever a server runs (dedicated, or single-player's integrated server). `minecraft-java-client` runs only inside a real, rendered client — it captures the actual first-person frame so Claude can SEE the world as a player. Patterns (server-only / client-only / server+client) are in the `setup-connect` skill; the inspection endpoint is optional and `exec-inspect` uses it when present.
 
 The plugin adds two things:
 - **Guided setup** — four ordered skills (`setup-fabric` → `setup-mod` → `setup-server` → `setup-connect`) that walk a user through standing up the full stack on Java Edition.
@@ -106,7 +114,8 @@ A one-shot renamer for the prefixed scheme lives at `scripts/migrate-skills.mjs`
 - A skill's `description` determines when Claude invokes it — make it concrete and specific.
 - The four setup skills must stay runnable in order, each handing off to the next.
 - Tool references use the Java MCP surface (`level_*`, `block_*`, `entity_*`, `structure_*`, `data_storage_*`, …) under the server name **`minecraft-java`** — never the Bedrock `mc_*` names.
-- The mod groups its 183 tools into ten domain categories (`blocks`, `structures`, `world`, `entities`, `players`, `items`, `gameplay`, `scripting`, `registries`, `server`) and tags each `read`/`write`/`admin`. With no config it registers a lean ~102-tool default: the seven default-on domains (`blocks`, `structures`, `world`, `entities`, `items`, `scripting`, `server`) capped at `write`. **The builder runs entirely within this default-on set** — it never needs an opt-in domain or admin access, except occasional read-only calls into `gameplay` / `registries`. The taxonomy and how to widen the surface live in the `setup-server` skill; the surface note for builds is in `reference/execution/engine-limits.md`.
+- The `minecraft-java` (world) server groups its tools into ten domain categories (`blocks`, `structures`, `world`, `entities`, `players`, `items`, `gameplay`, `scripting`, `registries`, `server`) and tags each `read`/`write`/`admin`. With no config it registers a lean ~102-tool default: the seven default-on domains (`blocks`, `structures`, `world`, `entities`, `items`, `scripting`, `server`) capped at `write`. **The builder runs entirely within this default-on set** — it never needs an opt-in domain or admin access, except occasional read-only calls into `gameplay` / `registries`. The taxonomy and how to widen the surface live in the `setup-server` skill; the surface note for builds is in `reference/execution/engine-limits.md`.
+- An eleventh category, `client`, is served only by the separate **`minecraft-java-client`** inspection endpoint (the mod's client entrypoint, default port 8766) — read-only tools `view_capture` (the player's real first-person frame), `sense_crosshair` / `sense_raycast` / `sense_entities` / `sense_screen`, and `client_status`. It is optional and runs only inside a real rendered client; `exec-inspect` uses it for true eye-level / in-game-rendering verification when connected and falls back to `block_render_region` + a user screenshot when not. Reference these under the `mcp__minecraft-java-client__*` name — never mix them into the `minecraft-java` world surface.
 - Bundled helper scripts live under `tools/` and are referenced from skills via `${CLAUDE_PLUGIN_ROOT}/tools/…`. Dependency posture: the `builder` harness is stdlib-only; the `voxel` toolkit is numpy + Pillow; the `terrain` toolkit adds scipy (+ optional opensimplex). Document any dependency in `tools/requirements.txt` and have a script degrade with a clear "run `pip install …`" message rather than failing opaquely. Hard tool limits are documented once in `reference/execution/engine-limits.md` — cite it rather than restating limits per skill.
 - Keep the Minecraft version, Fabric API jar, the MCP mod jar, and the values referenced in these skills in lockstep — the mod is built per Minecraft version.
 

@@ -6,6 +6,25 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- **Client inspection endpoint support (`minecraft-java-client`).** The mod now ships a second
+  MCP server — its client entrypoint — that runs inside a real, rendered Minecraft client and
+  serves read-only inspection tools (`view_capture` for the player's actual first-person frame,
+  plus `sense_crosshair` / `sense_raycast` / `sense_entities` / `sense_screen` / `client_status`).
+  The plugin learns to set it up and use it:
+  - `setup-connect` documents the world+inspection two-server model and the three patterns
+    (server-only, client-only, server+client combo), with `claude mcp add` for
+    `minecraft-java-client` and a `view_capture` verification step.
+  - `setup-server` notes the separate `client.json` / port 8766 / `MCP_CLIENT_*` config and the
+    eleventh `client` category.
+  - `exec-inspect` uses the real-client frame for eye-level / in-game-rendering verification when
+    `mcp__minecraft-java-client__*` is connected (aim the player from the world server, then
+    `view_capture`), records the frame `source` in `rider_pov`, and falls back to the synthetic
+    `block_render_region` + a user screenshot when the endpoint is absent.
+  - `.mcp.json.example`, the architecture diagram, the tool-surface conventions in `CLAUDE.md`,
+    and `reference/execution/engine-limits.md` all reflect the second endpoint.
+
 ## [0.9.0] - 2026-05-30
 
 The build pipeline becomes a single, gated, three-tier system. Every request runs

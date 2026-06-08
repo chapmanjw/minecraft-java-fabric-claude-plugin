@@ -31,7 +31,7 @@ no separate server process and no behavior pack.
 | 1 | `setup-fabric` | Minecraft Java Edition with the Fabric loader (single-player client or dedicated server). |
 | 2 | `setup-mod` | The MCP mod jar + matching Fabric API jar installed in `mods/`. |
 | 3 | `setup-server` | The mod configured (`config.json`) and running; `/healthz` verified. |
-| 4 | `setup-connect` | The MCP server registered with Claude; verified with a live `server_get_status` call. |
+| 4 | `setup-connect` | The MCP server(s) registered with Claude; verified with a live `server_get_status` call. Connects `minecraft-java` (world) always, and — when a real client is running (single-player, or a client joined to the server) — also `minecraft-java-client` (inspection: `view_capture` + `sense_*`). |
 
 ## How to run
 

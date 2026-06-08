@@ -43,6 +43,12 @@ that the world is not connected.
   full-volume scan into context), `block_scan_summary` (histogram + non-air
   bounds digest), `structure_list`, `entity_query`, and `block_render_region`
   (a PNG of a region — your fastest path to *seeing* a representational build).
+- **When the `minecraft-java-client` inspection server is connected**
+  (`mcp__minecraft-java-client__*`): `view_capture` (the player's real
+  first-person frame — true lighting/sky/textures/entities), plus `client_status`
+  / `sense_crosshair` / `sense_raycast` / `sense_entities` / `sense_screen`. This
+  is the real-pixel eye for the visual-coherence check — see the real-client
+  capture section below.
 - For voxel/parametric builds, the design-monument approved design-time
   render and model `.npy` (in the project scratch dir), to compare against.
 
@@ -247,6 +253,47 @@ clashing seam" failure to the orchestrator with a routing hint to `terrain-shape
 (it is a *shape* problem — hard rule 4's continuous field), never to
 `exec-worker` and never to a palette tweak.
 
+### Java-exclusive: real-client capture (the `minecraft-java-client` server)
+
+When the **inspection server** is connected (`mcp__minecraft-java-client__*` tools
+are available — see the `setup-connect` skill), you can SEE the build with the
+**real Minecraft client's pixels**: actual lighting, day/night sky, fog, water,
+foliage, entities, and a true eye-level perspective camera. This is the closest
+automated substitute for the user's in-game screenshot — strictly better than the
+synthetic `block_render_region` for the visual-coherence judgement, because it is
+what a player at that spot actually sees, not a flat-shaded map-colour voxel render.
+
+Use it for the **eye-level / ride-through / silhouette** check above. The division
+of labour between the two servers matters:
+
+1. **Aim from the world server.** The client tools are read-only — they do not move
+   the player. Position and aim the inspection client's player with the
+   `minecraft-java` (world) server: `entity_teleport`, or
+   `command_execute("tp <player> <x> <y> <z> <yaw> <pitch>")`. Teleporting with a
+   rotation snaps the client camera to that pose.
+2. **Capture from the client server.** Call `mcp__minecraft-java-client__view_capture`
+   and `Read` the returned PNG. Sample the same `rider_pov` camera positions/facings
+   you would have rendered — a few points along the route/loop.
+3. **Confirm the vantage** with `client_status` (position + facing), and use
+   `sense_crosshair` / `sense_entities` if you need to verify what the camera is
+   actually centred on.
+4. **Record the source.** In the `rider_pov` rows (below), note whether each frame
+   came from the real client (`source: client`) or the synthetic render
+   (`source: render`) so the verification record is honest about fidelity.
+
+Graceful degradation: if `mcp__minecraft-java-client__*` is **not** connected (a
+headless server-only setup, or no client joined), fall back to the existing path —
+`block_render_region` `view: iso` + an eye-level slice — and keep the **user visual
+checkpoint** as the gate. A real-client frame you judged yourself is still
+self-assessment, not verification; it is a much stronger signal than the synthetic
+render, but under autonomy with no user, treat a clean real-client eye-level pass as
+the minimum bar and flag anything ambiguous for a human look.
+
+Functional checks benefit too: drive a trigger from the world server (place/use via
+`command_execute` or a fake-player path), then confirm both the event
+(`events_poll`) **and** the visible result (`view_capture`) — e.g. the door is
+actually open in the frame, not just that `block.use` fired.
+
 ### 5. Adjustments — what needs to change
 
 For every issue, produce a **concrete correction**: the coordinates, what is
@@ -282,10 +329,13 @@ eye-level check as a `rider_pov` row — the camera samples you rendered and
 whether the faces read cleanly:
 
 ```toon
-rider_pov[2]{phase,camera,facing,reads_clean,note}:
-  3,118 70 -300,north,yes,snow carried onto the vertical faces too
-  3,134 70 -260,east,no,gray wall on the inside slope — route to terrain-shape
+rider_pov[2]{phase,camera,facing,source,reads_clean,note}:
+  3,118 70 -300,north,client,yes,snow carried onto the vertical faces too
+  3,134 70 -260,east,render,no,gray wall on the inside slope — route to terrain-shape
 ```
+
+`source` is `client` (real-client `view_capture` via `minecraft-java-client`) or
+`render` (synthetic `block_render_region`) — record which eyes judged each camera.
 
 When corrections are needed, also write them as a steps table the `exec-worker` can
 execute, and record what each correction was for (so `exec-reflect` sees the

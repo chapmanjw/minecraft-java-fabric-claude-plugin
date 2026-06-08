@@ -1,16 +1,26 @@
 {
-  "//": "Reference MCP config for the minecraft-java MCP server (the Fabric mod).",
-  "//1": "Template only — it is NOT auto-loaded by the plugin. The connect-claude",
-  "//2": "skill registers this for you; copy it to .mcp.json in a project (or use",
+  "//": "Reference MCP config for the Minecraft Java MCP servers (the Fabric mod).",
+  "//1": "Template only — it is NOT auto-loaded by the plugin. The setup-connect",
+  "//2": "skill registers these for you; copy to .mcp.json in a project (or use",
   "//3": "`claude mcp add`) if you'd rather do it by hand.",
-  "//4": "Single-player / localhost (no auth): the server block below is all you need.",
-  "//5": "Remote or authenticated server: add a headers block to the server entry —",
-  "//6": "  \"headers\": { \"Authorization\": \"Bearer ${MINECRAFT_MCP_TOKEN}\" }",
-  "//7": "and set MINECRAFT_MCP_TOKEN in your environment. Never commit the token.",
+  "//4": "minecraft-java = the WORLD server (read/write the world). Runs wherever a",
+  "//5": "  Minecraft server runs: a dedicated server, or single-player's integrated server.",
+  "//6": "minecraft-java-client = the INSPECTION server — SEE the world as a player does:",
+  "//7": "  view_capture returns a first-person PNG; sense_*/client_status read perception.",
+  "//8": "  Runs inside a real, rendered client (port 8766). OMIT this entry for a",
+  "//9": "  server-only/headless setup. In single-player ONE process serves BOTH endpoints",
+  "//10": "  (8765 world + 8766 inspection); in a server+client combo each runs in its own process.",
+  "//11": "Auth: for a remote/authenticated endpoint add a headers block to that entry —",
+  "//12": "  \"headers\": { \"Authorization\": \"Bearer ${MINECRAFT_MCP_TOKEN}\" } — and set the",
+  "//13": "  env var in your environment. Never commit the token.",
   "mcpServers": {
     "minecraft-java": {
       "type": "http",
       "url": "${MINECRAFT_MCP_URL:-http://localhost:8765/mcp}"
+    },
+    "minecraft-java-client": {
+      "type": "http",
+      "url": "${MINECRAFT_MCP_CLIENT_URL:-http://localhost:8766/mcp}"
     }
   }
 }

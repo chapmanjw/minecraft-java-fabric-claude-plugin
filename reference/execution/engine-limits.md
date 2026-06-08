@@ -29,6 +29,30 @@ needs an opt-in when it reads from `gameplay` (scoreboards, boss bars) or
 enable. If a tool the build expects answers "method not found," check it isn't a
 gated category before assuming an older mod.
 
+## Client inspection endpoint (`minecraft-java-client`)
+
+Separate from the world surface above, the mod's **client** entrypoint serves a
+second MCP endpoint, `minecraft-java-client` (default port 8766), with read-only
+inspection tools under `mcp__minecraft-java-client__*`: `view_capture` (the
+player's real first-person frame as a PNG — true lighting/sky/textures/entities),
+`sense_crosshair`, `sense_raycast`, `sense_entities`, `sense_screen`, and
+`client_status`. It runs only inside a real, rendered client and is **optional**.
+
+For builds this is a **verification** aid, not a placement tool: it is the
+real-pixel "what does this look like in-game" eye that `exec-inspect` uses (aim the
+player from the `minecraft-java` world server with `entity_teleport` / `tp … yaw
+pitch`, then `view_capture`). When the endpoint is absent, verification falls back
+to `block_render_region` (the synthetic server-side render) plus a user screenshot.
+Never assume it is connected — feature-detect the `mcp__minecraft-java-client__*`
+tools and degrade gracefully.
+
+`view_capture` notes: it defaults to `close_screen: true`, which dismisses the
+pause/Esc menu that opens on window focus loss (so an alt-tabbed client still yields
+a clean world frame); to stop that menu opening at all, toggle Pause on Lost Focus
+off in-game with **F3 + P**. The client window must not be minimized (minimized = no
+rendering = capture stalls). A large game window makes a large PNG — raise
+`downscale` (e.g. 3–4) for the inline-image path (~1 MB content cap in some clients).
+
 ## Block placement
 
 - **`block_fill_region` auto-tiles past the 32,768 ceiling** *(mod ≥ the

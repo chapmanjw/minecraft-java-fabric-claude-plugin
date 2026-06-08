@@ -33,6 +33,19 @@ also be overridden by an environment variable named `MCP_<FIELD>` (e.g.
 The defaults are deliberately safe: bind `127.0.0.1`, port `8765`, **no auth**,
 reject all cross-origin browser requests.
 
+> **There are two servers.** The above is the **world** server (`minecraft-java`,
+> the `main` entrypoint). The same jar also has a **client inspection** server
+> (`minecraft-java-client`, the `client` entrypoint) that runs inside a real,
+> rendered Minecraft client and serves the `client` category — `view_capture` (a
+> real first-person PNG) and `sense_*` / `client_status`. It reads a **separate**
+> config `config/minecraft_fabric_mcp/client.json` (default port **8766**, env
+> prefix **`MCP_CLIENT_*`**) and defaults to exposing only the inspection tools.
+> It needs a real client window with a GPU — it is **not** part of a headless
+> dedicated server. This phase configures the world server; running the
+> inspection server (and the server-only / client-only / combo patterns) is
+> covered in `setup-connect`. Most fields below apply to both — only the file
+> name, default port, and env prefix differ.
+
 ---
 
 ## Single-player branch — defaults are enough
@@ -147,11 +160,13 @@ plain `curl` confirms reachability independent of the token.
 
 ## Restricting the tool surface (optional)
 
-The mod groups its 183 tools into **ten domain categories** and tags each tool
+The mod groups its world tools into **ten domain categories** and tags each tool
 with one **access level**. With no config, an operator gets a lean default: the
 seven default-on domains at `write` access, about 102 tools. This is plenty for
 the world builder and keeps the surface small. Touch this only if the user
-wants to widen the surface or lock it down further.
+wants to widen the surface or lock it down further. (There is an eleventh
+category, `client`, but it is served only by the separate `minecraft-java-client`
+inspection endpoint — never the world server — and is configured there.)
 
 ### The ten categories
 
