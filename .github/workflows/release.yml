@@ -1,0 +1,74 @@
+name: Release
+
+# The plugin is distributed as a Claude Code marketplace (Claude reads
+# .claude-plugin/marketplace.json straight from the repo), so there is no
+# package to publish to Modrinth/CurseForge like the mod. This workflow's job is
+# to turn a pushed version tag into a visible GitHub Release with the changelog
+# notes — the step that used to be a manual `gh release create` and was easy to
+# forget (v0.9.0 and v1.0.0 shipped as tags with no Release until backfilled).
+#
+# Release flow: bump .claude-plugin/{plugin,marketplace}.json (lockstep) + add a
+# dated CHANGELOG section, commit to main, then `git tag vX.Y.Z && git push
+# --tags`. This runs on the tag and publishes the Release.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  github-release:
+    name: Publish to GitHub Releases
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Validate plugin manifests
+        run: node scripts/validate-plugin.mjs
+
+      - name: Verify the tag matches the manifest version
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          version="${tag#v}"
+          manifest=$(node -p "require('./.claude-plugin/plugin.json').version")
+          if [ "$version" != "$manifest" ]; then
+            echo "::error::Tag $tag (version $version) does not match plugin.json version $manifest — bump the manifests before tagging."
+            exit 1
+          fi
+          echo "tag $tag matches plugin.json version $manifest"
+
+      - name: Extract changelog entry
+        id: changelog
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          version="${tag#v}"
+          # Pull the section between '## [<version>]' and the next '## ['.
+          # Literal prefix match (index), not regex — the header contains '['/'.'.
+          notes=$(awk -v v="## [$version]" '
+            index($0, v) == 1 {flag=1; next}
+            flag && /^## \[/ {exit}
+            flag {print}
+          ' CHANGELOG.md)
+          {
+            echo "notes<<__EOF__"
+            echo "$notes"
+            echo "__EOF__"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create / update GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.notes }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') }}
