@@ -100,6 +100,7 @@ summary = write_fills_json(m, "/path/scratch/r1s_fills.json", origin=(206, 64, 7
 | `voxel.model` | `VoxelModel` — numpy grid + primitives: `box`, `ellipsoid` (solid/shell), `cylinder` (taper → cone), `line3d` (thickenable), `mirror_x`, anchors `fx/fy/fz` (fraction → index). |
 | `voxel.render` | `render_views` (iso + side + front), `render_iso`, `render_ortho` (side/front/top). Surface voxels only; per-block colour. |
 | `voxel.decompose` | `write_fills_json` / `to_fills` — greedy maximal-box cover, split to ≤ cap, → world-space fills. |
+| `voxel.continuity` | `find_gaps` / `verify_and_patch` — re-scan a 1-wide feature's Y-layer, diff it against the cells you meant to place, and `block_set_state` the entries `block_fill_batch` silently dropped (rails, redstone lines, thin walls). |
 
 ### Placing the result
 
@@ -195,6 +196,7 @@ write_terrain_fills(hf, "/path/scratch/island_fills.json", layers, origin=(0, 0)
 | `terrain.erosion` | `hydraulic` (droplet) + `thermal` (talus) erosion. |
 | `terrain.render` | `render_views` (hillshade + relief + profile) — the terrain verify eyes. |
 | `terrain.materialize` | `TerrainLayers` + `write_terrain_fills` — heightfield → world fills (double-layer, mixed surface, cliffs, beaches, water columns), reusing `voxel`'s decompose. |
+| `terrain.close` | `close_belt_end` — close one end of a `belt_from_path` canyon with the SAME generator as its walls (pinch the cross-section, re-apply the same noise + erosion via a `regen` callback, merge with `np.maximum`) so the endcap blends instead of reading as pasted-in. |
 
 `HeightField.from_image()` loads a greyscale heightmap PNG (a DEM exported from
 QGIS / Tangram Heightmapper / World Machine) — the zero-dep "import real

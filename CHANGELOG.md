@@ -24,6 +24,53 @@ All notable changes to this project are documented in this file. The format is b
     `block_render_region` + a user screenshot when the endpoint is absent.
   - `.mcp.json.example`, the architecture diagram, the tool-surface conventions in `CLAUDE.md`,
     and `reference/execution/engine-limits.md` all reflect the second endpoint.
+- **Rail / wire continuity verifier (`tools/voxel/continuity.py`).** `block_fill_batch`
+  can silently drop a few entries from a large batch — invisible on wide terrain, fatal
+  on a 1-wide rail (the cart stalls dead at each gap). `find_gaps` diffs the intended
+  cell list against a live layer scan; `verify_and_patch` re-places the missing cells
+  with `block_set_state` (reliable per block). `system-transit` and `exec-inspect` call
+  it after any 1-wide placement.
+- **Canyon/valley end-closer (`tools/terrain/close.py`, `close_belt_end`).** Closes one
+  end of a `belt_from_path` canyon by reusing the SAME machinery as its walls — the
+  belt's own cross-section (corridor pinching shut), the same `add_fbm` at global grid
+  coordinates (so the noise phase aligns at the seam), and the same thermal/hydraulic
+  erosion via a caller `regen` callback, merged with `np.maximum`. Generalises the
+  per-build endcap scripts that kept reading as pasted-in headwalls.
+- **Harness force-load re-assert for self-running mechanisms.** A plan may declare a
+  top-level `protect` block (`{corner_a, corner_b}` chunk rectangles); `builder.harness`
+  re-asserts those bands with `forceload add` as the last op of every force-toggling
+  phase (run / build / freshness), so a later phase's `forceload remove` never unloads a
+  permanently force-loaded rail loop or farm (entities freeze, redstone reverts).
+
+### Changed
+
+- **Folded the Zion showcase build learnings into the builder skills.** `system-transit`
+  gains the sourced-booster rule, square single-block-corner U-turns, the sloped-back
+  wall-bench profile, an auto-board station template, and ride-test hygiene;
+  `exec-inspect` documents zone fan-out plus an adversarial synthesis pass that
+  re-verifies "criticals", and eye-level / thin-slab cross-section judging;
+  `terrain-shape`, `build-natural-world`, `design-monument` / `terrain-landmark`,
+  `coherence`, `workflow-spine`, and `engine-limits` pick up same-generator
+  end-closing, low-frequency variation on gentle slopes, distinct hero-mass placement,
+  the force-load and full-prior-footprint-clear rules, the offline-preview sign-off
+  gate, and a consolidated engine-caps table.
+
+### Fixed
+
+- **Powered-rail booster guidance reversed (corrects the 0.8.0 note below).** A
+  `redstone_block` directly *under* a powered rail IS a real source: the rail recomputes
+  to `powered=true` on every block-update re-eval, so it is player-proof and
+  reload-proof. A source-less `powered=true` set via `block_set_state` holds only at 0
+  players and reverts the instant a player is online (player-driven chunk/light/neighbour
+  updates re-evaluate the rail; `update_flags=2` does not save it). The earlier "set
+  `powered=true` explicitly; a `redstone_block` underneath doesn't hold" guidance was
+  true only for a never-visited headless test. Corrected in `system-redstone`
+  (`setblock-redstone-limits.md`, `verification.md`), `system-transit`, and
+  `build-systems`.
+- **`entity_query` / `@e` only enumerates loaded chunks.** Documented in `engine-limits`:
+  a `summon` reporting `successCount: 1` followed by an empty query usually means the
+  chunk is unloaded (check `forceload query`), not that the entity despawned — minecarts
+  and items in unloaded chunks are frozen, not removed.
 
 ## [0.9.0] - 2026-05-30
 

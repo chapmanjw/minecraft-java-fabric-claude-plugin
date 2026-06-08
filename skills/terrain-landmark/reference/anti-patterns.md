@@ -24,6 +24,14 @@ reviews a finished landmark against. Each item is a yes/no gate.
 - **Wrong silhouette.** Devils Tower without vertical column striations is a
   generic plug. A tepui or mesa with tapered (not vertical) cliffs is just a
   hill.
+- **A group of named masses reads as one lump.** For a wonder that is several
+  named landmarks (Kata-Tjuta domes, Twelve Apostles, a line of buttes), each
+  mass must be legibly distinct: separated centres, varied summit heights, a
+  baked saddle between neighbours, contrasting profiles (broad mesa vs narrow
+  spire vs tri-lobed dome). Two `np.maximum`-merged broad masses read as a single
+  butte, and post-hoc carving of notches to split them reads as artificial slots.
+  → author each mass distinct in the heightfield (see `sequencing.md`); a merged
+  group sends the build back to the composer, not to a carve pass.
 
 ## Signature features
 

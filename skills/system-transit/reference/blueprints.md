@@ -66,6 +66,28 @@ build — against these failure modes:
   `terrain-shape`.
 - **Redstone in the plan** — a boost station or switch designed here instead
   of handed to `system-redstone`.
+- **A gapped 1-wide line** — a missing rail or wire cell. `block_fill_batch`
+  can silently drop a few entries from a large batch; for wide terrain that is
+  invisible, but for a 1-wide rail it is fatal (the cart stalls dead at each
+  gap). See the continuity check below.
 
 A mis-paired portal or a disconnected mode breaks the journey — those are
 corrections to make, not cosmetic notes.
+
+## Verifying 1-wide continuity
+
+A single batch of 1,928 one-block rail fills left 4 cells unplaced with no
+error; the cart skimmed the gaps at launch speed once (so the ride "passed"),
+then stalled at each of them after it slowed. For any 1-wide critical line
+(rail, redstone, a thin wall), do not trust the batch return — re-scan the
+feature's Y-layer and patch.
+
+Run `${CLAUDE_PLUGIN_ROOT}/tools/voxel/continuity.py` after laying the line:
+`verify_and_patch(intended_cells, dimension, y, shape_of=..., block="minecraft:rail")`
+scans the layer in cap-sized tiles, diffs the intended cell list against what is
+present (`find_gaps(intended, present)` is the pure set diff under it),
+`set_state`s the missing cells (per-block placement is reliable where the batch
+was not), and returns the patched cells so the gap is logged rather than silent.
+The `exec-inspect` pass should assert the scanned layer count equals the
+intended count. Hard tool caps (scan volume, batch entries) live in
+`${CLAUDE_PLUGIN_ROOT}/reference/execution/engine-limits.md`.

@@ -61,12 +61,21 @@ These work without intervention as long as the chunk is loaded and ticking.
   other receiver, activates normally — the neighbour update propagates power.
 - **Static power: `minecraft:redstone_block` adjacent to receiver.** A redstone
   block placed next to a piston/lamp/dispenser activates the receiver
-  immediately. Reliable. **Exception — powered rails:** a `redstone_block`
-  *underneath* a `powered_rail` does **not** compute/hold its power on this mod,
-  and a `block_fill_batch` placement fires no neighbour update — the rail lands
-  `powered=false` and acts as a **brake**. Set `powered=true` explicitly with
-  `block_set_state` (default update_flags 3) on each powered rail (see
-  `reference/verification.md` correction catalog).
+  immediately. Reliable. **Powered rails — use a real source under the rail.** A
+  `redstone_block` directly *underneath* a `powered_rail` (at `y = RAILY-1`) **is**
+  a genuine redstone source: the rail recomputes to `powered=true` on every
+  block-update re-eval, so a sourced booster is player-proof and reload-proof.
+  Place the source first, then the rail (so the rail computes `powered` from it).
+  Do **not** rely on `powered=true` set by `block_set_state` with no source under
+  the rail — a source-less powered rail self-reverts to `powered=false` the
+  instant any block update reaches it. At 0 players in a quiet chunk a source-less
+  set holds (nothing re-evaluates it); a single player online generates continuous
+  re-evals (chunk load, lighting, neighbour updates) that collapse it back to
+  `powered=false`. `update_flags:2` does **not** save it — a source-less rail
+  reverts on the chunk's rail re-eval regardless of flags. Source-less
+  `set_state powered=true` is acceptable only for a headless, never-visited
+  mechanism, and even then is fragile (see `reference/verification.md` correction
+  catalog).
 - **Button / pressure plate.** Players or mobs trigger these; pre-placed,
   unpressed, they work the moment something interacts.
 - **Lit redstone torch + adjacent dust.** A `minecraft:redstone_torch[lit=true]`

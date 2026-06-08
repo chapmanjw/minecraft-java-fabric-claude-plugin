@@ -155,6 +155,46 @@ richness a detail-layer one (see `SKILL.md` § Continuity belongs in the base
 layer). Render-verify offline, then place via `mcp_place.py` /
 `block_fill_columns` exactly as for the heightmap method.
 
+### Closing a canyon or valley end — same generator, not a new one
+
+Capping the end of a canyon, a valley, or any belt means the walls converge and
+pinch shut. The trap: closing the gap with a *different* process than the walls
+it joins. Every such mismatch reads as pasted-in. Four ways it fails, all from
+giving the endcap its own generator:
+
+1. A per-column random-top headwall → a vertical "dripping curtain."
+2. "More eroded" via a per-column gully/notch → the same vertical pins/streaks.
+3. Remnants of the *old* wider structure flanking the new cap (clear box too small).
+4. A smooth formula bowl set between rough eroded walls → looks dropped in.
+
+The rule: **close the end with the same generator as the walls.** Same
+cross-section wall profile, with the belt half-width shrinking to 0 going outward
+so the walls converge. The **same `add_fbm` sampled at GLOBAL grid coordinates
+with identical seeds**, so the noise phase aligns at the seam instead of starting
+a fresh phase that crackles against the existing rock. The same
+`erode_thermal`/`erode_hydraulic`. Then re-run the **same materializer** over the
+end window. Identical rough rock on both sides → seamless join.
+
+```python
+# Close: same cross-section, fw -> 0 going outward; SAME noise/erosion as the canyon.
+hf = HeightField(NX, NZ, sea_level=SEA, base=FLOOR)
+hf.h = closing_surface(...)                 # cross-section profile, fw shrinking to 0
+hf.add_fbm(3.0, octaves=4, base_freq=0.018, warp=14, seed=11)   # SAME seeds + grid coords
+hf.add_fbm(4.0, octaves=4, base_freq=0.050, warp=20, seed=23)   #   -> noise aligns at seam
+hf.erode_thermal(iterations=18, talus=1.6)
+hf.erode_hydraulic(droplets=30000, seed=7)
+Hm = np.maximum(H, hf.h)                     # keep tall existing walls, raise the gap
+# then re-run the SAME materializer over the end window
+```
+
+Don't re-implement this per build — `${CLAUDE_PLUGIN_ROOT}/tools/terrain/close.py`
+ships `close_belt_end(field, centerline, keypoints, end, ...)` (also
+`from terrain import close_belt_end`), which reuses the same fbm (identical seeds,
+global grid coords) and the same thermal/hydraulic erosion via a caller-supplied
+regen callback, then merges with `np.maximum`. When you replace an old cap, also
+clear its *entire* prior footprint first — the headwall often reaches farther out
+than the new one (and survives past the world border if it was force-loaded).
+
 ## Naturalising an existing rectangular mass — the talus-skirt rescue
 
 If you discover a rectangular foundation, base mass, or "corestone megablock"
@@ -217,6 +257,16 @@ bands is the sweet spot for a cliff face.
   glacial U-valley walls.
 - Real mountainsides are **compound**: convex along the ridge, concave toward
   the valley.
+- **Match surface-variation frequency to the slope.** High-freq noise reads as
+  bumpy rock on a near-vertical face (fine) but terraces into vertical pins on a
+  gentle slope (bad). Keep surface variation **low-frequency — features ≥ ~15–20
+  blocks — on anything but a near-vertical face;** high-freq is only OK on a cliff.
+  Never per-column random tops or per-column ridged gullies on a slope: adjacent
+  columns at very different heights shatter into vertical streaks (and, separately,
+  into thousands of 1-block fills). This is the same root cause as the
+  low-frequency-undulation strata rule (`reference/terrain/research.md` and the ±7
+  banded jitter under *Plateaus, mesas, badlands, canyons* above) — strata jitter
+  with noise across columns, never per-column random.
 
 ## Valleys
 

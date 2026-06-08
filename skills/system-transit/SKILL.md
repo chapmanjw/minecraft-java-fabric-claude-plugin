@@ -121,6 +121,10 @@ Both are plan ops the `exec-worker` executes — emit `spawn` steps for display 
    - **edge_irregularity** rows for any naturalistic transit element
      (forest path, mountain road, coastal road) — straight roads through
      organic terrain read as paint.
+   - **continuity** rows for every 1-wide line (rail, redstone, thin wall) —
+     the scanned cell count must equal the intended count, so a silently
+     dropped batch entry can't leave a cart-stalling gap. See
+     `reference/blueprints.md`.
 
 ## Reference library
 
@@ -167,6 +171,14 @@ orchestrator owns routing and sequences the next leaf:
 - **Mob-proof every route** — adequate lighting, capped tunnel floors.
 - **Route around** existing builds and natural landmarks; flag grading for
   `terrain-shape` rather than carving terrain into the plan yourself.
+- **Every player-facing powered rail needs a real redstone source** — a
+  `redstone_block` directly under the rail (`y = RAILY-1`). A source-less
+  `set_state powered=true` self-reverts the moment a player is online; see
+  `reference/surface-routes.md`.
+- **Verify 1-wide lines after placement** — `block_fill_batch` can silently drop
+  a few cells, and one missing rail stalls the cart. Scan-and-patch the layer
+  with `${CLAUDE_PLUGIN_ROOT}/tools/voxel/continuity.py`; see
+  `reference/blueprints.md`.
 
 ## Return
 

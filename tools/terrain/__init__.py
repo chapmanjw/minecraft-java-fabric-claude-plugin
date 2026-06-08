@@ -20,6 +20,7 @@ from .render import render_hillshade, render_relief, render_profile, render_view
 from .materialize import (TerrainLayers, to_voxel_model, write_terrain_fills,
                           MaterialSpec, Layer, to_columns_plan, write_columns_plan,
                           resolve_surface)
+from .close import close_belt_end
 from .erosion import hydraulic, thermal, fluvial_rivers, flow_accumulation
 from .render import render_slope, render_eye_level
 from . import masks, blend, verify, recipe, climate, scatter, emit
@@ -43,6 +44,7 @@ __all__ = [
     "TerrainLayers", "to_voxel_model", "write_terrain_fills",
     # new mask-driven, block_fill_columns materialisation (Pillar 2)
     "MaterialSpec", "Layer", "to_columns_plan", "write_columns_plan", "resolve_surface",
+    "close_belt_end",
     # new subsystems
     "masks", "blend", "verify", "recipe", "climate", "scatter", "emit",
     "BiomeField", "fluvial_rivers", "flow_accumulation",

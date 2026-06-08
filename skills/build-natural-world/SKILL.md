@@ -72,6 +72,25 @@ After each leaf returns, check it against the shared context before advancing:
 terrain↔ecology (no forests on cliffs), region↔region (one continuous field),
 whole↔world (one integration pass). Mismatch → fix the owning leaf and re-run.
 
+Closing a canyon/valley end is a region↔region continuity case, so route it back
+through the SAME generator that authored the walls — never a different per-column
+process. A headwall built from per-column random tops or per-column gully/notch
+reads as a vertical dripping curtain; a smooth formula bowl between rough eroded
+walls reads as pasted-in. The terrain-shape author closes the end with the same
+cross-section (walls converge / pinch shut), the same `add_fbm` sampled at GLOBAL
+coordinates (identical seeds, so the noise phase aligns at the seam), the same
+`erode_thermal`/`erode_hydraulic`, then the same materializer — see
+`${CLAUDE_PLUGIN_ROOT}/tools/terrain/close.py` (`close_belt_end`). Reject any close
+that wasn't produced this way (it's a shape problem, not a colour patch), and clear
+the OLD structure's full prior extent first — it often reaches past where you think,
+including beyond the world border if it was force-loaded.
+
 A user visual checkpoint is the gate for hero terrain; under autonomy, the
 eye-level `exec-inspect` pass is the minimum substitute. Never judge terrain from
 a top-down render alone.
+
+Gate any expensive or hard-to-undo pass on an offline preview before it writes to
+the world: a re-materialize, a large recolor, an end-close, or any pass that has
+already failed once. Render it offline from the field/model (no world writes), get
+user sign-off, then place once. One previewed proposal turns a place-render-revert
+thrash into a single clean placement; it is far cheaper than the round-trip.

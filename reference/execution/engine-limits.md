@@ -53,6 +53,24 @@ off in-game with **F3 + P**. The client window must not be minimized (minimized 
 rendering = capture stalls). A large game window makes a large PNG — raise
 `downscale` (e.g. 3–4) for the inline-image path (~1 MB content cap in some clients).
 
+## Caps at a glance
+
+Every hard cap on the tool surface, in one place. The behaviour-past-cap column
+is the dangerous part — the silent ones (truncation, dropped entries) produce a
+"successful" call that placed less than you asked for. The detail and the
+mitigation for each live in the section noted; this table is the index.
+
+| Operation | Cap | Behaviour past cap |
+|---|---|---|
+| `block_fill_region` / `/fill` (per box) | 32,768 blocks | auto-tiled server-side (places the true total — see Block placement) |
+| `block_replace_in_region` | 32,768 blocks (W×H×L) | **silent truncation** — NOT auto-tiled; edits ~the first 32,768 cells and reports success |
+| `block_fill_batch` | 8,192 entries | rejected above the cap; **and may silently drop a few entries even under it** (see Block placement) |
+| `block_fill_columns` / `_strata` | 65,536 columns | rejected |
+| `block_scan_region` | 65,536 blocks | error |
+| `block_scan_summary` | 1,048,576 blocks | error |
+| `block_render_region` | 4,194,304 sampled cells (after `step`) | error — raise `step` |
+| `forceload` | 256 chunks / dimension | new adds rejected |
+
 ## Block placement
 
 - **`block_fill_region` auto-tiles past the 32,768 ceiling** *(mod ≥ the
@@ -86,6 +104,18 @@ rendering = capture stalls). A large game window makes a large PNG — raise
   `tools/voxel/mcp_place.py` client pages automatically. If the connected server
   lacks the tool, drive the same list through a sequence of `block_fill_region`
   calls (the boxes are already capped).
+- **`block_fill_batch` may silently drop a small number of entries** from a
+  large batch — under the 8192 cap, no error. For wide terrain a few missed
+  cells are invisible; for a feature where every cell matters (rails, redstone
+  lines, thin walls) one gap is fatal, and the batch return won't tell you. A
+  Zion rail batch of 1,928 one-block fills left 4 cells unplaced this way; a
+  cart stalled dead at each gap. **Don't trust the batch return for 1-wide
+  critical features — re-scan and patch after placing.** The continuity verifier
+  `${CLAUDE_PLUGIN_ROOT}/tools/voxel/continuity.py` does exactly this:
+  `verify_and_patch(intended_cells, dimension, y, shape_of=…, block="minecraft:rail")`
+  scans the feature's Y-layer, diffs the intended cell list with `find_gaps`,
+  and `set_state`s the missing cells (`set_state` is reliable per-block). It logs
+  what it patched — never a silent fix.
 - **Prefer few large ops** (`block_fill_region`, `block_clone_region`,
   `structure_load_to_world`) over many `block_set_state` calls.
 - **`blocks_changed: 0` = unloaded chunk.** A fill in an unloaded chunk returns
@@ -115,6 +145,22 @@ otherwise — so a successful `block_get_state` is *not* proof a write will land
   `forceload remove <the specific box>` you added, and re-assert
   `forceload add 0 0 0 0` (or wherever a persistent command block lives) at the
   end of any script that touched force-loads.
+- **A force-REMOVE over a range can unload permanently force-loaded mechanism
+  chunks.** `forceload remove` takes a box, not a set, so a later phase's remove
+  band that overlaps a self-running mechanism's chunks (a rail loop, a farm, a
+  repeating command block) unloads them too — entities freeze, redstone reverts.
+  On Zion the ecology pass force-loaded then `forceload remove`d each work band;
+  the bands overlapped the rail chunks, so afterwards the cart's spawn chunk was
+  no longer force-loaded and summoned carts "despawned" (really: frozen in an
+  unloaded chunk — see the diagnostics note below). **Near a mechanism, prefer
+  `forceload add` only**, and re-assert the permanent mechanism set as the *last*
+  op of every force-toggling phase rather than bracketing with a remove. Reclaim
+  the 256-chunk cap with targeted single-chunk removes of *known* non-mechanism
+  chunks if you must. The build harness does this for you: it reads a top-level
+  `protect:` block in `plan.toon` (rows of `{corner_a, corner_b}` as "x z") and
+  re-asserts those chunk bands with `forceload add` as the last op of every
+  force-toggling phase — see
+  `${CLAUDE_PLUGIN_ROOT}/reference/execution/build-harness.md`.
 - **Cap: 256 chunks per dimension.** Regions wider than that must be built in
   **Z-bands** (≤256 chunks each), one force-load at a time. Force-load is
   **per-dimension** — re-do it in the Nether/End.
@@ -126,6 +172,16 @@ otherwise — so a successful `block_get_state` is *not* proof a write will land
   needs force-loading; a single-player integrated server needs a focused client
   and freezes ticks when unfocused. See
   `${CLAUDE_PLUGIN_ROOT}/reference/execution/startup-and-recovery.md`.
+- **Diagnostics: `entity_query` / `@e` selectors only enumerate entities in
+  LOADED chunks.** A `summon` that reports `successCount: 1` followed by an empty
+  query usually means the target chunk is not loaded (check
+  `forceload query <x> <z>`), not that the entity despawned. Minecarts and items
+  in unloaded chunks are frozen, not removed — they reappear when the chunk loads.
+  On Zion this misread cost the most time: carts summoned onto unloaded rail
+  chunks (see the force-load notes above) returned empty from `entity_query`, which looked like
+  "instant despawn" and sent the diagnosis chasing booster theories instead of
+  the force-load. Force-load the chunk, re-query, before concluding an entity is
+  gone.
 
 ## Scanning / reading
 

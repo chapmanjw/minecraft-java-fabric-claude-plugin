@@ -20,6 +20,12 @@ every leaf's result.
 5. **One seam / integration plan.** The orchestrator records the build's footprint so the final
    `terrain-integrate` pass grounds the WHOLE thing into the world in one coherent apron, not
    per-element patches.
+6. **One permanent force-load set.** If the build includes a permanently force-loaded mechanism
+   (a self-running rail loop, an automatic farm, a persistent command block) the orchestrator
+   tracks its chunks as a permanent set and threads it to every phase that force-toggles. The
+   chunks must stay loaded for 0-player ticking; a later phase that force-removes a *range*
+   overlapping them unloads the mechanism (entities freeze, redstone reverts). See the force-load
+   rule under Reconciliation below.
 
 ## How it threads through the spine
 
@@ -42,6 +48,26 @@ every leaf's result.
   the material vocabulary; the street/transit network connects them.
 - **Whole <-> world:** the assembled footprint is grounded into the surrounding world by a single
   integration pass that re-materializes the apron to the surveyed surrounding palette.
+- **Mechanism <-> force-loads:** if a phase force-toggles near the permanent force-load set, the
+  mechanism's chunks must still be loaded when the phase ends. Prefer `forceload add` only; never
+  force-REMOVE a *range*, since the remove takes a box, not a set, and will catch the mechanism's
+  chunks. Reclaim the 256-chunk-per-dimension cap with targeted single-chunk removes of KNOWN
+  non-mechanism chunks. The orchestrator re-asserts the permanent set with `forceload add` as the
+  LAST op of any force-toggling phase (run / build / freshness), which the harness does for you when
+  the set is declared as a top-level `protect:` block in `plan.toon` (rows of `corner_a corner_b` as
+  `x z`) — see `${CLAUDE_PLUGIN_ROOT}/reference/execution/build-harness.md`. The mechanics of the
+  force-load cap, banding, and the `forceload remove all` footgun live once in
+  `${CLAUDE_PLUGIN_ROOT}/reference/execution/engine-limits.md`.
 
 If any reconciliation fails, fix the owning leaf and re-run it — do not paper over a shape/seam
 problem with a colour pass (the parks-grand-loop lesson: a seam is a shape problem).
+
+## Adversarial integration defenses
+
+When a phase replaces or re-materializes a structure that was already built, clear its ENTIRE prior
+footprint, not just the footprint of the replacement. Recompute the old extent from the generator
+that made it; it often reaches past where you think (a canyon endcap's headwall extended ~22 blocks
+past the new clear box, leaving a vertical-drip tower poking up behind the replacement). The old
+extent can also reach BEYOND the world border — blocks placed in a force-loaded chunk outside the
+border still exist and survive a too-small clear box. Compute the full old extent, clear all of it,
+THEN place the replacement.

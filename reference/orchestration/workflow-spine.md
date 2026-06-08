@@ -41,6 +41,18 @@ something is "too simple to bother" is exactly the failure that produced the zig
   `recipe.json`, the terrain quality rows, or a passing verify token, and a footprint phase lacking
   the seam row.
 
+A fourth gate is **conditional**, not run on every build:
+
+- **Sign-off gate - offline preview** (before an expensive or hard-to-undo pass): when a phase will
+  re-materialize terrain, do a large recolor, or rebuild a feature that has already failed once,
+  render the *next* proposal offline from the field/model (no world writes) and get user sign-off
+  before placing. It is cheaper than place-render-revert: a Zion endcap took three in-world rejections
+  before this loop turned the thrash into one clean placement (preview -> "more eroded" -> adjust ->
+  preview -> place once). Under autonomy this folds into the offline render-verify you already owe
+  (see `reference/execution/large-builds.md`) — if you cannot get a user glance, still render the
+  proposal offline and gate the placement on your own `exec-inspect` pass rather than writing a costly
+  pass blind.
+
 ## Routing table (primary intent -> orchestrator)
 
 | Primary intent | Orchestrator |
@@ -53,3 +65,22 @@ something is "too simple to bother" is exactly the failure that produced the zig
 
 Cross-domain builds route by **primary** intent; that orchestrator calls sibling leaves (one inline
 orchestrator at a time — no nested forking). Ambiguous requests: the orchestrator interviews first.
+
+## Force-load discipline across phases
+
+A build with a permanently force-loaded mechanism (a self-running rail loop, an automatic farm —
+chunks that must stay loaded so it ticks at 0 players) carries a hazard the spine has to thread.
+Any later phase that brackets its work with `forceload add` / `forceload remove` over a *range* can
+remove the mechanism's chunks too, because `remove` takes a box, not a set. The mechanism then
+unloads: entities freeze and read as despawned to `entity_query`, redstone reverts. In the Zion
+build the ecology pass removed bands that overlapped the rail chunks and silently unloaded the cart
+twice.
+
+The orchestrator owns the fix: it tracks a **permanent force-load set** (the mechanism's chunks) and
+**re-asserts that set as the last op of any phase that force-toggles** — so even when a phase's
+teardown removes its own band, the protected chunks come back loaded before the phase returns. It
+records the set as the top-level `protect:` block in `plan.toon`; the harness reads it and does the
+re-assert on `run`/`build`/`freshness`. The mechanism and the matching "no later phase may
+`forceload remove` a range near mechanism chunks" rule are documented once — see
+`reference/execution/build-harness.md` and `reference/orchestration/coherence.md`; the force-load cap
+and behaviour live in `reference/execution/engine-limits.md`.

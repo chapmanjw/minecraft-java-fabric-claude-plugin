@@ -30,6 +30,7 @@ A bare number is sugar for `Constant`. Recipes round-trip via `node.to_spec()`.
   `erode_hydraulic(... pad_cells=, height_falloff=, sea_level=)`, `carve_rivers_from_flow(threshold, depth)`, `clamp(min_y, max_y)`.
 - **analysis:** `slope_deg()`, `aspect_deg()`, `curvature()`, `dist_to_water()`, `mask_slope(lo, hi)`, `mask_y(op, y)`, `summary()`.
 - **io:** `save_npy/load_npy`.
+- **close a belt end (`terrain.close_belt_end`):** `close_belt_end(field, centerline, keypoints, end, close_dist=, corridor_half=, fall=, interior_level=, floor=, regen=)` closes one end (`"low"`/`"high"`) of a `belt_from_path` canyon so it blends with the side walls instead of reading as a pasted-in headwall. It pinches the belt's own cross-section shut, re-applies the SAME noise + erosion through the caller's `regen(hf)` callback (identical seeds, global grid coords → the seam phase aligns), and merges with `np.maximum`. Re-run the same materializer over the end window after.
 
 ## Masks (`terrain.masks`)
 `slope_deg(h)`, `aspect_deg(h)`, `curvature(h)`, `dist_to_water(h, sea)`, and boolean

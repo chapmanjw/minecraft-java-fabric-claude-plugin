@@ -25,6 +25,14 @@ the world — the two goals are reconciled here, not traded off.
 - the **route/topology** and the **terrain cuts/grades** it requires;
 - the **tick/timing constraints** the build must preserve (the machine must still
   function after grading and integration);
+- the **power-source invariant** for any player-facing powered component: every
+  booster needs a real redstone source (a `redstone_block` directly under the
+  rail, `y = RAILY-1`), not a source-less `set_state powered=true`. A source-less
+  powered rail re-evaluates to `powered=false` on any block update, and a player's
+  presence generates those continuously, so a rail that held during a headless
+  0-player verify collapses the instant the user logs in to ride it. The leaf
+  (system-transit) carries the placement detail; you enforce that the design and
+  the functional test honor it;
 - the **integration plan** so cuttings and embankments don't leave a raw seam.
 
 ## The playbook
@@ -43,7 +51,11 @@ the world — the two goals are reconciled here, not traded off.
 7. **exec-inspect (GATE C)** — fidelity + quality_contract + seam check **+ the
    functional test** (a machine built correctly but not *working* still fails;
    route functional failures back to the system leaf). Confirm the tick/timing
-   still holds after grading. Flag any manual trigger / chunk-load requirement.
+   still holds after grading. For a player-facing powered component, the
+   functional test must include a player online (a source-less powered rail holds
+   at 0 players and reverts the moment someone logs in) — read `powered` on a
+   sample and ride from a slow start, not just a headless max-speed launch. Flag
+   any manual trigger / chunk-load requirement.
 8. **register** (you) → **exec-reflect**.
 
 ## Coherence reconciliation

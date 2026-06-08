@@ -126,6 +126,16 @@ orchestrator knows which leaf owns each part and where they meet:
 - **Animated** (a fountain, a rotating mobile) — `system-redstone` adds the
   redstone.
 
+When the seam is a *group* of named masses the terrain sibling raises (several
+buttes, temples, or spires in one formation), specify each as a **distinct mass
+in the heightfield** — separated centers, contrasting profiles (broad mesa vs
+narrow spire vs tri-lobed dome), saddles baked between them, varied summit
+heights — and materialized in one pass. Say so in the plan and hand
+`terrain-shape`/`terrain-landmark` the per-mass centers and profiles. Do not
+let the sibling `np.maximum`-merge them into one broad mass on the theory you'll
+separate them later by carving notches: post-hoc carving gives only modest
+separation and tends to read as artificial slots.
+
 Record the shared anchor coordinate in the `mcbuilder:registry` so the
 orchestrator can hand it to whichever sibling it sequences next.
 

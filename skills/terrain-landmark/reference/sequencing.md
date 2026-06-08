@@ -70,9 +70,22 @@ sea lantern or ochre froglight beneath blue ice for a glacier glow; `magma_block
 as ambient floor light in a lava tube. Plan these into the build, not as an
 afterthought.
 
+## Multi-mass groups: author distinct in the field
+
+When a wonder is several named masses (Kata-Tjuta domes, Twelve Apostles, a line
+of buttes), give each its own mass in the heightfield *before* materializing —
+separated centres, varied summit heights, a saddle baked into the field between
+neighbours, and contrasting profiles (broad mesa vs narrow spire vs tri-lobed
+dome) — then materialize once. Do not `np.maximum`-merge two broad masses into a
+single blob and try to split them afterward by carving notches: the merge reads
+as one butte, and the post-hoc slots read as artificial. Separation lives in the
+recipe, not in a corrective carve.
+
 ## Standard landmark build order
 
-1. Substrate / strata stack (carve-first wonders) **or** core mass (build-up).
+1. Substrate / strata stack (carve-first wonders) **or** core mass (build-up) —
+   for a multi-mass group, author each mass distinct in the field here (above),
+   not by carving later.
 2. Primary form — carve or build per primitive method.
 3. Secondary primitives (side canyons, talus skirts, satellite stacks).
 4. Weathering integrity passes on exposed shells.

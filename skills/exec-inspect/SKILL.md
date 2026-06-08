@@ -124,6 +124,21 @@ This is the check a literal step-by-step verifier misses. Look for:
   rectangle was sheer for 80 blocks. Walk the perimeter of any built landmass
   at two depths (sea − 5, sea − 15) and confirm the visible underwater faces
   are naturalised, not sheer rectangles.
+- **1-wide feature continuity.** For a rail, redstone line, thin wall, or any
+  feature where every cell matters, sampling a few corners is not enough — a
+  single missing cell breaks the whole route, and `block_fill_batch` can
+  silently drop a handful of entries from a large batch with no error (see
+  `${CLAUDE_PLUGIN_ROOT}/reference/execution/engine-limits.md`). On the Zion rail
+  loop, one batch of 1,928 one-block fills left 4 cells unplaced; the cart
+  stalled dead at each gap. **Verify with a layer-scan-and-patch, not spot
+  checks:** run the continuity verifier
+  `${CLAUDE_PLUGIN_ROOT}/tools/voxel/continuity.py` —
+  `verify_and_patch(intended_cells, dimension, y, shape_of=…, block="minecraft:rail")`
+  scans the feature's Y-layer, diffs the intended cell list with
+  `find_gaps(intended, present)` (a pure set diff), and `set_state`s the missing
+  cells (`set_state` is per-block reliable where the batch was not). It returns
+  the patched gaps — log them; never let a silent drop pass. Emit any cells the
+  verifier could not place as corrections for the `exec-worker`.
 
 ### 4. Functional behaviour — does it actually work?
 
@@ -234,15 +249,44 @@ only by the user's in-game screenshots.
 So for any **ride-through / walk-through / silhouette** build (a rail loop, a
 path, a valley, a skyline):
 
-1. Render **`view: iso`** AND an **eye-level slice from the viewer's height**
-   (the rider's Y, looking along the route) — not top-down. Top-down is valid
-   only for genuinely flat-pattern checks (mosaics, ring patterns, road
-   networks).
+1. Render **`view: iso`** AND an **eye-level / thin-slab cross-section** from the
+   viewer's height (the rider's Y, looking along the route) — not top-down, and
+   not iso alone. Top-down is valid only for genuinely flat-pattern checks
+   (mosaics, ring patterns, road networks).
 2. Sample **camera positions along the route** — a few points spaced around the
    loop/path — because a wall invisible from one stretch is obvious from the
    next.
 3. Record a **`rider_pov` row** in the inspection output (below): the sample
    camera positions/heights and whether the faces read cleanly.
+
+**iso hides the things a player actually sees.** On the Zion build, iso renders
+hid the floating overhang above a wall-base rail, a *west-facing* alcove (on the
+far side from the iso camera, so it read as solid wall), and a smooth-vs-rough
+endcap seam. Each time, the user's in-game screenshot caught what the iso
+"verified done." The reason is geometric: iso flattens vertical faces, hides
+far-side openings, and smears texture seams. So for anything a player views from
+**inside** — ledges, alcoves, overhangs, wall texture — verify with a
+**`view: side` or `view: front` thin-slab cross-section**: a 1–3 block slab
+through the feature, which shows the vertical profile (recesses, overhangs,
+texture banding) the way the rider's eye reads it.
+
+When the real client is connected, the eye-level `view_capture` below is the
+best version of this check — it is what a player at that spot actually sees. The
+thin-slab `block_render_region` is the fallback when no client has joined.
+
+Worked example — a wall-base rail bench you suspect overhangs. The bench runs
+along Z at X≈120, rail at Y=70. Render a 3-block-wide Z-slab through it in
+profile:
+
+```
+block_render_region(
+  from={x:119, y:55, z:-300}, to={x:121, y:85, z:-200},
+  view="side")   # looking along +X at the X~120 slab -> the bench appears in cross-section
+```
+
+A clean bench shows the wall sloping back above the rail with nothing floating;
+an overhang shows rock hanging over the rail with air beneath it — invisible in
+iso, obvious in the slab.
 
 A render you judged yourself is **self-assessment, not verification.** The gate
 for a visual-coherence build is a **user visual checkpoint**; under autonomy
@@ -310,6 +354,40 @@ the layout is wrong; return it to the orchestrator with a routing hint to
 re-plan. A `block_mix_ratios` failure
 means the palette weights are wrong; retune them. Then **re-sample** to
 confirm the fix landed and did not break a neighbouring row.
+
+## Large builds: fan out by zone, then synthesise adversarially
+
+A build too big to inspect in one pass (a 768×1024 canyon, a whole settlement, a
+multi-leg rail loop) is split into zones, with a parallel inspector per zone
+running the checks above on its slice. That fan-out is fast but it raises false
+alarms: each zone inspector sees only its slice, lacks the build's intent, and
+grades against what it assumes the spec was. On the Zion build the five zone
+inspectors raised four "critical: rail absent" findings; **every one was wrong** —
+two scanned the wrong X (the floor rail runs at X≈±9, not high on the wall), one
+graded the deliberately hike-only Narrows against a rail requirement, and one read
+a strata render artifact as exposed white columns. Acting on those blindly would
+have meant re-laying perfectly good rail.
+
+So the synthesis pass is not a merge — it is an **adversarial re-verifier**. The
+agent that consolidates the zone reports has tool access and, for every finding a
+zone marked **critical**, independently re-scans and *tries to refute it* before it
+lands in the punch-list:
+
+- Re-derive the spec the zone was grading against — was a rail actually required
+  in that zone, or was it deliberately hike-only / water-only?
+- Re-scan at the **correct** coordinates (a zone that scanned the wrong X or Y
+  finds nothing and calls it "absent"); confirm with `block_get_state` /
+  `block_scan_region`, and where it is a face/seam read, with an eye-level
+  thin-slab render (above), since iso artifacts masquerade as defects.
+- Distinguish a real gap from a render artifact (a 1-wide gap is real and breaks
+  the route — confirm it with the continuity verifier, §3 — a "column" of wrong
+  colour in an iso strata render usually is not).
+
+A critical that survives this refutation attempt goes on the punch-list with the
+re-verified evidence; one that does not is dropped, with a one-line note of why it
+was a false alarm. Only re-verified findings drive corrections. This is the
+adversarial-verify pattern (the orchestrator uses it across the spine) applied to
+inspection itself.
 
 ## Output
 

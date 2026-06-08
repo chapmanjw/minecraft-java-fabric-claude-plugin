@@ -71,5 +71,40 @@ offline route (until the 0.4.x erosion-depth upgrade lands).
 With no `protect_box`, the same flow naturalizes vanilla worldgen or a coarse
 placement — read, erode, re-materialize from the *inferred* (sampled) palette.
 
+## Carving a ledge into a wall: the sloped-back bench
+
+A ledge cut for a path or wall-base rail is the same problem this skill exists to
+fix — geometry that reads as unnatural where built work meets rock. Cutting a
+plain horizontal tube into a vertical face leaves the rock above the cut
+overhanging with nothing beneath it; it reads as "floating." Carve the ledge as a
+**bench whose outward wall recedes ~0.85 blocks per block of height**, so the
+wall slopes back above the cut with no overhang, while the canyon/valley side
+stays open for the view. The receding wall is the talus principle applied to a
+cut face: a slumped grade above, not a vertical lip.
+
+One ordering caveat decides whether the bench survives the placement. **Run all
+the carve/clear fills first, then all the ledge/rail fills** — never per-cell
+`[clear, rail]`. A per-cell order lets cell `i+1`'s wider clear wipe cell `i`'s
+just-placed ledge content before it sets, disconnecting the result along jogs and
+turns.
+
+```python
+carves, fills = [], []
+for cell in path:
+    carves.extend(bench_clear(cell))   # ledge + sloped-back air (receding wall)
+    fills.append(ledge_fill(cell))
+batch(carves)   # ALL clears first ...
+batch(fills)    # ... THEN all fills
+```
+
+Verify a carved bench in profile, not from iso: render a thin `view: side|front`
+slab through it so the overhang (or its absence) and the receding wall are
+visible — iso hides vertical faces. For batch caps and the separate silent-drop
+hazard (`block_fill_batch` can drop a few entries from a large batch, so re-scan
+a 1-wide feature after placing), see
+`${CLAUDE_PLUGIN_ROOT}/reference/execution/engine-limits.md`. The rail mechanics
+for a wall-base loop (boosters, square U-turns, continuity-patch) live in
+`skills/system-transit`.
+
 Return: the apron region, the erosion job summary, and a `seam` quality_contract
 row so `exec-inspect` (GATE C) can confirm no hard build↔world edge remains.

@@ -16,6 +16,24 @@ Break up any uniform surface with 5–15% variant noise:
 - **Replace-fill method.** Chain `replace`-mode fills at descending coverage
   to convert subsets of a base block to variants.
 
+### Match the variation frequency to the slope
+
+Surface variation and erosion detail must be **low-frequency** (features ≥
+~15–20 blocks) unless the face is near-vertical. On a near-vertical wall,
+high-frequency noise reads as bumpy rock and is fine; on a gentle slope the
+same high-freq variation terraces into vertical pins and streaks (a "dripping
+curtain" / "vertical drip" look), and separately it explodes into thousands of
+1-block fills.
+
+- **Never per-column random tops or per-column ridged gullies on a slope.** Two
+  ways this goes wrong are per-column `rng.normal` heights and per-column ridged
+  gully/notch carving — both shatter a ramp into vertical streaks. High-freq is
+  OK on a cliff; low-freq only on a ramp.
+- Same root cause as the "real strata are roughly horizontal with low-frequency
+  undulation, never per-column random" note in
+  `${CLAUDE_PLUGIN_ROOT}/reference/terrain/research.md` — keep the jitter smooth
+  and low-frequency, not per-column.
+
 ## Detail-block library — use sparsely, never uniformly
 
 Scatter these in **clusters**, not evenly:

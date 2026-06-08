@@ -136,6 +136,32 @@ envelopes[2]{phase,corner_a,corner_b}:
 
 `corner_a`/`corner_b` are `x z` block coords (Y is irrelevant to force-loading).
 
+### Re-asserting the protect set
+
+When the build includes a **permanently force-loaded mechanism** (a self-running
+rail loop, an automatic farm — chunks that must stay loaded so it ticks at 0
+players), the per-phase `forceload remove` is a trap: `remove` takes a box, not a
+set, so a band that overlaps the mechanism's chunks unloads them too. The
+mechanism then stops — entities freeze and read as despawned to `entity_query`,
+redstone reverts.
+
+The harness guards against this. It reads a top-level `protect:` block in
+`plan.toon` naming the chunk bands that must never go unloaded, and re-asserts
+them with `forceload add` as the **last op of every force-toggling phase**
+(`run`, `build`, `freshness`). So even when a phase's teardown removes its own
+band, the protected bands come back loaded before the phase returns. The harness
+never blanket-removes a range that covers a mechanism.
+
+```toon
+protect[1]{corner_a,corner_b}:
+  -56 416,-40 432
+```
+
+Rows are `{corner_a, corner_b}` as `x z` block coords, same convention as
+`envelopes`. The orchestrator owns this set (it tracks the mechanism's chunks);
+the matching workflow rule — that no later phase may `forceload remove` a range
+near mechanism chunks — lives in `reference/orchestration/coherence.md`.
+
 ## Graceful fallback
 
 The harness is **opt-in**. If Python isn't available, the package is missing, or

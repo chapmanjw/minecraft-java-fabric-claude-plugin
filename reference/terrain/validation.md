@@ -27,6 +27,17 @@ were bare gray walls. For any ride-through / walk-through terrain, the acceptanc
 **iso + eye-level + slope**. Top-down is valid only for flat-pattern checks (mosaics, road networks).
 A user visual checkpoint is required under autonomy for hero terrain.
 
+iso is not enough on its own either. iso hides vertical faces, far-side openings, and texture seams
+because the camera only sees one set of faces. The Zion build repeatedly "verified done" by iso while
+the user's in-game screenshots caught what it missed: a floating overhang above a wall rail, a
+west-facing alcove on the far side from the iso camera (it read as solid wall), and a smooth-vs-rough
+endcap seam. For anything a player views from *inside* — ledges, alcoves, overhangs, wall texture —
+add an **eye-level / thin-slab cross-section** render: `view: side` or `view: front` over a 1-3 block
+slab, which shows the recess or overhang in profile that iso flattens away. Worked example: to check a
+wall-base rail bench for the floating-overhang problem, render a z-slab one to three blocks deep
+at the rail and read the wall-and-bench profile side-on. Treat the user's in-game look as the
+acceptance gate.
+
 ## Underwater faces
 
 Sample **below** sea level too — pad walls, foundation faces, the seabed profile. Cape Aurelia's

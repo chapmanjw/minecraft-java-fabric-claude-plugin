@@ -26,7 +26,12 @@ skill can branch on the exit code and read the printed digest.
 Force-loading (dedicated/unattended servers): every `run`/`build` brackets the
 phase with `forceload add`/`remove`, banded to stay under the 256-chunk/dimension
 cap. Writes silently no-op in unloaded chunks, so this is mandatory when no
-player is online; harmless when one is. See
+player is online; harmless when one is. A plan may also declare a top-level
+`protect` block (rows of `{corner_a, corner_b}` as "x z") naming the chunks of a
+permanently force-loaded, self-running mechanism (a rail loop, a farm). Those
+bands are re-asserted with `forceload add` as the LAST op of every force-toggling
+phase (run/build/freshness), so a transient `forceload remove` never unloads the
+mechanism (its entities would freeze and its redstone revert). See
 docs: tools/README.md and reference/engine-limits.md.
 
 Stdlib only. No dependencies.
@@ -193,6 +198,16 @@ class Plan:
         for row in (data.get("envelopes") or []):
             try:
                 self.envelopes[int(row["phase"])] = (parse_xz(row["corner_a"]), parse_xz(row["corner_b"]))
+            except (KeyError, ValueError):
+                continue
+        # Permanently force-loaded mechanism chunks (a self-running rail loop, a
+        # farm) that must keep ticking at 0 players. Any phase that force-toggles
+        # re-asserts these as its last op, so a transient `forceload remove` never
+        # unloads them. Rows are {corner_a, corner_b} as "x z" (Zion P2).
+        self.protect = []
+        for row in (data.get("protect") or []):
+            try:
+                self.protect.append((parse_xz(row["corner_a"]), parse_xz(row["corner_b"])))
             except (KeyError, ValueError):
                 continue
 
@@ -581,8 +596,31 @@ def _forceload(client, bands, action):
         client.command(f"forceload {action} {x1} {z1} {x2} {z2}")
 
 
-def run_phase(client, plan, phase, forceload=True):
-    """Execute every step of a phase, force-load-bracketed. Returns a digest dict."""
+def protected_bands(plan, extra=None):
+    """Chunk-aligned force-load bands for the plan's PERMANENT mechanism set (its
+    top-level ``protect`` rows) plus any ``extra`` ``(corner_a, corner_b)`` pairs.
+
+    A self-running mechanism (rail loop, farm) must keep its chunks force-loaded
+    to tick at 0 players. A per-phase ``forceload remove`` that brackets its own
+    range will unload the mechanism's chunks too — entities freeze, redstone
+    reverts (Zion P2). The runner re-asserts these bands with ``forceload add`` as
+    the LAST op of any force-toggling phase, so a transient remove never strands a
+    mechanism."""
+    pairs = list(getattr(plan, "protect", None) or []) if plan else []
+    if extra:
+        pairs += list(extra)
+    bands = []
+    for a, b in pairs:
+        bands += chunk_bands(a, b)
+    return bands
+
+
+def run_phase(client, plan, phase, forceload=True, protect=None):
+    """Execute every step of a phase, force-load-bracketed. Returns a digest dict.
+
+    When ``forceload`` is on, the phase's own bands are removed on teardown, then
+    the plan's permanent ``protect`` set (plus any ``protect`` ``extra`` pairs) is
+    re-asserted so a self-running mechanism keeps ticking (Zion P2)."""
     steps = plan.phase_steps(phase)
     digest = {"phase": phase, "steps_total": len(steps), "ok": 0, "failures": [],
               "warnings": [], "blocks_changed": 0, "bands": []}
@@ -593,6 +631,8 @@ def run_phase(client, plan, phase, forceload=True):
     env, bands = phase_envelope_bands(plan, phase)
     digest["bands"] = bands
     digest["envelope"] = env
+    protect_bands = protected_bands(plan, protect)
+    digest["protected_bands"] = protect_bands
     base_dir = os.path.dirname(plan.path) if plan.path else None
 
     if forceload:
@@ -618,6 +658,10 @@ def run_phase(client, plan, phase, forceload=True):
     finally:
         if forceload:
             _forceload(client, bands, "remove")
+            if protect_bands:
+                # P2: re-assert the permanent mechanism set so this phase's
+                # remove never unloads a self-running rail loop / farm.
+                _forceload(client, protect_bands, "add")
     return digest
 
 
@@ -1472,6 +1516,9 @@ def print_digest(d):
           f"{d['blocks_changed']} blocks changed, {len(d['bands'])} force-load band(s)")
     if d.get("envelope"):
         print(f"  envelope(x,z): {d['envelope']}")
+    if d.get("protected_bands"):
+        print(f"  re-asserted {len(d['protected_bands'])} protected force-load "
+              f"band(s) (permanent mechanism chunks kept loaded)")
     for w in d.get("warnings", []):
         print(f"  WARN seq {w['seq']} ({w['op']}): {w['hint']} — {w['detail']}")
     for f in d.get("failures", []):
@@ -1554,6 +1601,7 @@ def main(argv=None):
             return 1
         # Hold the force-load across BOTH run and verify (guidance Rule 1).
         _env, bands = phase_envelope_bands(plan, args.phase)
+        protect_bands = protected_bands(plan)
         _forceload(client, bands, "add")
         try:
             digest = run_phase(client, plan, args.phase, forceload=False)
@@ -1563,6 +1611,8 @@ def main(argv=None):
             rep = verify_phase(client, plan, args.phase)
         finally:
             _forceload(client, bands, "remove")
+            if protect_bands:
+                _forceload(client, protect_bands, "add")   # P2: keep mechanisms ticking
         print_report(rep)
         return 0 if rep["verdict"] == "PASS" else 1
     return 0
@@ -1607,6 +1657,7 @@ def _freshness(client, plan, phase, sample=4):
     # so a read isn't a void (−64) force-load miss masquerading as drift.
     samples = []          # (x, z, planned_y, live_y)
     bands = chunk_bands(*env) if env else []
+    protect_bands = protected_bands(plan)
     if planned:
         _forceload(client, bands, "add")
         try:
@@ -1614,6 +1665,8 @@ def _freshness(client, plan, phase, sample=4):
                 samples.append((x, z, py, _top_solid_y(client, plan.dimension, x, z)))
         finally:
             _forceload(client, bands, "remove")
+            if protect_bands:
+                _forceload(client, protect_bands, "add")   # P2: keep mechanisms ticking
 
     if not samples:
         if terrain_steps:
