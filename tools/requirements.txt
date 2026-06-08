@@ -9,4 +9,4 @@
 numpy>=2.4.6
 pillow>=12.2.0
 scipy>=1.11
-opensimplex>=0.4
+opensimplex>=0.4.5.1
