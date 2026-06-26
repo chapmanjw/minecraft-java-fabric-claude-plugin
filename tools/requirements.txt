@@ -6,7 +6,7 @@
 # (imported unguarded — required by the terrain toolkit). opensimplex: the
 # OpenSimplex2S noise basis for the sampler graph (optional; the toolkit falls
 # back to Perlin if absent).
-numpy>=2.4.6
+numpy>=2.5.0
 pillow>=12.2.0
 scipy>=1.17.1
 opensimplex>=0.4.5.1
