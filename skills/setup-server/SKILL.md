@@ -115,7 +115,7 @@ Optional fields the user may want:
   terminate it at a reverse proxy. See the mod's `docs/security.md`.
 - Tool-surface controls (`included_categories` / `excluded_categories` /
   `max_access`) — see the section below; with no config the mod registers a
-  lean ~102-tool surface.
+  lean ~103-tool surface.
 - `command_timeout_ms` (default 15000) and `rate_limit_rpm` (default 60).
 
 ### Step 2 — Launch and capture the token
@@ -162,7 +162,7 @@ plain `curl` confirms reachability independent of the token.
 
 The mod groups its world tools into **ten domain categories** and tags each tool
 with one **access level**. With no config, an operator gets a lean default: the
-seven default-on domains at `write` access, about 102 tools. This is plenty for
+seven default-on domains at `write` access, about 103 tools. This is plenty for
 the world builder and keeps the surface small. Touch this only if the user
 wants to widen the surface or lock it down further. (There is an eleventh
 category, `client`, but it is served only by the separate `minecraft-java-client`

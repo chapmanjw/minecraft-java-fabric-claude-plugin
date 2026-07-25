@@ -49,10 +49,11 @@ Ask the user, before downloading anything:
    - **Dedicated server:** a headless Minecraft server (for friends, or to keep
      the MCP endpoint up 24/7). LAN/remote access with a bearer token.
    Branch the rest of this skill on their answer.
-2. **Which Minecraft version?** The mod's v0.1.0 supports **1.21.11**,
-   **26.1.1**, and **26.1.2**. Default to the newest the user is comfortable
-   with (26.1.2). **Record the exact version** — it must match the mod jar and
-   Fabric API jar in Phase 2.
+2. **Which Minecraft version?** The mod supports **1.21.11**, **26.1.1**,
+   **26.1.2**, and **26.2**. Default to the newest the user is comfortable with
+   (26.2). **Record the exact version** — it must match the mod jar and Fabric
+   API jar in Phase 2. The mod jar declares an EXACT Minecraft dependency, so a
+   mismatch is refused at load with a clear message rather than failing later.
 3. **(Dedicated server only) What OS and where?** Linux or Windows; same
    machine as Claude, LAN box, or cloud VM. The host needs a JDK: **Java 21**
    for 1.21.11, **Java 25** for 26.1.x. (Single-player uses the launcher's

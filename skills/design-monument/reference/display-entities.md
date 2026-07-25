@@ -22,7 +22,8 @@ the blockwork is built so fills do not disturb them. Tag every one
 with `entity_set_nbt`.
 
 > **Version note (verify before relying on edge cases).** All examples below
-> are verified live on **26.1.2**; this mod also supports **1.21.11**. The
+> are verified live on **26.1.2**; this mod also supports **1.21.11**, **26.1.1**
+> and **26.2**. The
 > display-entity NBT (`transformation`, `billboard`, `brightness`,
 > `glow_color_override`, the `text_display` text/background fields) has been
 > stable since 1.19.4 and is reliable on both. Item-`components` SNBT inside an

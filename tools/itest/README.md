@@ -10,10 +10,10 @@ cd tools && python -m itest.run --only block   # one category (name prefix)
 cd tools && python -m itest.run --baseline out.toon
 ```
 
-## It tests the LIVE surface, not all 183 tools
+## It tests the LIVE surface, not all 193 tools
 
 After the 26.x tool-categorization redesign the mod registers a subset of its
-183 tools depending on config. With no config (or an empty one) an operator gets
+193 tools depending on config. With no config (or an empty one) an operator gets
 the lean default: roughly **102 tools live, ~81 not live**. The suite only runs
 cases whose tool is actually registered; a case for a tool that isn't live is
 reported as `SKIP` with the reason it's off, e.g.
@@ -36,7 +36,7 @@ otherwise-on domains (the worldborder setters, `level_set_difficulty`,
 `command_execute` stays `write` (it is the workhorse) even though it can run
 arbitrary commands.
 
-## Testing the full 183
+## Testing the full 193
 
 To exercise every tool, configure the mod to include all ten categories and
 raise the access cap to `admin`, then restart the server and re-run the suite.
@@ -46,7 +46,7 @@ admin opt-in). Config precedence: a non-empty `includedCategories` is the
 allowlist, otherwise the `enabledByDefault` domains are used; then
 `excludedCategories` is subtracted; then any tool whose access rank exceeds
 `maxAccess` is dropped. With all categories included and `maxAccess=admin`, all
-183 register and the suite runs the full surface.
+193 register and the suite runs the full surface.
 
 ## Cases
 

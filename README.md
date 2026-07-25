@@ -63,8 +63,9 @@ The mod ships a separate jar for each supported Minecraft version, built against
 that version's Fabric API. A Minecraft or Fabric update can change the modding
 surface the mod depends on. Pin your Minecraft version, your Fabric API jar, and
 the mod jar to a matched, known-good set and upgrade them together. The mod's
-release notes list the supported Minecraft versions (v0.1.0 supports **1.21.11,
-26.1.1, and 26.1.2**). Treat the whole stack as experimental.
+release notes list the supported Minecraft versions (currently **1.21.11, 26.1.1,
+26.1.2, and 26.2**). Each jar is pinned to its exact Minecraft version, so a jar
+built for one will refuse to load on another. Treat the whole stack as experimental.
 
 Get the MCP server mod from
 [**Modrinth**](https://modrinth.com/mod/fabric-api-mcp-server) or

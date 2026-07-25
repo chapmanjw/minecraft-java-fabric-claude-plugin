@@ -11,7 +11,7 @@ on or warning against them; do not assert either way from memory.
 
 ## Default tool surface (what's registered)
 
-The mod defines 183 tools but **registers a lean ~102-tool surface by default**.
+The mod defines 193 tools but **registers a lean ~103-tool surface by default**.
 The default-on set is the seven domains the builder needs — `blocks`,
 `structures`, `world`, `entities`, `items`, `scripting`, `server` — capped at
 `write` access. The opt-in domains `players`, `gameplay`, and `registries`, plus
@@ -26,8 +26,32 @@ biome/feature/erosion world tools, entity ops, items, `command_execute`, and
 structure save/load all sit in the default-on, write-or-below set. A build only
 needs an opt-in when it reads from `gameplay` (scoreboards, boss bars) or
 `registries` (recipes, loot tables, tags) — both read-only and harmless to
-enable. If a tool the build expects answers "method not found," check it isn't a
-gated category before assuming an older mod.
+enable.
+
+### A tool the build expects is missing
+
+Work through these in order before concluding the mod is old or broken. There are
+**three** independent reasons a tool can be absent from `tools/list`, and they look
+identical from the client:
+
+1. **Gated category or access.** The tool is in an opt-in domain (`players`,
+   `gameplay`, `registries`) or is `admin`-tagged. Fix: widen
+   `included_categories` / `max_access` in `config.json`.
+2. **Minecraft version constraint.** The tool declares `minMinecraftVersion` /
+   `maxMinecraftVersion` and the running game is outside it.
+3. **Missing Fabric API module.** The tool declares `requiredFabricModules`, and
+   one of those modules is not loaded — the tool is then skipped at registration
+   with an INFO line reading `Skipping tool '<name>': required module '<module>'
+   is not installed`. Usually this means an incomplete Fabric API install, but it
+   can also mean the tool names a module that does not exist: five tools were
+   silently dead on every Minecraft version because they required
+   `fabric-screen-handler-api-v1` and `fabric-resource-loader-v0`, neither of
+   which Fabric API ships (the real names are `fabric-menu-api-v1` and
+   `fabric-resource-loader-v1`).
+
+The server log is authoritative — it prints one line per skipped tool with the
+reason, plus a summary like `Registered 92 MCP tools (8 skipped due to
+version/module constraints)`. Read that before guessing.
 
 ## Client inspection endpoint (`minecraft-java-client`)
 
@@ -314,10 +338,10 @@ and validation.)
 The v0.4.0 mod adds batch feature scatter, strata banding, and in-world
 erosion. Same posture as the 0.3.0 helpers above — **probe before relying on
 them** (`tools/list` / a method-not-found error means an older mod) and use the
-listed fallback. The v0.4.0 mod defines 183 tools in all; the terrain helpers
+listed fallback. The mod defines 193 tools in all; the terrain helpers
 here are in the default-on `blocks` / `world` domains, so they register under
 the lean default (see "Default tool surface" above — a `tools/list` on a default
-config shows ~102, not the full 183).
+config shows ~103, not the full 193).
 
 - **`level_place_features_batch`** — grow many vanilla configured features in
   one call (the batch form of `level_place_feature`): send a `features[]` list of
