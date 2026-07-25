@@ -10,11 +10,14 @@ cd tools && python -m itest.run --only block   # one category (name prefix)
 cd tools && python -m itest.run --baseline out.toon
 ```
 
-## It tests the LIVE surface, not all 193 tools
+## It tests the LIVE surface, not the whole tool set
 
 After the 26.x tool-categorization redesign the mod registers a subset of its
-193 tools depending on config. With no config (or an empty one) an operator gets
-the lean default: roughly **102 tools live, ~81 not live**. The suite only runs
+tools depending on config. The mod defines 193 in total, but 6 of those are
+client-only and served by the separate `minecraft-java-client` endpoint, so the
+world server this suite targets can register at most **187**. With no config (or
+an empty one) an operator gets the lean default: roughly **103 tools live, ~84
+not live**. The suite only runs
 cases whose tool is actually registered; a case for a tool that isn't live is
 reported as `SKIP` with the reason it's off, e.g.
 `not live (opt-in domain 'gameplay') — enable via mod config to test`. A
@@ -36,7 +39,7 @@ otherwise-on domains (the worldborder setters, `level_set_difficulty`,
 `command_execute` stays `write` (it is the workhorse) even though it can run
 arbitrary commands.
 
-## Testing the full 193
+## Testing the full world surface
 
 To exercise every tool, configure the mod to include all ten categories and
 raise the access cap to `admin`, then restart the server and re-run the suite.
@@ -46,7 +49,9 @@ admin opt-in). Config precedence: a non-empty `includedCategories` is the
 allowlist, otherwise the `enabledByDefault` domains are used; then
 `excludedCategories` is subtracted; then any tool whose access rank exceeds
 `maxAccess` is dropped. With all categories included and `maxAccess=admin`, all
-193 register and the suite runs the full surface.
+187 world tools register and the suite runs the full surface. The 6 client tools
+(`view_capture`, `sense_*`, `client_status`) are never reachable here — they need
+a running client on the `minecraft-java-client` endpoint.
 
 ## Cases
 
