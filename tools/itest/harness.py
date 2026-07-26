@@ -6,9 +6,10 @@ a change is confirmed to actually work. Built on the same ``builder.mcpclient``
 transport the build harness uses.
 
 Tests the LIVE tool surface only. After the 26.x tool-categorization redesign an
-unconfigured mod registers a lean default of ~102 of the 183 tools: the
+unconfigured mod registers a lean default of ~104 of the mod's 194 tools (188 of
+which are world tools this suite can reach; the other 7 are client-only): the
 default-ON domains (blocks, structures, world, entities, items, scripting,
-server) up to write access. The other ~81 — the opt-in domains (players,
+server) up to write access. The rest — the opt-in domains (players,
 gameplay, registries) plus the admin-access tools in any domain — are NOT live
 by default, so their cases report SKIP "not live (…)", which is expected, not a
 regression. To exercise the full 183, configure the mod with every category
@@ -36,6 +37,8 @@ Usage:
 Stdlib only (uses builder.mcpclient / builder.toon).
 """
 from __future__ import annotations
+
+import re
 
 import os
 import sys
@@ -133,13 +136,55 @@ def _domain_for(tool: str) -> str:
     return "?"
 
 
-def not_live_reason(tool: str) -> str:
-    """Explain why a registered tool is likely not in the lean default surface.
+# Populated from the server log when one is supplied — see load_server_skip_log().
+# Maps tool name -> the server's own reason for skipping it.
+_SERVER_SKIP_REASONS: dict[str, str] = {}
 
-    Under the 26.x defaults a tool is off because (a) it lives in an opt-in
-    domain, or (b) it carries admin access, or both. Name the cause and how to
-    turn it on so the SKIP is read as expected, not a regression.
+# "Skipping tool 'x': required module 'y' is not installed" and its version-range sibling.
+_SKIP_LINE = re.compile(r"Skipping tool '([^']+)': (.+?)\s*$")
+
+
+def load_server_skip_log(path) -> int:
+    """Read the server log and record why IT says each tool was skipped.
+
+    The categorization tables below can only guess. They cannot see the third
+    reason a tool goes missing — a `requiredFabricModules` entry that is not
+    loaded — so a module-filtered tool used to be reported as merely "absent
+    from this server build". That is exactly how five tools stayed dead across
+    every Minecraft version without anyone noticing: they required
+    fabric-screen-handler-api-v1 and fabric-resource-loader-v0, neither of which
+    Fabric API ships, and nothing in the harness could say so.
+
+    The server already logs the authoritative reason per skipped tool. Reading it
+    turns a guess into a fact. Returns how many reasons were loaded; 0 is fine and
+    simply means the harness falls back to its static inference.
     """
+    _SERVER_SKIP_REASONS.clear()
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                m = _SKIP_LINE.search(line)
+                if m:
+                    _SERVER_SKIP_REASONS[m.group(1)] = m.group(2).strip()
+    except OSError:
+        return 0
+    return len(_SERVER_SKIP_REASONS)
+
+
+def not_live_reason(tool: str) -> str:
+    """Explain why a registered tool is not in the live surface.
+
+    Three independent causes look identical from the client: an opt-in domain,
+    an admin access tag, or an unmet `requiredFabricModules` / version
+    constraint. Only the server knows which applies, so prefer its log when one
+    was supplied and fall back to inference otherwise.
+    """
+    # The server's own words win — it is the only source that can distinguish a
+    # module or version filter from a category opt-out.
+    server_said = _SERVER_SKIP_REASONS.get(tool)
+    if server_said:
+        return f"not live (server: {server_said})"
+
     domain = _domain_for(tool)
     is_admin = tool in _ADMIN_TOOLS
     is_opt_in = domain in _OPT_IN_DOMAINS
@@ -151,9 +196,13 @@ def not_live_reason(tool: str) -> str:
     if causes:
         why = " + ".join(causes)
         return f"not live ({why}) — enable via mod config to test"
-    # An ON-domain, non-admin tool that is still missing: not a default opt-out.
+    # An ON-domain, non-admin tool that is still missing. Without a server log we
+    # cannot tell an unmet module/version constraint from a genuinely older build,
+    # so say so rather than asserting the wrong one.
     return (f"not live (domain {domain!r} is on by default and access<=write) — "
-            "tool absent from this server build, not an opt-out")
+            "cause undetermined: could be an unmet requiredFabricModules or "
+            "version constraint, or a build predating the tool. Pass "
+            "--server-log to read the server's own reason")
 
 
 def case(tool: str, level: str = "safe"):

@@ -13,10 +13,10 @@ cd tools && python -m itest.run --baseline out.toon
 ## It tests the LIVE surface, not the whole tool set
 
 After the 26.x tool-categorization redesign the mod registers a subset of its
-tools depending on config. The mod defines 193 in total, but 6 of those are
+tools depending on config. The mod defines 194 in total, but 6 of those are
 client-only and served by the separate `minecraft-java-client` endpoint, so the
-world server this suite targets can register at most **187**. With no config (or
-an empty one) an operator gets the lean default: roughly **103 tools live, ~84
+world server this suite targets can register at most **188**. With no config (or
+an empty one) an operator gets the lean default: roughly **104 tools live, ~84
 not live**. The suite only runs
 cases whose tool is actually registered; a case for a tool that isn't live is
 reported as `SKIP` with the reason it's off, e.g.
@@ -49,9 +49,26 @@ admin opt-in). Config precedence: a non-empty `includedCategories` is the
 allowlist, otherwise the `enabledByDefault` domains are used; then
 `excludedCategories` is subtracted; then any tool whose access rank exceeds
 `maxAccess` is dropped. With all categories included and `maxAccess=admin`, all
-187 world tools register and the suite runs the full surface. The 6 client tools
+188 world tools register and the suite runs the full surface. The 6 client tools
 (`view_capture`, `sense_*`, `client_status`) are never reachable here — they need
 a running client on the `minecraft-java-client` endpoint.
+
+## Why a tool is not live
+
+Three independent things can keep a tool out of `tools/list`, and they are
+indistinguishable from the client: an opt-in domain, an admin access tag, or an
+unmet `requiredFabricModules` / Minecraft-version constraint. The harness can only
+infer the first two from its own tables.
+
+Pass `--server-log <path>` and it reads the server's own `Skipping tool '<name>':
+<reason>` lines instead, which is the only way to see the third. That third case is
+not hypothetical: five tools were dead on every Minecraft version because they
+required `fabric-screen-handler-api-v1` and `fabric-resource-loader-v0`, neither of
+which Fabric API ships, and nothing here could say so.
+
+```sh
+python -m itest.run --server-log /path/to/server/logs/latest.log
+```
 
 ## Cases
 
