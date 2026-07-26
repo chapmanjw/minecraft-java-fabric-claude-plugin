@@ -43,12 +43,21 @@ arbitrary commands.
 
 To exercise every tool, configure the mod to include all ten categories and
 raise the access cap to `admin`, then restart the server and re-run the suite.
-In the mod config, include all categories as the allowlist and set
-`maxAccess=admin` (equivalently, the legacy `excludeWriteTools=false` plus an
-admin opt-in). Config precedence: a non-empty `includedCategories` is the
-allowlist, otherwise the `enabledByDefault` domains are used; then
-`excludedCategories` is subtracted; then any tool whose access rank exceeds
-`maxAccess` is dropped. With all categories included and `maxAccess=admin`, all
+The config keys are **snake_case** — `included_categories`, `excluded_categories`,
+`max_access`. camelCase spellings are silently ignored by the loader, so a config
+written with them appears to do nothing:
+
+```json
+{
+  "included_categories": ["blocks","structures","world","entities","players",
+                          "items","gameplay","scripting","registries","server"],
+  "max_access": "admin"
+}
+```
+
+Config precedence: a non-empty `included_categories` is the allowlist, otherwise the
+enabled-by-default domains are used; then `excluded_categories` is subtracted; then
+any tool whose access rank exceeds `max_access` is dropped. With all categories included and `max_access=admin`, all
 188 world tools register and the suite runs the full surface. The 6 client tools
 (`view_capture`, `sense_*`, `client_status`) are never reachable here — they need
 a running client on the `minecraft-java-client` endpoint.

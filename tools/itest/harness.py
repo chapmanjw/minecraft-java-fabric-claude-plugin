@@ -13,7 +13,7 @@ server) up to write access. The rest — the opt-in domains (players,
 gameplay, registries) plus the admin-access tools in any domain — are NOT live
 by default, so their cases report SKIP "not live (…)", which is expected, not a
 regression. To exercise the full 183, configure the mod with every category
-included and ``maxAccess=admin`` (see tools/itest/README.md), restart, and re-run.
+included and ``max_access=admin`` (see tools/itest/README.md), restart, and re-run.
 
 Design / safety:
   * All world writes happen inside a small **force-loaded scratch sandbox** far
@@ -116,7 +116,7 @@ _DOMAIN_BY_PREFIX = [
 # under the lean default until enabled via mod config.
 _OPT_IN_DOMAINS = {"players", "gameplay", "registries"}
 
-# Tools tagged admin (admin access is opt-in; default maxAccess=write). These
+# Tools tagged admin (admin access is opt-in; default max_access=write). These
 # stay not-live by default even in an enabled-by-default domain.
 _ADMIN_TOOLS = {
     "worldborder_set_size", "worldborder_add_size", "worldborder_set_center",
