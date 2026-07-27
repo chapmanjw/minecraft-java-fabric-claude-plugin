@@ -41,11 +41,19 @@ Sampling block state is a snapshot — it can miss a mechanism that fired and
 reset between reads. Java exposes a **real feedback channel** Bedrock's MCP did
 not: subscribe to world events, trigger, then drain them.
 
-- **`events_subscribe(event_types, filters?)`** → a `subscription_id`. Useful
-  types: `block.use` (a button/lever/door interacted), `block.place` /
-  `block.break`, `container.open` / `container.close`, `entity.death`,
-  `player.chat`. Narrow with `filters` (e.g. an area or entity type) to avoid
-  noise.
+- **`events_subscribe(event_types, filters?)`** → a `subscription_id`. The
+  deliverable set is **closed**: `block.use` (a button/lever/door interacted),
+  `block.break`, `player.chat`, `player.join` / `player.leave`, `server.tick`,
+  and `server.starting` / `server.started` / `server.stopping` /
+  `server.stopped`. Any other name — `block.place`, `container.open` /
+  `container.close`, `entity.death`, `entity.spawn`, `item.use`, `item.craft`,
+  `player.death` — is declared by the protocol but never emitted, and
+  `events_subscribe` **rejects the whole call** rather than subscribing to less
+  than you asked. One bad name kills the valid types in the same array, so a
+  mixed list fails outright. There is no entity, container, or item event:
+  verify those outcomes by sampling instead (`entity_query`,
+  `inventory_count_items`, `block_get_state`). Narrow with `filters` (e.g. an
+  area) to avoid noise.
 - **`events_poll(subscription_id)`** drains the events captured since the last
   poll.
 - **`events_unsubscribe`** when done so the subscription doesn't accumulate.
@@ -55,24 +63,24 @@ to the snapshot `sample` step rather than a replacement. It confirms the
 mechanism *fired*, not just that geometry ended up in some state:
 
 ```toon
-test: mob-farm-is-killing
+test: hidden-door-fires
 steps[4]{action,target,detail}:
-  subscribe,,events_subscribe(["entity.death"]) over the kill chute → sub_id
-  wait,,600 game ticks
-  poll,,events_poll(sub_id) expect ≥1 entity.death of the farmed mob
-  sample,{x:10,y:62,z:8},and the collection chest holds drops
+  subscribe,,events_subscribe(["block.use"]) → sub_id
+  trigger,{x:4,y:64,z:0},press the button (player or command)
+  poll,,events_poll(sub_id) expect ≥1 block.use at the button pos
+  sample,{x:4,y:64,z:2},door-block coords are air
 ```
 
 Where it earns its place:
 
-- **Mob farm / collector** — `entity.death` events prove the kill chamber is
-  actually killing, even if the chest is briefly empty between hopper pulls.
 - **Door / button / trap** — `block.use` confirms a player (or a redstone-driven
   interaction) triggered it; pair with the door-block `sample`.
-- **Sorter / storage** — `container.open` / `container.close` and item movement
-  confirm the right chest received the stream.
 - **Interactive builds** — watch `player.chat` or `block.use` to drive a build
   that responds to the user in real time.
+- **Mob farm, sorter, or any container/entity outcome** — there is no
+  `entity.death` and no `container.*` event, so this channel cannot help.
+  Verify by sampling across the timing budget instead: `entity_query` over the
+  kill chute, `inventory_count_items` on the collection or output chest.
 
 Not a substitute for sampling geometry (it can't read a static block state), but
 a genuine signal that a mechanism is firing under load. Event payload shapes are

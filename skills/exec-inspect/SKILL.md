@@ -166,24 +166,31 @@ feedback channel to confirm interactive features actually work:
 
 1. **Subscribe** before triggering:
    ```
-   events_subscribe(["block.use", "container.open", "entity.death"])
+   events_subscribe(["block.use", "block.break", "player.chat"])
    → subscription_id: "insp-001"
    ```
-2. **Trigger** the mechanism — ask the user to interact (open a door, step
-   on a pressure plate, open a chest, walk through a mob farm) or use
-   `command_execute` / `command_execute_as` to simulate the trigger.
+   Only these types are deliverable: `block.break`, `block.use`, `player.chat`,
+   `player.join`, `player.leave`, `server.tick`, `server.starting`,
+   `server.started`, `server.stopping`, `server.stopped`. Any other name makes
+   the **entire** subscribe call fail — you get an error, not a partial
+   subscription — so one stale type takes the valid ones down with it.
+2. **Trigger** the mechanism — ask the user to interact (press a button, step
+   on a pressure plate, break a block) or use `command_execute` /
+   `command_execute_as` to simulate the trigger.
 3. **Poll** and confirm:
    ```
    events_poll("insp-001")
-   → [{type:"container.open", pos:{x:…,y:…,z:…}}, …]
+   → [{type:"block.use", pos:{x:…,y:…,z:…}}, …]
    ```
 4. **Unsubscribe** after the check.
 
-Use cases: confirm a chest can be opened (`container.open`), a lever fires
-`block.use`, or a mob farm is killing (`entity.death` from the farm region).
-This is a real signal — not geometry — and catches failures that block-sampling
-cannot. See `reference/contract-checks.md` for how to integrate event checks
-into contract rows.
+Use cases: confirm a lever or button fires (`block.use`), a block was actually
+broken (`block.break`), or drive a build from chat (`player.chat`). There is no
+container or entity event — check a chest's contents with `inventory_get` /
+`inventory_count_items`, and a mob farm's kills with `entity_query` sampling.
+Within its range this is a real signal — not geometry — and catches failures
+block-sampling cannot. See `reference/contract-checks.md` for how to integrate
+event checks into contract rows.
 
 ### Java-exclusive: block_entity_get_nbt content verification
 

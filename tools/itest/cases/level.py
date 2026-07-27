@@ -135,6 +135,18 @@ def test_get_biome_at(ctx: Ctx):
                     {"dimension": ctx.dim, "position": ctx.pos_obj(p)})
     bid = data.get("id") if isinstance(data, dict) else data
     ctx.expect("minecraft:" in str(bid), f"no biome id at {p}: {data!r}")
+    if isinstance(data, dict):
+        # downfall used to be hardcoded 0.0 for every biome. It is real now, so the
+        # field must at least be present and in range -- 0.0 is still legitimate for
+        # deserts and badlands, so we cannot assert non-zero here.
+        ctx.expect("downfall" in data, f"downfall missing: {data!r}")
+        ctx.expect(0.0 <= float(data["downfall"]) <= 1.0,
+                   f"downfall out of range: {data['downfall']!r}")
+        # Position-resolved, so this tool (unlike the listing) must return it.
+        ctx.expect(str(data.get("precipitation")) in ("none", "rain", "snow"),
+                   f"unexpected precipitation: {data.get('precipitation')!r}")
+        ctx.expect(str(data.get("waterColor", "")).startswith("#"),
+                   f"waterColor not a hex colour: {data.get('waterColor')!r}")
 
 
 @case("level_list_biomes_in_dimension", level="safe")
@@ -142,9 +154,35 @@ def test_list_biomes(ctx: Ctx):
     data = ctx.call("level_list_biomes_in_dimension", {"dimension": ctx.dim})
     ctx.expect(isinstance(data, list) and len(data) >= 1,
                f"expected a non-empty biome list, got {data!r}")
-    ids = [(b.get("id") if isinstance(b, dict) else b) for b in data]
-    ctx.expect(any("plains" in str(i) for i in ids),
+    ids = [str(b.get("id") if isinstance(b, dict) else b) for b in data]
+    ctx.expect(any("plains" in i for i in ids),
                f"plains missing from biome list: {ids[:5]}...")
+    # The listing is dimension-FILTERED now: it reports what this dimension's generator
+    # can place, not the whole shared registry. Asserting plains alone passed even when
+    # the filter was absent, because the scratch dim is the overworld -- so also assert
+    # that biomes belonging to other dimensions are excluded.
+    foreign = [i for i in ids
+               if any(k in i for k in ("nether_wastes", "crimson_forest", "warped_forest",
+                                       "soul_sand_valley", "basalt_deltas",
+                                       "end_barrens", "end_highlands", "end_midlands",
+                                       "small_end_islands", "the_void"))]
+    ctx.expect(not foreign,
+               f"overworld listing leaked biomes from other dimensions: {foreign}")
+
+
+@case("level_list_biomes_in_dimension:nether", level="safe")
+def test_list_biomes_nether(ctx: Ctx):
+    # The nether generator places a small, fixed set. Before the filter fix this
+    # returned the entire registry (66 biomes) regardless of the dimension asked for.
+    data = ctx.call("level_list_biomes_in_dimension", {"dimension": "minecraft:the_nether"})
+    ctx.expect(isinstance(data, list) and data, f"expected a biome list, got {data!r}")
+    ids = {str(b.get("id") if isinstance(b, dict) else b) for b in data}
+    ctx.expect(len(ids) < 20,
+               f"nether listing looks unfiltered ({len(ids)} biomes): {sorted(ids)[:6]}...")
+    ctx.expect(any("nether_wastes" in i for i in ids),
+               f"nether_wastes missing from nether listing: {sorted(ids)}")
+    ctx.expect(not any("plains" in i for i in ids),
+               f"overworld biome leaked into nether listing: {sorted(ids)}")
 
 
 @case("level_get_game_rule", level="safe")

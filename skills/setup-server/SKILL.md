@@ -115,7 +115,7 @@ Optional fields the user may want:
   terminate it at a reverse proxy. See the mod's `docs/security.md`.
 - Tool-surface controls (`included_categories` / `excluded_categories` /
   `max_access`) — see the section below; with no config the mod registers a
-  lean ~103-tool surface.
+  lean ~104-tool surface.
 - `command_timeout_ms` (default 15000) and `rate_limit_rpm` (default 60).
 
 ### Step 2 — Launch and capture the token

@@ -211,7 +211,8 @@ match.
 
 ```
 level_get_biome_at("minecraft:overworld", {x:120,y:64,z:-340})
-→ {id:"minecraft:taiga", temperature:0.25, downfall:0.8, hasPrecipitation:true}
+→ {id:"minecraft:taiga", temperature:0.25, downfall:0.8, hasPrecipitation:true,
+   precipitation:"rain", waterColor:"#3F76E4", grassColorModifier:"none"}
 ```
 
 For biome palettes:
@@ -224,6 +225,17 @@ For biome palettes:
   dead vegetation.
 - `downfall` and `hasPrecipitation` determine moss, mud, and water-feature
   plausibility — high downfall favours `moss_block`, `mud`, and heavy vine.
+  (`downfall` was reported as 0 for every biome by mod versions before 1.0.1;
+  if you see a flat 0 everywhere, the server is running an older jar.)
+- `precipitation` resolves what actually falls **at that block** — `none`,
+  `rain` or `snow`. It accounts for altitude, so the same biome can answer
+  `snow` on a peak and `rain` in the valley. Prefer it over inferring from
+  `temperature` by hand.
+- `waterColor` and any `grassColorOverride` / `foliageColorOverride` /
+  `dryFoliageColorOverride` give the biome's actual tint, so water features and
+  foliage choices can match. Overrides are absent for biomes that sample the
+  colour gradient rather than pinning a value. `grassColorModifier` is `swamp`
+  or `dark_forest` where vanilla post-processes the tint.
 - At biome boundaries, call `level_get_biome_at` at multiple points and
   blend the two palettes across a 10–30 block transition zone.
 
@@ -231,7 +243,9 @@ For landmark palettes:
 
 ```
 level_get_biome_at("minecraft:overworld", {x:200,y:80,z:50})
-→ {id:"minecraft:badlands", temperature:2.0, downfall:0, hasPrecipitation:false}
+→ {id:"minecraft:badlands", temperature:2.0, downfall:0, hasPrecipitation:false,
+   precipitation:"none", waterColor:"#3F76E4",
+   grassColorOverride:"#90814D", foliageColorOverride:"#9E814D"}
 ```
 
 - A high-temperature, zero-downfall biome (badlands, desert) confirms

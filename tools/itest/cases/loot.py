@@ -12,11 +12,13 @@ Probing notes (confirmed against the live 26.1.2 server):
     {id,count,...} item objects. Block / entity / fishing tables instead
     require minecraft:tool / minecraft:block_state context params and error out,
     so we deliberately only roll chest tables.
-  * loot_table_get_definition returns the raw JSON for some tables
-    (chests/spawn_bonus_chest) but "Definition not available" for many built-ins
-    (entities/sheep, chests/simple_dungeon) — the fabric-loot-api-v3 surface does
-    not expose every table's source. The test is tolerant: it walks the list to
-    find a table whose definition IS available and Skips if none is.
+  * loot_table_get_definition returns the raw JSON for every table. It used to
+    fail with "Definition not available" for most built-ins (entities/sheep,
+    chests/simple_dungeon, blocks/*_ore) because the encoder was not registry-
+    aware; fixed in mod 1.0.1. If you still see that error the server is running
+    an older jar. The test stays tolerant: it walks the list to find a table
+    whose definition IS available and Skips if none is, so it passes against
+    both old and new servers.
 """
 from __future__ import annotations
 

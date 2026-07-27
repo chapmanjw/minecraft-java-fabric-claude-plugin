@@ -148,9 +148,16 @@ sites; do not insert ad-hoc fills.
 
 A functional check using the event system rather than geometry sampling. Use
 when a contract row must confirm an interactive feature works (a door can be
-opened, a mechanism fires, a mob farm is killing).
+opened, a mechanism fires).
 
-1. Call `events_subscribe(event_types)` → `subscription_id`.
+1. Call `events_subscribe(event_types)` → `subscription_id`. `event_types` must
+   be drawn from the deliverable set — `block.break`, `block.use`,
+   `player.chat`, `player.join`, `player.leave`, `server.tick`,
+   `server.starting`, `server.started`, `server.stopping`, `server.stopped`.
+   `events_subscribe` rejects the **whole call** if any other type is present,
+   so a single stale name fails the row at GATE C. For kill, container, or
+   craft outcomes there is no event at all — use a `block_entity_nbt` or
+   inventory row instead of `event_trigger`.
 2. Apply the trigger described in `trigger_note` (ask the user, or run
    `command_execute` / `command_execute_as`).
 3. Call `events_poll(subscription_id)` and inspect the returned events.

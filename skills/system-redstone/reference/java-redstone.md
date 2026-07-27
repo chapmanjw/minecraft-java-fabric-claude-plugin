@@ -130,5 +130,6 @@ each is detailed in its reference file:
   spawners configured via `block_entity_set_nbt` / `inventory_set_slot`. See
   `contraptions-farms.md` and `contraptions-mechanisms.md`.
 - **Event-based verification** — `events_subscribe` / `events_poll` confirm a
-  mechanism *fired* (`entity.death`, `block.use`, `container.open`). See
-  `verification.md`.
+  mechanism *fired* (`block.use`, `block.break`, `player.chat` — the only
+  interaction events the server emits; `entity.death` and `container.open` are
+  rejected outright). See `verification.md`.

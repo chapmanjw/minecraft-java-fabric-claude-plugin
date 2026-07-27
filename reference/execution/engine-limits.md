@@ -11,7 +11,9 @@ on or warning against them; do not assert either way from memory.
 
 ## Default tool surface (what's registered)
 
-The mod defines 193 tools but **registers a lean ~103-tool surface by default**.
+The mod defines 194 tools -- 188 on the server endpoint plus 6 client-side
+(`sense_*`, `client_status`, `view_capture`) -- but **registers a lean
+~104-tool surface by default**.
 The default-on set is the seven domains the builder needs — `blocks`,
 `structures`, `world`, `entities`, `items`, `scripting`, `server` — capped at
 `write` access. The opt-in domains `players`, `gameplay`, and `registries`, plus
@@ -338,10 +340,10 @@ and validation.)
 The v0.4.0 mod adds batch feature scatter, strata banding, and in-world
 erosion. Same posture as the 0.3.0 helpers above — **probe before relying on
 them** (`tools/list` / a method-not-found error means an older mod) and use the
-listed fallback. The mod defines 193 tools in all; the terrain helpers
+listed fallback. The mod defines 194 tools in all (188 server + 6 client); the terrain helpers
 here are in the default-on `blocks` / `world` domains, so they register under
 the lean default (see "Default tool surface" above — a `tools/list` on a default
-config shows ~103, not the full 193).
+config shows ~104, not the full 188 server-side).
 
 - **`level_place_features_batch`** — grow many vanilla configured features in
   one call (the batch form of `level_place_feature`): send a `features[]` list of

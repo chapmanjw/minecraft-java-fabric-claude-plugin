@@ -1012,6 +1012,19 @@ def check_block_entity_nbt(client, dim, rows):
     return results
 
 
+# The event types the server actually emits. EventType declares more than this, but
+# subscribing to an unwired one is refused outright -- and the refusal covers the whole
+# call, so one stale name in a row takes the valid types down with it. Checking here
+# turns that into an actionable message instead of a bare "could not subscribe", which
+# reads identically to a transport failure and makes a stale row look like a broken
+# mechanism.
+DELIVERABLE_EVENT_TYPES = {
+    "block.break", "block.use", "player.chat", "player.join", "player.leave",
+    "server.tick", "server.starting", "server.started", "server.stopping",
+    "server.stopped",
+}
+
+
 def check_event_trigger(client, dim, rows):
     """Functional check: subscribe, fire the trigger command, poll for the expected event type."""
     import time
@@ -1022,6 +1035,13 @@ def check_event_trigger(client, dim, rows):
         trigger = r.get("trigger_note")
         if not types or not trigger:
             results.append(("event_trigger", "FAIL", f"row missing event_types/trigger_note: {r}"))
+            continue
+        bad = [t for t in types if t not in DELIVERABLE_EVENT_TYPES]
+        if bad:
+            results.append(("event_trigger", "FAIL",
+                            f"event_types {bad} are not emitted by the server -> rewrite this "
+                            f"row against a deliverable type ({', '.join(sorted(DELIVERABLE_EVENT_TYPES))}) "
+                            "or replace it with a sampling check (entity_query / inventory_count_items)"))
             continue
         sub = client.call_toon("events_subscribe", {"event_types": types})
         sub_id = sub.get("subscription_id") if isinstance(sub, dict) else None
