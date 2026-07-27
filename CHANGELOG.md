@@ -4,6 +4,51 @@ All notable changes to this project are documented in this file. The format is b
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-07-26
+
+Tracks the MCP server's 1.1.0 release. Two of that release's tool changes break
+skills written against the old behaviour, and one documented recipe stopped working
+outright, so this is a correctness pass over the skills and harness rather than new
+capability.
+
+### Changed
+
+- **The event verification recipe no longer subscribes to events that do not exist.**
+  `events_subscribe` now rejects the 11 event types the server declares but never
+  emits, and the rejection covers the whole call — one stale name takes the valid
+  types in the same array with it. The deliverable set is `block.break`, `block.use`,
+  `player.chat`, `player.join`, `player.leave`, and the five `server.*` lifecycle
+  events.
+- **`system-redstone/reference/verification.md`**: the file's only worked example
+  subscribed to `entity.death` and failed at step one. Replaced with a `block.use`
+  example that runs. The mob-farm and sorter bullets were built entirely on rejected
+  types and could not be reworded — there is no entity or container event, so both now
+  point at sampling (`entity_query`, `inventory_count_items`), which is the only thing
+  that actually verifies those outcomes.
+- **`exec-inspect/SKILL.md`**, **`reference/contract-checks.md`** and
+  **`system-redstone/reference/java-redstone.md`**: same substitution. The
+  java-redstone bullet mattered disproportionately — it is the index an agent reads
+  before opening `verification.md`, so it seeded the bad names first.
+- **`reference/terrain/palettes.md`**: biome examples extended with the fields the
+  server now returns (`precipitation`, `waterColor`, colour overrides), and a note
+  that a flat `downfall: 0` across every biome means an older mod jar.
+
+### Fixed
+
+- **`tools/builder/harness.py`** pre-filters event types against the deliverable set.
+  A legacy contract row previously failed as "could not subscribe", which is
+  indistinguishable from a transport failure — so a stale row read as a broken
+  mechanism rather than a stale row.
+- **`tools/itest/cases/level.py`** was asserting only that `plains` appeared in the
+  biome listing, which passed even with no dimension filtering at all because the
+  scratch dimension is the overworld. It now also asserts no foreign biomes leak in,
+  and a new case checks the nether returns its own small set.
+- **`tools/itest/cases/loot.py`** described the old "Definition not available" bug as
+  current behaviour.
+- Tool counts in `reference/execution/engine-limits.md` and `skills/setup-server`
+  were off by one: 194 tools declared (188 server endpoint plus 6 client-side), with a
+  lean default surface of ~104.
+
 ## [1.0.0] - 2026-06-07
 
 The 1.0 milestone. The plugin learns the two-endpoint stack — the world server plus

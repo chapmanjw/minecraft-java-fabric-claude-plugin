@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "minecraft-java-claude",
-  "description": "Claude plugins for Minecraft Java Edition — guided setup and AI control of a live Fabric world over MCP.",
+  "description": "Claude plugins for Minecraft Java Edition \u2014 guided setup and AI control of a live Fabric world over MCP.",
   "owner": {
     "name": "chapmanjw"
   },
@@ -9,7 +9,7 @@
     {
       "name": "minecraft-java",
       "source": "./",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Guided, step-by-step setup of the Minecraft Java Fabric MCP stack (Fabric loader, the MCP mod, configuration, and the Claude connection) plus an in-world builder agent.",
       "category": "games",
       "keywords": [
