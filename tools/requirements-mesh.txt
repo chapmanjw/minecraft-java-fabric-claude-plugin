@@ -11,4 +11,4 @@
 trimesh>=5.0.0      # mesh load + voxelization
 scipy>=1.18.0       # cKDTree for nearest-vertex voxel labeling (see figures.md)
 networkx>=3.6.1     # required by trimesh's graph operations / 3mf handling
-lxml>=6.1.1         # XML parsing for .3mf object models
+lxml>=6.1.2         # XML parsing for .3mf object models
