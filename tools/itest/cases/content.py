@@ -9,8 +9,12 @@ Six live tools, all prefixed ``content_``:
   * content_registry_set_compostable       (GLOBAL — mutates the composter table)
   * content_registry_set_flammable_block   (GLOBAL — mutates the fire registry)
 
-Observed response shapes (probed live, 26.1.2):
+Observed response shapes (probed live, 26.1.2; mod 1.2.0 additions probed on 26.3):
   get_fuel             -> {"burn_time_ticks": <int>}                 (0 = not a fuel)
+                          mod 1.2.0+ also: burn_time_ticks_fast, speed_multiplier,
+                          brewing_fuel_uses
+  set_compostable      -> not registered on Minecraft 26.3+ (compostability became an
+                          item component), so it reports SKIP there by design
   is_compostable       -> {"compostable": true, "chance": <number>}  (chance 0 = not compostable)
   is_flammable_block   -> {"flammable": true, "spread_chance": <int>, "burn_chance": <int>}
 
@@ -44,10 +48,24 @@ def test_get_fuel(ctx: Ctx):
     bt0 = ctx.expect_field(nonfuel, "burn_time_ticks")
     ctx.expect(bt0 == 0, f"diamond should not be a fuel (burn_time_ticks 0), got {nonfuel}")
 
+    if ctx.mod_at_least(1, 2):
+        # 1.2.0 fields: blast furnaces/smokers burn twice as fast; coal is not brewing fuel,
+        # blaze powder is (20 brews per item in vanilla).
+        fast = ctx.expect_field(fuel, "burn_time_ticks_fast")
+        ctx.expect(fast * 2 == bt, f"coal fast burn should be half of {bt}, got {fuel}")
+        ctx.expect(ctx.expect_field(fuel, "speed_multiplier") == 1,
+                   f"coal speed_multiplier should be 1, got {fuel}")
+        ctx.expect(ctx.expect_field(fuel, "brewing_fuel_uses") == 0,
+                   f"coal is not brewing fuel, got {fuel}")
+        blaze = ctx.call("content_registry_get_fuel", {"item_id": "minecraft:blaze_powder"})
+        ctx.expect(ctx.expect_field(blaze, "brewing_fuel_uses") == 20,
+                   f"blaze powder should give 20 brews, got {blaze}")
+
 
 @case("content_registry_is_compostable", level="safe")
 def test_is_compostable(ctx: Ctx):
-    # apple is compostable in vanilla (0.65 chance).
+    # apple is compostable in vanilla: 0.65 chance of adding a layer to a composter
+    # that already holds compost (an empty one always takes a layer).
     res = ctx.call("content_registry_is_compostable", {"item_id": "minecraft:apple"})
     chance = ctx.expect_field(res, "chance")
     ctx.expect(isinstance(chance, (int, float)) and chance > 0,

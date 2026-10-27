@@ -51,6 +51,17 @@ if (market) {
   }
 }
 
+// --- the two manifests must carry the same version (bumped together by hand) ---
+if (plugin?.version && Array.isArray(market?.plugins)) {
+  const entry = market.plugins.find((p) => p?.name === plugin.name) ?? market.plugins[0];
+  if (entry?.version && entry.version !== plugin.version) {
+    fail(
+      `version mismatch: plugin.json is ${plugin.version} but marketplace.json lists ` +
+        `${entry.version} for "${entry.name}"; bump both together`,
+    );
+  }
+}
+
 // --- .mcp.json.example ---
 readJson(".mcp.json.example");
 

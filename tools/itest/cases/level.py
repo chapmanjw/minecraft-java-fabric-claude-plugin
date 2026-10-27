@@ -46,6 +46,16 @@ def _no_players(ctx: Ctx) -> bool:
     return False
 
 
+def _refusal(ctx, tool, args):
+    """(text, refused) for a call that should be refused. The mod reports bad input as a
+    JSON-RPC error (raised by call_text as McpError) and adapter failures as isError; accept
+    either, the same way the bossbar and datapack cases do."""
+    try:
+        return ctx.call_text(tool, args)
+    except Exception as e:  # noqa: BLE001 - McpError is the documented refusal path
+        return str(e), True
+
+
 def _eventually(read, want, tries=10, delay=0.2):
     """Some level mutators dispatch a slash command whose effect lands on the
     next server tick (e.g. /weather toggles isRaining() during the tick loop,
@@ -93,6 +103,62 @@ def test_get_info(ctx: Ctx):
     ctx.expect_field(data, "weather")
     ctx.expect_field(data, "difficulty")
     ctx.expect_field(data, "spawnPoint")
+    if ctx.mod_at_least(1, 2):
+        # 1.2.0: the visual fade levels, 0.0-1.0.
+        for key in ("rainLevel", "thunderLevel"):
+            v = ctx.expect_field(data, key)
+            ctx.expect(isinstance(v, (int, float)) and 0 <= v <= 1,
+                       f"{key} should be within 0..1, got {data!r}")
+
+
+@case("level_poi_query", level="safe")
+def test_poi_query(ctx: Ctx):
+    # A workstation is a POI record the moment it is placed; the query must report it at its
+    # position, unoccupied.
+    x, y, z = ctx.pos()
+    ctx.call_text("block_set_state", {"dimension": ctx.dim, "position": {"x": x, "y": y, "z": z},
+                                      "block": {"id": "minecraft:smithing_table"}})
+    try:
+        res = None
+        for _ in range(8):
+            res = ctx.call("level_poi_query", {"dimension": ctx.dim,
+                                               "position": {"x": x, "y": y, "z": z}, "radius": 2})
+            pois = res.get("poi") if isinstance(res, dict) else None
+            if pois:
+                break
+            time.sleep(0.25)
+        pois = res.get("poi") if isinstance(res, dict) else None
+        ctx.expect(pois, f"smithing table should register a POI, got {res!r}")
+        hit = [p for p in pois if isinstance(p, dict) and p.get("type") == "minecraft:toolsmith"]
+        ctx.expect(hit, f"expected a minecraft:toolsmith POI, got {pois!r}")
+    finally:
+        ctx.call_text("block_set_state", {"dimension": ctx.dim, "position": {"x": x, "y": y, "z": z},
+                                          "block": {"id": "minecraft:air"}})
+
+
+@case("level_get_mob_spawns", level="safe")
+def test_get_mob_spawns(ctx: Ctx):
+    # The sandbox sits in an ordinary overworld biome; every such biome lists creature
+    # spawns. Read all categories, then one category, then an unknown category.
+    x, y, z = ctx.pos()
+    pos = {"x": x, "y": y, "z": z}
+    data = ctx.call("level_get_mob_spawns", {"dimension": ctx.dim, "position": pos})
+    ctx.expect(isinstance(data, dict), f"expected dict, got {data!r}")
+    cats = ctx.expect_field(data, "categories")
+    total = ctx.expect_field(data, "total_entries")
+    ctx.expect(isinstance(cats, dict) and isinstance(total, int) and total > 0,
+               f"expected some spawn entries, got {data!r}")
+    some = next(iter(cats.values()))
+    ctx.expect(isinstance(some, list) and some and {"type", "weight", "min_count", "max_count"} <= set(some[0]),
+               f"entries should carry type/weight/min_count/max_count, got {some!r}")
+    one = ctx.call("level_get_mob_spawns",
+                   {"dimension": ctx.dim, "position": pos, "category": "creature"})
+    one_cats = ctx.expect_field(one, "categories")
+    ctx.expect(set(one_cats) <= {"creature"}, f"category filter leaked other categories: {one!r}")
+    text, is_err = _refusal(ctx, "level_get_mob_spawns",
+                            {"dimension": ctx.dim, "position": pos, "category": "bogus"})
+    ctx.expect(is_err and "unknown mob category" in text.lower(),
+               f"an unknown category should be rejected, got {text!r}")
 
 
 @case("level_get_time", level="safe")
@@ -285,6 +351,26 @@ def test_place_feature(ctx: Ctx):
         # scan_summary returns a non-air count somewhere in its payload; be lenient
         ctx.expect(scan is not None, f"scan after feature returned nothing: {scan!r}")
 
+    if not ctx.mod_at_least(1, 2):
+        return
+    # Mod 1.2.0: an inline definition instead of an id. Minecraft 26.3+ accepts it (in the
+    # flattened 26.3 feature format); older targets must refuse it naming 26.3.
+    dx, _, dz = ctx.pos()
+    definition = {"type": "minecraft:simple_block", "to_place": {"id": "minecraft:gold_block"}}
+    args = {"dimension": ctx.dim, "definition": definition,
+            "position": {"x": dx, "y": floor_y + 1, "z": dz}}
+    text, is_err = _refusal(ctx, "level_place_feature", args)
+    if ctx.mc_at_least(26, 3):
+        ctx.expect(not is_err, f"inline definition should place on 26.3+: {text}")
+        got = ctx.call("block_get_state", {"dimension": ctx.dim,
+                                           "position": {"x": dx, "y": floor_y + 1, "z": dz}})
+        ctx.expect(isinstance(got, dict) and got.get("id") == "minecraft:gold_block",
+                   f"inline simple_block should have placed gold, got {got!r}")
+    else:
+        ctx.expect(is_err and "26.3" in text, f"pre-26.3 should refuse a definition naming 26.3: {text}")
+    both, both_err = _refusal(ctx, "level_place_feature", dict(args, feature="minecraft:oak"))
+    ctx.expect(both_err and "exactly one" in both, f"feature+definition should be rejected: {both}")
+
 
 @case("level_place_features_batch", level="safe")
 def test_place_features_batch(ctx: Ctx):
@@ -311,8 +397,11 @@ def test_place_features_batch(ctx: Ctx):
 def test_fill_biome(ctx: Ctx):
     # Confined to the sandbox. Read the current biome, paint a test biome,
     # verify the change, then restore the original biome.
-    a, b = ctx.box(4, 1, 4)
-    probe = {"x": a[0], "y": a[1], "z": a[2]}
+    # Probe the CENTRE of a box at least two biome cells (4x4x4) wide. Vanilla's getBiome
+    # jitters a position into a neighbouring cell by world seed, so a probe at the box corner
+    # can read a cell outside the painted box and report the old biome on some seeds.
+    a, b = ctx.box(11, 3, 11)
+    probe = {"x": a[0] + 6, "y": a[1] + 1, "z": a[2] + 6}
     before = ctx.call("level_get_biome_at", {"dimension": ctx.dim, "position": probe})
     orig = before.get("id") if isinstance(before, dict) else str(before)
     ctx.expect("minecraft:" in str(orig), f"could not read original biome: {before!r}")
@@ -341,6 +430,12 @@ def test_fill_biome(ctx: Ctx):
         if now != target:
             raise Skip(f"fillbiome accepted but biome read-back lagged "
                        f"(wanted {target}, last saw {now!r})")
+        if ctx.mc_at_least(26, 3):
+            # 26.3 reports a no-op /fillbiome as a failure: painting the same biome again
+            # changes nothing and must come back as an error, not a silent success.
+            again = ctx.call("level_fill_biome", args)
+            ctx.expect(isinstance(again, dict) and "error" in again,
+                       f"repeat fill_biome on 26.3 should report an error, got {again!r}")
     finally:
         ctx.call_text(
             "level_fill_biome",
@@ -397,14 +492,20 @@ def test_set_weather(ctx: Ctx):
             after = ctx.call("level_get_weather", {"dimension": ctx.dim})
             return after.get("weather") if isinstance(after, dict) else str(after)
 
-        # /weather flips isRaining() a tick or two later (verified ~0.6s when
-        # idle). Under full-suite executor contention it can lag further; poll
-        # generously. If it still hasn't flipped, the command surface accepted
-        # the change (asserted above) — don't hard-fail a global-state read race.
-        val = _eventually(_read_weather, target, tries=30, delay=0.25)
-        if str(val) != target:
-            raise Skip(f"weather set accepted but read-back lagged "
-                       f"(wanted {target}, last saw {val!r})")
+        if ctx.mod_at_least(1, 2):
+            # Mod 1.2.0 reads the weather state, not the rain level that fades over
+            # ~20 ticks, so the very first read must already show the new weather. A
+            # lag here is a regression of that fix, not a race.
+            val = _read_weather()
+            ctx.expect(str(val) == target,
+                       f"weather read straight after set should be {target}, got {val!r}")
+        else:
+            # Before 1.2.0 the read followed the fading rain level and lagged ~1 s
+            # (longer under full-suite contention). Poll; degrade to Skip if it lags.
+            val = _eventually(_read_weather, target, tries=30, delay=0.25)
+            if str(val) != target:
+                raise Skip(f"weather set accepted but read-back lagged "
+                           f"(wanted {target}, last saw {val!r})")
     finally:
         ctx.call_text("level_set_weather",
                       {"dimension": ctx.dim, "weather": str(orig), "duration_ticks": 6000})

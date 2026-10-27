@@ -6,13 +6,14 @@ a change is confirmed to actually work. Built on the same ``builder.mcpclient``
 transport the build harness uses.
 
 Tests the LIVE tool surface only. After the 26.x tool-categorization redesign an
-unconfigured mod registers a lean default of ~104 of the mod's 194 tools (188 of
-which are world tools this suite can reach; the other 7 are client-only): the
+unconfigured mod registers a lean default (~104 measured on 1.1.0) of the mod's 195
+tools (up to 189 world tools this suite can reach, depending on Minecraft version and
+loaded Fabric modules; the other 6 are client-only): the
 default-ON domains (blocks, structures, world, entities, items, scripting,
 server) up to write access. The rest — the opt-in domains (players,
 gameplay, registries) plus the admin-access tools in any domain — are NOT live
 by default, so their cases report SKIP "not live (…)", which is expected, not a
-regression. To exercise the full 183, configure the mod with every category
+regression. To exercise the full surface, configure the mod with every category
 included and ``max_access=admin`` (see tools/itest/README.md), restart, and re-run.
 
 Design / safety:
@@ -171,6 +172,14 @@ def load_server_skip_log(path) -> int:
     return len(_SERVER_SKIP_REASONS)
 
 
+# Tools the mod registers only on some Minecraft versions (@McpTool min/maxMinecraftVersion).
+# Lets a missing tool report its real cause without a server log.
+_VERSION_GATED_TOOLS = {
+    "block_transform_preview": "needs Minecraft 26.3+",
+    "content_registry_set_compostable": "removed on Minecraft 26.3+ (compostability is an item component)",
+}
+
+
 def not_live_reason(tool: str) -> str:
     """Explain why a registered tool is not in the live surface.
 
@@ -184,6 +193,9 @@ def not_live_reason(tool: str) -> str:
     server_said = _SERVER_SKIP_REASONS.get(tool)
     if server_said:
         return f"not live (server: {server_said})"
+    gate = _VERSION_GATED_TOOLS.get(tool)
+    if gate:
+        return f"not live ({gate}) — expected on this Minecraft version"
 
     domain = _domain_for(tool)
     is_admin = tool in _ADMIN_TOOLS
@@ -222,6 +234,32 @@ class Ctx:
         self._cx = SCRATCH_X0          # cursor for pos()/box() allocation
         self._cz = SCRATCH_Z0
         self._cy = SCRATCH_Y0
+
+    # -- server versions ---------------------------------------------------
+    _versions = None
+
+    @staticmethod
+    def _vtuple(v):
+        out = []
+        for part in str(v or "").split("+")[0].split("."):
+            digits = "".join(ch for ch in part if ch.isdigit())
+            out.append(int(digits) if digits else 0)
+        return tuple(out)
+
+    def versions(self):
+        """(minecraft, mod) version tuples from server_get_status, cached per run."""
+        if Ctx._versions is None:
+            st = self.call("server_get_status", {})
+            st = st if isinstance(st, dict) else {}
+            Ctx._versions = (self._vtuple(st.get("minecraftVersion")),
+                             self._vtuple(st.get("modVersion")))
+        return Ctx._versions
+
+    def mc_at_least(self, *want):
+        return self.versions()[0][:len(want)] >= tuple(want)
+
+    def mod_at_least(self, *want):
+        return self.versions()[1][:len(want)] >= tuple(want)
 
     # -- tool calls --------------------------------------------------------
     def call(self, tool, args=None):

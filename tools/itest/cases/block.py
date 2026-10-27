@@ -112,6 +112,52 @@ def test_scan_region(ctx: Ctx):
     ctx.expect("gold_block" in str(state), f"scanned entry not gold_block: {first}")
 
 
+@case("block_transform_preview", level="safe")
+def test_transform_preview(ctx: Ctx):
+    # 26.3+ only (the harness skips it elsewhere as not live). Read-only: the preview must
+    # report what an axe would do to an oak log and leave the log in place.
+    cx, cy, cz = _cell()
+    pos = {"x": cx, "y": cy, "z": cz}
+    ctx.call_text("block_set_state", {"dimension": ctx.dim, "position": pos,
+                                      "block": {"id": "minecraft:oak_log", "properties": {"axis": "x"}}})
+    res = ctx.call("block_transform_preview",
+                   {"dimension": ctx.dim, "position": pos, "tool": "minecraft:iron_axe"})
+    ctx.expect(isinstance(res, dict) and res.get("matched") is True,
+               f"axe on oak_log should match, got {res!r}")
+    ctx.expect(res.get("result_block") == "minecraft:stripped_oak_log",
+               f"expected stripped_oak_log, got {res!r}")
+    props = res.get("result_properties") or {}
+    ctx.expect(str(props.get("axis")) == "x", f"strip should keep axis=x, got {res!r}")
+    # A tool is damaged, never consumed.
+    ctx.expect(res.get("consumes_item") is False and res.get("item_damage") == 1,
+               f"an axe should take 1 damage and not be consumed, got {res!r}")
+    after = ctx.call("block_get_state", {"dimension": ctx.dim, "position": pos})
+    ctx.expect(isinstance(after, dict) and after.get("id") == "minecraft:oak_log",
+               f"preview must not change the world, block is now {after!r}")
+    try:
+        text, is_err = ctx.call_text("block_transform_preview",
+                                     {"dimension": ctx.dim, "position": pos, "tool": "minecraft:stick"})
+    except Exception as e:  # noqa: BLE001 - a raised McpError is also a refusal
+        text, is_err = str(e), True
+    ctx.expect(is_err and "block_transformer" in text,
+               f"an item without a block_transformer should be refused, got {text!r}")
+
+
+@case("block_family_variants", level="safe")
+def test_family_variants(ctx: Ctx):
+    # Registry read: oak planks have stairs and a slab; a variant resolves to the same family.
+    base = ctx.call("block_family_variants", {"block": "minecraft:oak_planks"})
+    ctx.expect(isinstance(base, dict) and base.get("in_family") is True,
+               f"oak_planks should be in a family, got {base!r}")
+    variants = base.get("variants") or {}
+    ctx.expect(variants.get("stairs") == "minecraft:oak_stairs"
+               and variants.get("slab") == "minecraft:oak_slab",
+               f"oak family should list oak_stairs and oak_slab, got {base!r}")
+    via = ctx.call("block_family_variants", {"block": "minecraft:oak_stairs"})
+    ctx.expect(isinstance(via, dict) and via.get("base") == "minecraft:oak_planks",
+               f"oak_stairs should resolve to the oak_planks family, got {via!r}")
+
+
 @case("block_get_map_color")
 def test_get_map_color(ctx: Ctx):
     # Place a known block, read its authoritative map colour.

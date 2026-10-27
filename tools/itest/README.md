@@ -13,11 +13,13 @@ cd tools && python -m itest.run --baseline out.toon
 ## It tests the LIVE surface, not the whole tool set
 
 After the 26.x tool-categorization redesign the mod registers a subset of its
-tools depending on config. The mod defines 194 in total, but 6 of those are
+tools depending on config. The mod (1.2.0) defines 195 in total, but 6 of those are
 client-only and served by the separate `minecraft-java-client` endpoint, so the
-world server this suite targets can register at most **188**. With no config (or
-an empty one) an operator gets the lean default: roughly **104 tools live, ~84
-not live**. The suite only runs
+world server this suite targets can register at most **189**. Two tools are tied to a
+Minecraft version: `block_transform_preview` exists only on 26.3+ and
+`content_registry_set_compostable` only up to 26.2, so the 189 is a different set on
+26.3 than on older targets. With no config (or an empty one) an operator gets the lean
+default: roughly **104 tools live** (measured on 1.1.0). The suite only runs
 cases whose tool is actually registered; a case for a tool that isn't live is
 reported as `SKIP` with the reason it's off, e.g.
 `not live (opt-in domain 'gameplay') — enable via mod config to test`. A
@@ -58,7 +60,7 @@ written with them appears to do nothing:
 Config precedence: a non-empty `included_categories` is the allowlist, otherwise the
 enabled-by-default domains are used; then `excluded_categories` is subtracted; then
 any tool whose access rank exceeds `max_access` is dropped. With all categories included and `max_access=admin`, all
-188 world tools register and the suite runs the full surface. The 6 client tools
+189 world tools register and the suite runs the full surface. The 6 client tools
 (`view_capture`, `sense_*`, `client_status`) are never reachable here — they need
 a running client on the `minecraft-java-client` endpoint.
 
