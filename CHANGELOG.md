@@ -4,6 +4,57 @@ All notable changes to this project are documented in this file. The format is b
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - Unreleased
+
+Tracks the MCP server's 1.2.0 release, which adds Minecraft 26.3 as a fifth target and new
+tools. Nothing in the plugin broke on 1.2.0 or 26.3: the terrain scatter sends only registered
+feature ids, so 26.3's flattened feature format does not reach it, and no skill used a renamed or
+removed tag. This release brings the versions and counts up to date and puts the new tools where
+skills can use them.
+
+### Changed
+
+- Minecraft 26.3 is a supported target and the default for new setups (`setup-fabric`,
+  `setup-mod`, `minecraft-mcp-setup`, README). Example jars are `minecraft-fabric-mcp-1.2.0+26.3`
+  and `fabric-api-0.165.0+26.3`; `setup-mod` lists each target's minimum Fabric API, since a jar
+  now refuses an older one. The JDK text reads Java 21 for 1.21.11 and Java 25 for every 26.x
+  (it said 26.1.x, already stale for 26.2).
+- `setup-fabric` and `setup-connect`: a 26.3 dedicated server defaults to `white-list=true`, so
+  the player cannot join until whitelisted or the setting is turned off.
+- Tool counts: 195 defined, up to 189 on the world server depending on Minecraft version and
+  loaded modules (`reference/execution/engine-limits.md`, the itest harness and README).
+- `fluid.flow` (26.2+, needs a `filters.region`) joins the deliverable event types in
+  `exec-inspect` and `system-redstone`, with a recipe for verifying water elevators and feeds.
+  The chat recipes filter on `chat_type: minecraft:chat`, because on 26.2+ `player.chat` also
+  fires for `/say`, `/msg` and `/me`.
+
+### Added
+
+- `level_get_mob_spawns` checks in `survey-site`, the mob-farm design notes, transit tunnels and
+  biome painting: read what can spawn at a position, structure overrides included, instead of
+  assuming.
+- `itemstack_describe include_values` for verifying item components against the SNBT a build
+  wrote (`design-building`, `design-house`, `design-monument`).
+- `block_transform_preview` (26.3) pointers for stripped logs, paths and copper scraping, and
+  `content_registry_get_fuel` / `is_compostable` sizing notes for furnace banks and composters.
+- The new `rainLevel` / `thunderLevel` fields in `survey-site`, and a note on the new 26.3 game rule
+  `projectiles_can_break_blocks` in `engine-limits.md`.
+- itest cases for `level_get_mob_spawns`, `block_transform_preview`, `block_family_variants` and
+  `level_poi_query`, plus checks for the new `get_fuel` fields, the weather levels, inline feature
+  definitions, `fluid.flow` and the 26.3 repeat-`fill_biome` error. The baseline is regenerated
+  against a 1.2.0 server on 26.3.
+- `scripts/validate-plugin.mjs` fails when `plugin.json` and `marketplace.json` disagree on the
+  version.
+
+### Fixed
+
+- `tools/itest/cases/level.py`: the weather case skipped whenever the read lagged, which would
+  have hidden a regression of the server's weather fix. Against mod 1.2.0 the first read must now
+  match. The `fill_biome` case probed the corner of its box, where vanilla's seed-dependent biome
+  jitter can read a neighbouring cell; it now paints a wider box and probes its centre.
+- The itest harness explains a version-gated tool's absence (`block_transform_preview` below 26.3,
+  `content_registry_set_compostable` on 26.3) instead of reporting "cause undetermined".
+
 ## [1.1.0] - 2026-07-26
 
 Tracks the MCP server's 1.1.0 release. Two of that release's tool changes break
