@@ -101,7 +101,7 @@ fundamentals, the timing table, and the version-sensitive caveats are in
 exploit mechanic at the verification step; substitute the reliable Java
 equivalent and tell the user.
 
-Target **modern Java (1.21.11 / 26.1.x)**. Don't over-claim legacy quirks;
+Target **modern Java (1.21.11 and 26.x)**. Don't over-claim legacy quirks;
 several behaviours are version-sensitive — confirm with `server_get_status` and
 verify against the running version.
 
@@ -169,7 +169,7 @@ noted:
   spawners configured via `block_entity_set_nbt` / `inventory_set_slot`
   (`reference/contraptions-farms.md`, `reference/contraptions-mechanisms.md`).
 - **Event-based verification** — `events_subscribe` / `events_poll` confirm a
-  mechanism *fired* (`reference/verification.md`).
+  mechanism *fired* (`reference/verification.md`); `fluid.flow` (26.2+, needs a `filters.region`) covers water and lava feeds.
 
 ## Verification and automated correction
 
@@ -240,7 +240,7 @@ done until its functional test passes.
 - **Java-correct.** Use Java mechanics (QC, deterministic timing, clean observer
   pulses). Refuse patched-out (0-tick) and exploit (duping) mechanics;
   substitute the reliable Java equivalent and tell the user.
-- **Target modern Java (1.21.11 / 26.1.x)** — flag any version-sensitive claim
+- **Target modern Java (1.21.11 and 26.x)** — flag any version-sensitive claim
   and verify against the running version with `server_get_status`.
 - **Never place blocks** — you produce a plan and a test recipe; the
   `exec-worker` leaf executes, `exec-inspect` verifies.

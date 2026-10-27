@@ -39,7 +39,7 @@ sources (`community-sources.md`) for anything not standard.
   distance); water streams funnel mobs to a kill chute and a hopper collector.
   Rate scales with simulation distance — design to the world's setting. Modern
   Java spawns hostiles at block-light level 0, so the platform must be fully
-  dark.
+  dark. Before sizing a farm, call `level_get_mob_spawns {dimension, position}` at the platform and read `categories.monster`; if the mob you want is absent there, the platform will never produce it.
 - **Specific spawners** — zombie / skeleton / cave-spider / blaze XP farms off a
   natural spawner; drowned, guardian (ocean monument), witch hut; enderman
   platform in the End; slime-chunk farm.
@@ -68,7 +68,7 @@ sources (`community-sources.md`) for anything not standard.
 - **Auto-smelter** — a furnace bank fed by an input hopper, a separate fuel
   hopper, and an output hopper to a chest. Three furnaces in parallel ≈ 18
   items/min. Furnaces keep smelting XP until the player collects the output — a
-  useful XP source. Add overflow protection if input can outpace smelting.
+  useful XP source. Add overflow protection if input can outpace smelting. To size the fuel supply, `content_registry_get_fuel {item_id}` gives `burn_time_ticks` (furnace), `burn_time_ticks_fast` (blast furnace and smoker), `speed_multiplier` (always 1.0 before 26.3) and `brewing_fuel_uses`. For a composter loop, `content_registry_is_compostable {item_id}` gives the chance one item adds a layer to a composter that already holds compost (an empty composter always takes a layer). `content_registry_set_compostable` does not exist on 26.3.
 - **Auto-brewer** — dispenser-fed brewing stands in a chain.
 
 ## Java-exclusive: ship a farm pre-configured (block-entity NBT)

@@ -50,13 +50,13 @@ Ask the user, before downloading anything:
      the MCP endpoint up 24/7). LAN/remote access with a bearer token.
    Branch the rest of this skill on their answer.
 2. **Which Minecraft version?** The mod supports **1.21.11**, **26.1.1**,
-   **26.1.2**, and **26.2**. Default to the newest the user is comfortable with
-   (26.2). **Record the exact version** — it must match the mod jar and Fabric
+   **26.1.2**, **26.2**, and **26.3**. Default to the newest the user is comfortable with
+   (26.3). **Record the exact version** — it must match the mod jar and Fabric
    API jar in Phase 2. The mod jar declares an EXACT Minecraft dependency, so a
    mismatch is refused at load with a clear message rather than failing later.
 3. **(Dedicated server only) What OS and where?** Linux or Windows; same
    machine as Claude, LAN box, or cloud VM. The host needs a JDK: **Java 21**
-   for 1.21.11, **Java 25** for 26.1.x. (Single-player uses the launcher's
+   for 1.21.11, **Java 25** for every 26.x. (Single-player uses the launcher's
    bundled runtime — no separate JDK needed.) The connect step (Phase 4) cares
    where it runs, so note their answer.
 
@@ -128,6 +128,8 @@ commands. In `server.properties`, confirm sensible defaults (e.g.
 mod runs tool calls as the console, which has full command permission — no
 per-player op is required for the MCP tools themselves.
 
+On 26.3 a dedicated server defaults to `white-list=true`, so the user's own character cannot join until added. Set `white-list=false` in `server.properties` for a private server, or run `whitelist add <name>` via `command_execute`. The MCP console tools are unaffected.
+
 ---
 
 ## Wrap up
@@ -139,7 +141,7 @@ Confirm with the user (the relevant set for their branch):
       `mods/` folder exists and its path is recorded.
 - [ ] **Dedicated server:** Fabric server installed; ran once; `eula=true`;
       server root path recorded; correct JDK present (21 for 1.21.11, 25 for
-      26.1.x).
+      every 26.x).
 
 Then hand off: tell the user Phase 1 is done and the next step installs the MCP
 mod and its Fabric API dependency. Offer to continue with the

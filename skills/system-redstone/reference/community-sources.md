@@ -26,7 +26,7 @@ to verify against the running version.
 ## Verify against the running version
 
 - **Confirm the world's version first** with `server_get_status`. A design
-  proven on an older version may behave differently on 1.21.11 / 26.1.x.
+  proven on an older version may behave differently on 1.21.11 and 26.x.
 - **Version-sensitive areas** to double-check before relying on them:
   spawn-light thresholds, mob-spawn shell distances, bubble-column speeds,
   iron-golem spawn volume, powered-rail spacing, and any contraption that

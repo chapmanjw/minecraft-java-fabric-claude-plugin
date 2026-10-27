@@ -13,7 +13,7 @@ This is **Phase 2** of the four-phase Minecraft Java MCP setup. It assumes
 Phase 1 (`setup-fabric`) is done: Fabric is installed and the `mods/` folder
 exists. You should have, written down:
 
-- the chosen **Minecraft version** (e.g. `26.2`);
+- the chosen **Minecraft version** (e.g. `26.3`);
 - the **mods-folder path** (single-player) or the **`<server>` root** with its
   `mods/` folder (dedicated server).
 
@@ -38,7 +38,7 @@ From the mod's releases:
 <https://github.com/chapmanjw/minecraft-java-fabric-mcp-server/releases>
 
 Pick the asset whose filename ends in **`+<your-mc-version>.jar`** — e.g.
-`minecraft-fabric-mcp-1.0.1+26.2.jar` for Minecraft 26.2. Pin to a specific
+`minecraft-fabric-mcp-1.2.0+26.3.jar` for Minecraft 26.3. Pin to a specific
 release tag rather than tracking `latest`, so the version stays in lockstep
 with Minecraft and Fabric API.
 
@@ -47,7 +47,7 @@ with Minecraft and Fabric API.
 From Modrinth: <https://modrinth.com/mod/fabric-api/versions>
 
 Filter by your Minecraft version and download the Fabric API jar for it — e.g.
-`fabric-api-0.155.2+26.2.jar`. Its Minecraft version must match exactly.
+`fabric-api-0.165.0+26.3.jar`. Its Minecraft version must match exactly. Each mod jar also requires Fabric API at or above its pin (0.141.6+1.21.11, 0.145.4+26.1.1, 0.155.3+26.1.2, 0.161.0+26.2, 0.165.0+26.3); an older Fabric API fails to load, so filtering by Minecraft version alone does not guarantee a new enough jar.
 
 > The mod jar declares an EXACT `depends.minecraft`, so a jar built for one
 > Minecraft version is refused at load on any other — you get a clear loader
@@ -77,8 +77,8 @@ user already runs):
 
 ```
 mods/
-├── fabric-api-0.155.2+26.2.jar
-└── minecraft-fabric-mcp-1.0.1+26.2.jar
+├── fabric-api-0.165.0+26.3.jar
+└── minecraft-fabric-mcp-1.2.0+26.3.jar
 ```
 
 Confirm with the user that both files are present and that the version suffixes

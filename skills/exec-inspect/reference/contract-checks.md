@@ -153,7 +153,7 @@ opened, a mechanism fires).
 1. Call `events_subscribe(event_types)` → `subscription_id`. `event_types` must
    be drawn from the deliverable set — `block.break`, `block.use`,
    `player.chat`, `player.join`, `player.leave`, `server.tick`,
-   `server.starting`, `server.started`, `server.stopping`, `server.stopped`.
+   `server.starting`, `server.started`, `server.stopping`, `server.stopped`, and `fluid.flow` (26.2+ only; requires `filters.region {dimension, from:{x,y,z}, to:{x,y,z}}`; optional `filters.max_per_second`, default 20, max 1000; payload `{dimension,x,y,z,fluid,source,amount}`).
    `events_subscribe` rejects the **whole call** if any other type is present,
    so a single stale name fails the row at GATE C. For kill, container, or
    craft outcomes there is no event at all — use a `block_entity_nbt` or

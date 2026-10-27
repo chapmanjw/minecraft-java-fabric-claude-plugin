@@ -11,9 +11,9 @@ on or warning against them; do not assert either way from memory.
 
 ## Default tool surface (what's registered)
 
-The mod defines 194 tools -- 188 on the server endpoint plus 6 client-side
+The mod defines 195 tools -- up to 189 server tools depending on Minecraft version and loaded Fabric modules, plus 6 client-side
 (`sense_*`, `client_status`, `view_capture`) -- but **registers a lean
-~104-tool surface by default**.
+~104-tool surface by default** (1.1.0 measurement).
 The default-on set is the seven domains the builder needs — `blocks`,
 `structures`, `world`, `entities`, `items`, `scripting`, `server` — capped at
 `write` access. The opt-in domains `players`, `gameplay`, and `registries`, plus
@@ -279,6 +279,7 @@ otherwise — so a successful `block_get_state` is *not* proof a write will land
   certainly a camelCase id (e.g. `doDaylightCycle`) hitting this rejection, not
   the surface being inert. **VERIFY** with a one-shot snake_case
   `level_set_game_rule` round-trip if you depend on it.
+- `projectiles_can_break_blocks` is new in 26.3 (projectiles breaking blocks); confirm the id with `level_list_game_rules` before setting it.
 - *Robust regardless:* for permanent world state, a **repeating command block**
   in a force-loaded chunk is the bulletproof path — a `repeating,
   always-active` block running `time set day` holds permanent daytime even where
@@ -329,7 +330,7 @@ and validation.)
   non-negotiable 5, erosion/grow detail). **Fallback:** `command_execute` with the same `/place feature`
   command, or bone-meal / `random_tick_speed` sapling growth.
 - **`level_fill_biome`** — paint the biome of a region (`/fillbiome`): foliage /
-  water tint, mob spawns, climate. Biome is read-only otherwise. **Fallback:**
+  water tint, mob spawns, climate. Verify the spawns afterwards with `level_get_mob_spawns`. Biome is read-only otherwise. **Fallback:**
   `command_execute` with `/fillbiome`.
 - **`block_get_top_y` `heightmap` arg** and **`block_render_region` `hillshade`
   view** — documented inline above; both degrade to their pre-0.3.0 behaviour
@@ -340,10 +341,10 @@ and validation.)
 The v0.4.0 mod adds batch feature scatter, strata banding, and in-world
 erosion. Same posture as the 0.3.0 helpers above — **probe before relying on
 them** (`tools/list` / a method-not-found error means an older mod) and use the
-listed fallback. The mod defines 194 tools in all (188 server + 6 client); the terrain helpers
+listed fallback. The mod defines 195 tools in all (up to 189 server, depending on Minecraft version and loaded Fabric modules, + 6 client); the terrain helpers
 here are in the default-on `blocks` / `world` domains, so they register under
 the lean default (see "Default tool surface" above — a `tools/list` on a default
-config shows ~104, not the full 188 server-side).
+config shows ~104, not the full server-side set of up to 189).
 
 - **`level_place_features_batch`** — grow many vanilla configured features in
   one call (the batch form of `level_place_feature`): send a `features[]` list of

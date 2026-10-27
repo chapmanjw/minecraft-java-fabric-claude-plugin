@@ -171,7 +171,7 @@ feedback channel to confirm interactive features actually work:
    ```
    Only these types are deliverable: `block.break`, `block.use`, `player.chat`,
    `player.join`, `player.leave`, `server.tick`, `server.starting`,
-   `server.started`, `server.stopping`, `server.stopped`. Any other name makes
+   `server.started`, `server.stopping`, `server.stopped`, and `fluid.flow` (26.2+ only; requires `filters.region {dimension, from:{x,y,z}, to:{x,y,z}}`; optional `filters.max_per_second`, default 20, max 1000; payload `{dimension,x,y,z,fluid,source,amount}`). Any other name makes
    the **entire** subscribe call fail — you get an error, not a partial
    subscription — so one stale type takes the valid ones down with it.
 2. **Trigger** the mechanism — ask the user to interact (press a button, step
@@ -185,7 +185,7 @@ feedback channel to confirm interactive features actually work:
 4. **Unsubscribe** after the check.
 
 Use cases: confirm a lever or button fires (`block.use`), a block was actually
-broken (`block.break`), or drive a build from chat (`player.chat`). There is no
+broken (`block.break`), or drive a build from chat (`player.chat`). From mod 1.2.0 `player.chat` carries a `chat_type`, and on Minecraft 26.2 and later it also fires for `/say`, `/msg` and `/me`; for chat-driven recipes filter on `{"chat_type":"minecraft:chat"}` so command output is ignored. Use `fluid.flow` for water and lava feeds. There is no
 container or entity event — check a chest's contents with `inventory_get` /
 `inventory_count_items`, and a mob farm's kills with `entity_query` sampling.
 Within its range this is a real signal — not geometry — and catches failures

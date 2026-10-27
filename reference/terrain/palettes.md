@@ -264,7 +264,8 @@ foliage/water tint, mob spawns, or climate — the underlying biome does. On a
 **v0.3.0+ mod**, set the biome of the built region with **`level_fill_biome`**
 (dimension, from/to, biome id, optional `replace_filter`) so a snowy peak spawns
 snowy-biome mobs and tints its foliage, rather than borrowing the surrounding
-biome. **Fall back** to `command_execute` with `/fillbiome` on older mods. Skip
+biome. **Fall back** to `command_execute` with `/fillbiome` on older mods. Verify the
+resulting spawns with `level_get_mob_spawns`. Skip
 this when the build already sits in the matching biome.
 
 ---

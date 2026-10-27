@@ -50,7 +50,7 @@ reading as an empty shell.
   hips, dormers; double-stair the roof for visible thickness.
 - **Wall variation** — mix block faces (stone / andesite / diorite / cobble /
   brick; oak / stripped / planks / log). A flat one-block wall is the loudest
-  amateur tell.
+  amateur tell. On 26.3, `block_transform_preview {dimension, position, tool, face?}` dry-runs what an axe, hoe or shovel (any item with a block_transformer component) would turn the block at a position into, without changing the world; it returns `result_block`, `result_properties`, `matched` and `face_blocked`. 26.3+ only.
 - **Trim courses** — a contrasting band at floor lines and the roofline.
 - **Windows** — vary them: single panes, full-wall glass, leaded (iron bars
   over panes), stained-glass accents.
@@ -135,7 +135,7 @@ inventory_set_slot(container_pos, slot=0, item={
 
 **Version note:** the `minecraft:enchantments` component shape changed between
 1.20.5 and 1.21. Verify the exact SNBT with a round-trip (`itemstack_describe`
-or give-then-read) on the running version (`server_get_status`).
+or give-then-read) on the running version (`server_get_status`). Pass `include_values: true` (optionally `component_filter: ["minecraft:enchantments"]`) to read the actual component JSON and compare it to the SNBT you wrote; without it only `componentKeys` come back.
 
 Use this for a "hero kit" chest near the front door, a trophy sword above the
 fireplace, or a named heirloom in a display case.

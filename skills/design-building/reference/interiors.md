@@ -162,7 +162,7 @@ inventory_set_slot(container_pos, slot=13, item={
 **Version note:** the `minecraft:enchantments` component shape changed between
 1.20.5 and 1.21. Verify the exact SNBT with a round-trip read
 (`itemstack_describe` or give-then-read) against the running server version
-(`server_get_status`).
+(`server_get_status`). Pass `include_values: true` (optionally `component_filter: ["minecraft:enchantments"]`) to read the actual component JSON and compare it to the SNBT you wrote; without it only `componentKeys` come back.
 
 Useful components for interiors:
 - `minecraft:custom_name` — named artefact on a pedestal.

@@ -45,12 +45,12 @@ no separate server process and no behavior pack.
    mid-run:
    - **Single-player or dedicated server?** This branches every phase. Default
      to single-player unless the user wants remote/LAN access.
-   - a **Minecraft version** the mod supports (v0.1.0: 1.21.11, 26.1.1,
-     26.1.2);
+   - a **Minecraft version** the mod supports (1.21.11, 26.1.1,
+     26.1.2, 26.2, 26.3);
    - **single-player:** Minecraft: Java Edition account + launcher (the
      launcher's bundled runtime is fine);
    - **dedicated server:** a host with the right JDK — **Java 21** for 1.21.11,
-     **Java 25** for 26.1.x;
+     **Java 25** for every 26.x;
    - **Claude Desktop via the `mcp-remote` adapter only:** Node.js / `npx` on
      the machine running Claude Desktop. (Claude Code connects to Streamable
      HTTP natively — no Node needed.)

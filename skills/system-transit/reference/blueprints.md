@@ -55,7 +55,7 @@ build — against these failure modes:
 - **A route through a protected build or landmark** — it should have been
   routed around.
 - **Unlit corridor** — a rail, road, or tunnel that becomes a mob spawner;
-  light it and cap dark surfaces.
+  light it and cap dark surfaces. `level_get_mob_spawns` at the tunnel position confirms whether that biome has monster spawns at that Y.
 - **A "suspended" deck with no support** — chains and hangers are decorative;
   the deck needs hidden piers.
 - **Disconnected modes** — a dock with no road to it, an elevator that does

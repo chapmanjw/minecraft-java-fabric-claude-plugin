@@ -45,7 +45,7 @@ not: subscribe to world events, trigger, then drain them.
   deliverable set is **closed**: `block.use` (a button/lever/door interacted),
   `block.break`, `player.chat`, `player.join` / `player.leave`, `server.tick`,
   and `server.starting` / `server.started` / `server.stopping` /
-  `server.stopped`. Any other name — `block.place`, `container.open` /
+  `server.stopped`, plus `fluid.flow` (26.2+ only; requires `filters.region {dimension, from:{x,y,z}, to:{x,y,z}}`; optional `filters.max_per_second`, default 20, max 1000; payload `{dimension,x,y,z,fluid,source,amount}`). Any other name — `block.place`, `container.open` /
   `container.close`, `entity.death`, `entity.spawn`, `item.use`, `item.craft`,
   `player.death` — is declared by the protocol but never emitted, and
   `events_subscribe` **rejects the whole call** rather than subscribing to less
@@ -76,7 +76,8 @@ Where it earns its place:
 - **Door / button / trap** — `block.use` confirms a player (or a redstone-driven
   interaction) triggered it; pair with the door-block `sample`.
 - **Interactive builds** — watch `player.chat` or `block.use` to drive a build
-  that responds to the user in real time.
+  that responds to the user in real time. From mod 1.2.0 `player.chat` carries a `chat_type`, and on Minecraft 26.2 and later it also fires for `/say`, `/msg` and `/me`; for chat-driven recipes filter on `{"chat_type":"minecraft:chat"}` so command output is ignored.
+- **Water elevator, bubble column, lava or water feed** — `fluid.flow` on a small region around the feed (26.2+).
 - **Mob farm, sorter, or any container/entity outcome** — there is no
   `entity.death` and no `container.*` event, so this channel cannot help.
   Verify by sampling across the timing budget instead: `entity_query` over the

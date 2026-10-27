@@ -59,7 +59,7 @@ A villager with no workstation stays unemployed (use spares for breeding).
   (taiga).
 - **Composter loop** — a farmer throws surplus crops into a composter; a
   hopper-fed composter→chest loop yields bone meal. Keep the composter
-  claimable as the farmer's job site.
+  claimable as the farmer's job site. To size the loop, `content_registry_is_compostable {item_id}` gives the chance one item adds a layer to a composter that already holds compost (an empty composter always takes a layer). `content_registry_set_compostable` does not exist on 26.3.
 - **Animal pens** — fenced enclosures, 7×7 minimum, lit, with water and feed:
   cows, pigs, sheep, chickens. Place near the shepherd and butcher.
 

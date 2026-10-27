@@ -202,6 +202,7 @@ If a call fails:
   server down), wrong host:port, or a firewall between Claude and the host.
 - **Tools connect but calls error about no world / no player** — load a world
   and have a player join, then retry.
+- **Player cannot join a 26.3 dedicated server** — 26.3 defaults to `white-list=true` in `server.properties`. Set it to `false` on a private server, or run `whitelist add <name>` via `command_execute`. The MCP console tools are unaffected.
 
 ## Wrap up
 

@@ -131,5 +131,5 @@ each is detailed in its reference file:
   `contraptions-farms.md` and `contraptions-mechanisms.md`.
 - **Event-based verification** — `events_subscribe` / `events_poll` confirm a
   mechanism *fired* (`block.use`, `block.break`, `player.chat` — the only
-  interaction events the server emits; `entity.death` and `container.open` are
+  interaction events the server emits, plus `fluid.flow` on 26.2+ with a `filters.region`; `entity.death` and `container.open` are
   rejected outright). See `verification.md`.

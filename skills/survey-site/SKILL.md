@@ -43,7 +43,7 @@ Use read-only tools; gather only what a planner would need:
 
 - **World context** — `level_get_info` (requires a `dimension` arg, e.g.
   `"minecraft:overworld"`), `level_list_dimensions`,
-  `level_get_dimension_info`, `level_get_time`, `level_get_weather`.
+  `level_get_dimension_info`, `level_get_time`, `level_get_weather`. For a site that will hold a village, a base or a farm, also call `level_get_mob_spawns {dimension, position}`. From mod 1.2.0 `level_get_weather` reports the state (clear/rain/thunder) immediately after `level_set_weather`, and `level_get_info` returns `rainLevel` and `thunderLevel` (0.0-1.0, the visual fade) for "is it still visibly raining".
 - **Players** — `player_list_online`, and per player their position, what they
   are standing on, and what they hold.
 - **Terrain** — `block_get_top_y` across the footprint to map surface heights

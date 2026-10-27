@@ -39,7 +39,7 @@ Use the stages as a gradient across the figure:
   touched parts.
 
 Place the blocks **waxed** so they hold the intended stage (unwaxed copper
-keeps oxidizing). For a deliberately *aging* look, leave some unwaxed.
+keeps oxidizing). On 26.3, `block_transform_preview {dimension, position, tool, face?}` dry-runs what an axe, hoe or shovel (any item with a block_transformer component) would turn the block at a position into, without changing the world; it returns `result_block`, `result_properties`, `matched` and `face_blocked`. 26.3+ only. For a deliberately *aging* look, leave some unwaxed.
 
 ## Marble and stone gradients
 

@@ -22,14 +22,14 @@ the blockwork is built so fills do not disturb them. Tag every one
 with `entity_set_nbt`.
 
 > **Version note (verify before relying on edge cases).** All examples below
-> are verified live on **26.1.2**; this mod also supports **1.21.11**, **26.1.1**
-> and **26.2**. The
+> are verified live on **26.1.2**; this mod also supports **1.21.11**, **26.1.1**,
+> **26.2** and **26.3**. The
 > display-entity NBT (`transformation`, `billboard`, `brightness`,
 > `glow_color_override`, the `text_display` text/background fields) has been
 > stable since 1.19.4 and is reliable on both. Item-`components` SNBT inside an
 > `item_display`'s shown item is the format that *does* drift across versions —
 > if you embed a custom item, round-trip it with `itemstack_describe` on the
-> running version (`server_get_status` reports the version). Do not assert a
+> running version (`server_get_status` reports the version). Pass `include_values: true` (optionally `component_filter`) to read the component JSON, not just `componentKeys`. Do not assert a
 > component shape blindly.
 
 ## The transformation block — common to all three
