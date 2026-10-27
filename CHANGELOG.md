@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file. The format is b
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to
 [Semantic Versioning](https://semver.org/).
 
-## [1.2.0] - Unreleased
+## [1.2.0] - 2026-10-26
 
 Tracks the MCP server's 1.2.0 release, which adds Minecraft 26.3 as a fifth target and new
 tools. Nothing in the plugin broke on 1.2.0 or 26.3: the terrain scatter sends only registered
